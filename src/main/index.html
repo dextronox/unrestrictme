@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <link rel='stylesheet' type='text/css' href='bootstrap.css'>
+    <link rel='stylesheet' type='text/css' href='index.css'>
+    <title>unrestrict.me Client</title>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <a class="navbar-brand" style="color: white">unrestrict.me</a>
+    </nav>
+    <div class="container prompt">
+        <h1>Welcome.</h1>
+        <p>We're ready to connect. Click the button below to begin.</p>
+        <button type="button" class="btn btn-primary btn-lg">Connect to unrestrict.me</button>
+        <button type="button" class="btn btn-secondary btn-lg" data-toggle="modal" data-target="#settings">Settings</button>
+    </div>
+    <div class="modal fade" id="settings" tabindex="-1" role="dialog" aria-labelledby="settings" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Settings</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <p>unrestrict.me should work 'out of the box', and modifying these settings isn't necessary for the average user. If anything breaks, click "Reset Config".</p>
+                <h5>Custom API Server</h5>
+                <p>Input a custom API server for unrestrict.me to send requests.</p>
+                <form>
+                    <fieldset>
+                        <div class="form-group">
+                            <textarea class="form-control" id="exampleTextarea" rows="1"></textarea>
+                        </div>
+                    </fieldset>
+                </form>
+                <h5>Regenerate RSA Keypair</h5>
+                <p>This option regenerates the stored RSA keypair. Any pending connections will be impossible to complete.</p>
+                <button type="button" class="btn btn-danger" id="rsa_regen">Regenerate RSA Keypair</button>
+                <h5>Reset Config</h5>
+                <p>This option resets unrestrict.me to default settings.</p>
+                <button type="button" class="btn btn-danger" id="reset">Reset Config</button>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+            </div>
+            </div>
+        </div>
+    </div>
+</body>
+<script>
+    require('./index.js')
+    require('./bootstrap.bundle.min.js')
+</script>
+</html>

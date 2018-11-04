@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <link rel='stylesheet' type='text/css' href='bootstrap.css'>
+    <link rel='stylesheet' type='text/css' href='index.css'>
+    <title>unrestrict.me Client</title>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <a class="navbar-brand" style="color: white">unrestrict.me</a>
+    </nav>
+    <div id="step1" class="container prompt">
+        <h1>Hi! You're almost good to go.</h1>
+        <p>Looks like you have the newest version of the unrestrict.me client installed. Awesome!</p>
+        <p>We just have to get a few things setup and you'll be ready to browse the internet securely, privately and freely.</p>
+        <button id="step1_button" type="button" class="btn btn-primary">Next</button>
+    </div>
+    <div id="step2" class="container prompt" style="display: none">
+        <h1>How we operate.</h1>
+        <p>First things first, we don't sell your data. We make money via advertising on our website when you choose a location to connect to. This webpage opens in your default browser with your standard privacy settings.</p>
+        <p>The data sent between you and our servers whilst connected to our VPN is encrypted with AES-256 military grade encryption. In addition to this, connection requests sent to our API servers are encrypted with 512bit RSA public/private keypair cryptography.</p>
+        <button id="step2_button" type="button" class="btn btn-primary">Next</button>
+    </div>
+    <div id="step3" class="container prompt" style="display: none">
+        <h1>One last thing.</h1>
+        <p>In order for our VPN to operate, we need to install a driver so that we can interface with your computer.</p>
+        <p>Please click the button below to start the installation. Once you've completed the install, click verify and you'll be ready to use unrestrict.me!</p>
+        <div id="step3_button_div1">
+            <button id="step3_button1" type="button" class="btn btn-primary">Install</button>
+        </div>
+        <div id="step3_button_div2" style="display: none">
+            <button id="step3_button2" type="button" class="btn btn-primary">Verify</button>
+        </div>
+    </div>
+</body>
+<script>
+    require('./index.js')
+    require('./bootstrap.bundle.min.js')
+</script>
+</html>

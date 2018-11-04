@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>unrestrict.me Client</title>
+    <link rel='stylesheet' type='text/css' href='index.css'>
+</head>
+<body>
+    <div class="container">
+        <div class="la-ball-spin-clockwise la-dark la-3x" id="loading">
+            <div></div>
+            <div></div>
+            <div></div>
+            <div></div>
+            <div></div>
+            <div></div>
+            <div></div>
+            <div></div>
+        </div>
+        <div id="update" style="display:none">
+            <span>The client is updating.</span><br>
+            <span>Percent:</span> <span id="percent"></span><br>
+            <span>Speed (MB/s):</span> <span id="speed"></span><br>
+            <span>Time remaining (s): </span><span id="time"></span><br>
+        </div>
+    </div>
+</body>
+<script>
+    require('./index.js')
+</script>
+</html>

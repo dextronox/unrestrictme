@@ -1,0 +1,17 @@
+body {
+    background-color: #e9ecef;
+}
+
+.prompt {
+    margin-top: 25q;
+}
+
+h1 {
+    pointer-events: none;
+}
+p {
+    pointer-events: none;
+}
+.navbar {
+    pointer-events: none;
+}

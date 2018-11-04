@@ -1,0 +1,5 @@
+21:47:59:929 Main: Application is elevated.
+21:47:59:932 Main: settings.conf found!
+21:47:59:940 Main: Already on newest or newer version than publicly available.
+21:47:59:940 Main: Checking for public/private keys
+21:47:59:942 Main: Normal install. Ready to continue.
