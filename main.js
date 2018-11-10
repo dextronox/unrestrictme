@@ -324,6 +324,9 @@ exports.verify = () => {
                 })
             }
         })
-    }
-    
+    }   
+}
+
+exports.connect = (config) => {
+    log.info(`Main: Received command to connect OpenVPN with config: ${config}`)
 }

@@ -15,8 +15,27 @@
     <div class="container prompt">
         <h1>Welcome.</h1>
         <p>We're ready to connect. Click the button below to begin.</p>
-        <button type="button" class="btn btn-primary btn-lg">Connect to unrestrict.me</button>
-        <button type="button" class="btn btn-secondary btn-lg" data-toggle="modal" data-target="#settings">Settings</button>
+        <div id="connectButtons">
+            <button type="button" class="btn btn-primary btn-lg" id="connect">Connect to unrestrict.me</button>
+            <button type="button" class="btn btn-secondary btn-lg" data-toggle="modal" data-target="#settings">Settings</button>
+        </div>
+        <div id="loading1" style="display:none;">
+            <div class="alert alert-dismissible alert-secondary">
+                <strong>Creating request.</strong> <p>We're generating a unique request ID for you now. Please wait. You'll be redirected to a webpage for you to choose your preferred location.</p>
+            </div>
+        </div>
+        <div id="loading2" style="display:none;">
+            <div class="alert alert-dismissible alert-success">
+                <strong>Request created.</strong> <p>Please complete the connection in your browser. Once you've selected a location, we'll automatically connect.</p>
+                <button id="cancelRequest" type="button" class="btn btn-danger btn-lg btn-block">Cancel request</button>
+            </div>
+        </div>
+        <div id="loading3" style="display:none;">
+            <div class="alert alert-dismissible alert-success">
+                <strong>Location selected.</strong> <p>We're now connecting you to unrestrict.me. The connection should complete momentarily.</p>
+                <button id="cancelConnection" type="button" class="btn btn-danger btn-lg btn-block">Cancel connection</button>
+            </div>
+        </div>
     </div>
     <div class="modal fade" id="settings" tabindex="-1" role="dialog" aria-labelledby="settings" aria-hidden="true">
         <div class="modal-dialog" role="document">
@@ -34,7 +53,16 @@
                 <form>
                     <fieldset>
                         <div class="form-group">
-                            <textarea class="form-control" id="exampleTextarea" rows="1"></textarea>
+                            <textarea class="form-control" id="customAPI" rows="1"></textarea>
+                        </div>
+                    </fieldset>
+                </form>
+                <h5>Custom Webpage</h5>
+                <p>Input a custom webpage for unrestrict.me to navigate you to complete the connection.</p>
+                <form>
+                    <fieldset>
+                        <div class="form-group">
+                            <textarea class="form-control" id="customWebpage" rows="1"></textarea>
                         </div>
                     </fieldset>
                 </form>
