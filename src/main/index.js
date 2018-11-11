@@ -137,7 +137,9 @@ function monitorRequest(id) {
             try {
                 let bodyParse = JSON.parse(body)
                 log.debug(`Renderer: Config file not yet available. User probably hasn't selected a location, or config hasn't finished generation. Error: ${bodyParse["error"]}`)
-                setTimeout(() => {monitorRequest(id)}, 1000)
+                if (bodyParse["error"] != "id") {
+                    setTimeout(() => {monitorRequest(id)}, 1000)
+                }
             } catch (error) {
                 let key = new nodersa()
                 fs.readFile(path.join(__dirname, '../..', 'keys/private'), 'utf8', (error, data) => {

@@ -12,6 +12,10 @@ h1 {
 p {
     pointer-events: none;
 }
+
+p a {
+    pointer-events: all;
+}
 .navbar {
     pointer-events: none;
 }
