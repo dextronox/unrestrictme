@@ -56,11 +56,21 @@ $("#connect").on("click", () => {
                     log.error(`Renderer: Connection request error. Error: ${error}`)
                     swal("Whoops!", "An error occurred sending a request for a new connection identifier. Check your internet connection.", "error")
                 }
-                try {
-                    let bodyParse = JSON.parse(body)
-                    log.error(`Renderer: API server rejected our request. Error: ${bodyParse["error"]}`)
-                    swal("Whoops!", "The API server rejected our request. See log for more info. Try regenerating the keypair.", "error")
-                } catch(error) {
+                let checkJSON = body["error"]
+                if (checkJSON) {
+                    let error = checkJSON["error"]
+                    if (error === "internal") {
+                        log.error(`Renderer: Interal API error. Error: ${error}`)
+                        swal("Whoops!", "Something went wrong on our end, and we were unable to create your connection.", "error")
+                        $("#loading1").css("display", "none")
+                        $("#connectButtons").css("display", "block")
+                    } else {
+                        log.error(`Renderer: API server rejected our request. Error: ${error}`)
+                        swal("Whoops!", "The API server rejected our request. See log for more info. Try regenerating the keypair.", "error")
+                        $("#loading1").css("display", "none")
+                        $("#connectButtons").css("display", "block")
+                    }
+                } else {
                     log.info(`Renderer: We sent a valid request! Decrypting response...`)
                     let key = new nodersa()
                     fs.readFile(path.join(__dirname, '../..', 'keys/private'), 'utf8', (error, data) => {
@@ -71,7 +81,16 @@ $("#connect").on("click", () => {
                         }
                         key.importKey(data, 'private')
                         let decryptedResponse = JSON.parse(key.decrypt(body, 'utf8'))
-                        openWebpage(decryptedResponse["id"])
+                        if (decryptedResponse["success"]) {
+                            log.info(`Renderer: API server created request!`)
+                            openWebpage(decryptedResponse["id"])
+                        } else {
+                            log.error(`Renderer: API server unable to fulfil.`)
+                            swal('Whoops!', "Something went wrong on our end creating your connection request.", "error")
+                            $("#loading1").css("display", "none")
+                            $("#connectButtons").css("display", "block")
+                        }
+                        
                     })
                 }
     
