@@ -181,7 +181,7 @@ function evaluateErrors() {
 }
 
 function createLoadingWindow() {
-    loadingWindow = new BrowserWindow({show: false, frame: false, width: 300, height: 300, /*icon: path.resolve(__dirname, 'icons', 'icon.ico'),*/'minWidth': 300, 'minHeight': 300, transparent: false, title: "unrestrict.me Client", resizable: false})
+    loadingWindow = new BrowserWindow({show: false, frame: false, width: 300, height: 300, icon: path.resolve(__dirname, 'assets', 'icons', 'win.ico'), 'minWidth': 300, 'minHeight': 300, transparent: false, title: "unrestrict.me Client", resizable: false})
     loadingWindow.setMenu(null)
     loadingWindow.loadURL(url.format({
         pathname: path.join(__dirname, 'src/loading/index.html'),
@@ -196,7 +196,7 @@ function createLoadingWindow() {
 }
 
 function createErrorWindow(error) {
-    errorWindow = new BrowserWindow({show: false, frame: true, width: 600, height: 400, /*icon: path.resolve(__dirname, 'icons', 'icon.ico'),*/'minWidth': 600, 'minHeight': 400, transparent: false, title: "unrestrict.me Client", resizable: false})
+    errorWindow = new BrowserWindow({show: false, frame: true, width: 600, height: 400, icon: path.resolve(__dirname, 'assets', 'icons', 'win.ico'), 'minWidth': 600, 'minHeight': 400, transparent: false, title: "unrestrict.me Client", resizable: false})
     errorWindow.setMenu(null)
     errorWindow.loadURL(url.format({
         pathname: path.join(__dirname, 'src/error/index.html'),
@@ -216,7 +216,7 @@ function createErrorWindow(error) {
 }
 
 function createWelcomeWindow() {
-    welcomeWindow = new BrowserWindow({show: false, frame: true, width: 600, height: 400, /*icon: path.resolve(__dirname, 'icons', 'icon.ico'),*/'minWidth': 600, 'minHeight': 400, transparent: false, title: "unrestrict.me Client", resizable: false})
+    welcomeWindow = new BrowserWindow({show: false, frame: true, width: 600, height: 400, icon: path.resolve(__dirname, 'assets', 'icons', 'win.ico'), 'minWidth': 600, 'minHeight': 400, transparent: false, title: "unrestrict.me Client", resizable: false})
     welcomeWindow.setMenu(null)
     welcomeWindow.loadURL(url.format({
         pathname: path.join(__dirname, 'src/welcome/index.html'),
@@ -235,7 +235,7 @@ function createWelcomeWindow() {
 }
 
 function createMainWindow() {
-    mainWindow = new BrowserWindow({show: false, frame: true, width: 600, height: 400, /*icon: path.resolve(__dirname, 'icons', 'icon.ico'),*/'minWidth': 600, 'minHeight': 400, transparent: false, title: "unrestrict.me Client", resizable: false})
+    mainWindow = new BrowserWindow({show: false, frame: true, width: 600, height: 400, icon: path.resolve(__dirname, 'assets', 'icons', 'win.ico'), 'minWidth': 600, 'minHeight': 400, transparent: false, title: "unrestrict.me Client", resizable: false})
     mainWindow.setMenu(null)
     mainWindow.loadURL(url.format({
         pathname: path.join(__dirname, 'src/main/index.html'),
