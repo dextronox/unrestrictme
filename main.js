@@ -34,7 +34,7 @@ log.transports.file.stream = fs.createWriteStream(path.join(__dirname, 'log.txt'
 //Log
 
 //Definition of global variables
-let loadErrors = {}, loadingWindow, errorWindow, welcomeWindow, mainWindow, apiEndpoint = "http://127.0.0.1:3000"
+let loadErrors = {}, loadingWindow, errorWindow, welcomeWindow, mainWindow, apiEndpoint = "http://127.0.0.1:3000", tray
 
 app.on('ready', () => {
     appStart()
@@ -126,6 +126,7 @@ function checkKeys() {
 }
 
 function createKeys() {
+    log.info(`Main: Generating a new RSA keypair.`)
     let key = new nodersa()
     key.generateKeyPair()
     let publicKey = key.exportKey('public')
@@ -136,7 +137,7 @@ function createKeys() {
         }
         fs.writeFile(path.join(__dirname, 'keys/public'), publicKey, (error) => {
             if (error) {
-                loadErrors["publicKey"] = false
+                loadErrors["publicKey"] = 0
             }
         })
         fs.unlink(path.join(__dirname, 'keys/private'), (error) => {
@@ -145,7 +146,7 @@ function createKeys() {
             }
             fs.writeFile(path.join(__dirname, 'keys/private'), privateKey, (error) => {
                 if (error) {
-                    loadErrors["privateKey"] = false
+                    loadErrors["privateKey"] = 0
                 }
                 evaluateErrors()
             })
@@ -166,7 +167,7 @@ function evaluateErrors() {
         } else if (loadErrors["update"] === 'error') {
             log.info(`Main: Error checking for update.`)
             createErrorWindow(`update`)
-        } else if (!loadErrors["publicKey"] || !loadErrors["privateKey"]) {
+        } else if (loadErrors["publicKey"] === 0|| loadErrors["privateKey"] === 0) {
             createErrorWindow('key')
         } else if (loadErrors["settings"]) {
             if (loadErrors["settings"]=== 'new_install') {
@@ -191,7 +192,7 @@ function createLoadingWindow() {
     loadingWindow.webContents.on('did-finish-load', () => {
         loadingWindow.show()
     })
-    loadingWindow.webContents.openDevTools({mode: "undocked"})
+    //loadingWindow.webContents.openDevTools({mode: "undocked"})
     loadingWindow.setAlwaysOnTop(true)
 }
 
@@ -207,7 +208,7 @@ function createErrorWindow(error) {
         errorWindow.show()
         errorWindow.webContents.send('error', error)
     })
-    errorWindow.webContents.openDevTools({mode: "undocked"})
+    //errorWindow.webContents.openDevTools({mode: "undocked"})
     errorWindow.setAlwaysOnTop(false)
     if (loadingWindow) {
         loadingWindow.close()
@@ -226,7 +227,7 @@ function createWelcomeWindow() {
     welcomeWindow.webContents.on('did-finish-load', () => {
         welcomeWindow.show()
     })
-    welcomeWindow.webContents.openDevTools({mode: "undocked"})
+    //welcomeWindow.webContents.openDevTools({mode: "undocked"})
     welcomeWindow.setAlwaysOnTop(false)
     if (loadingWindow) {
         loadingWindow.close()
@@ -245,8 +246,41 @@ function createMainWindow() {
     mainWindow.webContents.on('did-finish-load', () => {
         mainWindow.show()
     })
-    mainWindow.webContents.openDevTools({mode: "undocked"})
+    //mainWindow.webContents.openDevTools({mode: "undocked"})
     mainWindow.setAlwaysOnTop(false)
+    mainWindow.on('minimize',function(event){
+        event.preventDefault();
+        mainWindow.hide();
+    });
+    
+    mainWindow.on('close', function (event) {
+        if(!app.isQuiting){
+            event.preventDefault();
+            mainWindow.hide();
+        }
+    
+        return false;
+    });
+    
+    tray = new Tray(path.join(__dirname, "assets", "icons", "win.ico"))
+    let contextMenu = Menu.buildFromTemplate([
+        {
+            label: "Show unrestrict.me", click: () => {
+                mainWindow.show()
+            }
+        },
+        {
+            label: "Quit unrestrict.me", click: () => {
+                app.isQuiting = true
+                quit()
+            }
+        }
+    ])
+    tray.setContextMenu(contextMenu)
+    tray.setToolTip('Show unrestrict.me')
+    tray.on('click', () => {
+        mainWindow.show()
+    })
     if (loadingWindow) {
         loadingWindow.close()
         loadingWindow = null
@@ -294,6 +328,27 @@ function update(version) {
     .pipe(fs.createWriteStream('update.exe'));
 }
 
+function quit() {
+    tray.destroy()
+    log.info(`Main: We're about to kill OpenVPN`)
+    exec(`taskkill /IM openvpn.exe /F`, (error, stdout, stderr) => {
+        if (error) {
+            let status = {
+                "disconnectError": true
+            }
+            mainWindow.webContents.send('error', status)
+            app.quit()
+            return
+        }
+        let status = {
+            "connected": false
+        }
+        mainWindow.webContents.send('connection', status)
+        log.info(`Main: OpenVPN was killed`)
+        app.quit()
+    }) 
+}
+
 exports.tap = () => {
     exec(`"${path.join(__dirname, 'assets', 'openvpn', 'tap-windows.exe')}"`, (error, stdout, stderr) => {
         if (error) {
@@ -329,4 +384,68 @@ exports.verify = () => {
 
 exports.connect = (config) => {
     log.info(`Main: Received command to connect OpenVPN with config: ${config}`)
+    fs.writeFile(path.join(__dirname, "current.ovpn"), config, (error) => {
+        if (error) {
+            let status = {
+                "writeError": true
+            }
+            mainWindow.webContents.send('error', status)
+            log.info(`Main: Couldn't write the current openvpn file to disk. Error: ${error}`)
+            return
+        }
+        if (os.platform() === "win32") {
+            log.info(`Main: Going to run: "${path.join(__dirname, "assets", "openvpn", `${os.arch()}`)}\\openvpn.exe" --config "${path.join(__dirname, "current.ovpn")}"`)
+            let ovpnProc = exec(`"${path.join(__dirname, "assets", "openvpn", `${os.arch()}`)}\\openvpn.exe" --config "${path.join(__dirname, "current.ovpn")}"`)
+            ovpnProc.stdout.on('data', (data) => {
+                log.info(`OpenVPN: ${data}`)
+                if (data.includes(`Initialization Sequence Completed`)) {
+                    //Connected to unrestrictme
+                    let status = {
+                        "connected": true
+                    }
+                    mainWindow.webContents.send('connection', status)
+                }
+                if (data.includes(`All TAP-Windows adapters on this system are currently in use.`)) {
+                    //Couldn't connect, some other VPN (maybe us) is already connected
+                    let status = {
+                        "tapError": true
+                    }
+                    mainWindow.webContents.send('error', status)
+                }
+                
+            })
+            ovpnProc.on('close', (data) => {
+                //OpenVPN has closed!
+                let status = {
+                    "connected": false
+                }
+                mainWindow.webContents.send('connection', status)
+                fs.unlink(path.join(__dirname, "current.ovpn"), (error) => {
+                    if (error) {
+                        log.error(`Main: Error deleting previous config file. This shouldn't matter as it will be overwritten.`)
+                    }
+                })
+            })
+        } else {
+            //This needs to be expanded to support other OSs.
+        }
+    }) 
+}
+
+exports.disconnect = () => {
+    log.info(`Main: We're about to kill OpenVPN`)
+    exec(`taskkill /IM openvpn.exe /F`, (error, stdout, stderr) => {
+        if (error) {
+            let status = {
+                "disconnectError": true
+            }
+            mainWindow.webContents.send('error', status)
+            return
+        }
+        let status = {
+            "connected": false
+        }
+        mainWindow.webContents.send('connection', status)
+        log.info(`Main: OpenVPN was killed`)
+    })
 }

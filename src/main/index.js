@@ -1,4 +1,4 @@
-const {remote} = require("electron")
+const {remote, ipcRenderer} = require("electron")
 const app = remote.app
 const $ = jQuery = require('jquery')
 const path = require("path")
@@ -11,6 +11,46 @@ const nodersa = require('node-rsa')
 
 let currentRequestId
 
+$(document).ready(() => {
+    //These are our listeners from the main process.
+    ipcRenderer.on(`connection`, (event, args) => {
+        if (args["connected"]) {
+            //We'd better change the buttons back before
+            $("#loading3").css("display", "none")
+            $("#connectButtons").css("display", "block")
+            //Hide the disconnected view, show the connected view
+            $("#disconnected").css('display', 'none')
+            $("#connected").css('display', 'block')
+        } else {
+            $("#connected").css('display', 'none')
+            $("#disconnected").css('display', 'block')
+        }
+    })
+    //An OpenVPN error occurred.
+    ipcRenderer.on(`error`, (event, args) => {
+        if (args["tapError"]) {
+            //Tell the user
+            swal("Whoops!", "All TAP devices are currently in use. This means there is another VPN connected.", "error")
+            $("#connected").css('display', 'none')
+            $("#disconnected").css('display', 'block')
+            $("#loading3").css("display", "none")
+            $("#connectButtons").css("display", "block")
+        } else if (args["writeError"]) {
+            swal("Whoops!", "We couldn't write the OpenVPN config file to disk.", "error")
+            $("#connected").css('display', 'none')
+            $("#disconnected").css('display', 'block')
+            $("#loading3").css("display", "none")
+            $("#connectButtons").css("display", "block")
+        } else if (args["disconnectError"]) {
+            swal("Whoops!", "We couldn't kill OpenVPN. It's possible it's already closed, in which case this message can be ignored.", "error")
+            $("#connected").css('display', 'none')
+            $("#disconnected").css('display', 'block')
+            $("#loading3").css("display", "none")
+            $("#connectButtons").css("display", "block")
+        }
+    })
+})
+
 $("#connect").on("click", () => {
     $("#connectButtons").css("display", "none")
     $("#loading1").css("display", "block")
@@ -19,6 +59,8 @@ $("#connect").on("click", () => {
         if (error) {
             log.error(`Renderer: Error reading settings file. Error: ${error}`)
             swal("Whoops!", "We were unable to read your settings file. Please try rebooting the client.", "error")
+            $("#loading1").css("display", "none")
+            $("#connectButtons").css("display", "block")
             return;
         }
         settingsFile = JSON.parse(data)
@@ -26,6 +68,8 @@ $("#connect").on("click", () => {
             if (error) {
                 log.error(`Renderer: Error reading public key for new connection request. Error: ${error}`)
                 swal("Whoops!", "We were unable to read your public key file. Try regenerating your keypair from the settings menu.", "error")
+                $("#loading1").css("display", "none")
+                $("#connectButtons").css("display", "block")
                 return;
             }
             log.info(settingsFile)
@@ -55,6 +99,9 @@ $("#connect").on("click", () => {
                 if (error) {
                     log.error(`Renderer: Connection request error. Error: ${error}`)
                     swal("Whoops!", "An error occurred sending a request for a new connection identifier. Check your internet connection.", "error")
+                    $("#loading1").css("display", "none")
+                    $("#connectButtons").css("display", "block")
+                    return
                 }
                 let checkJSON = body["error"]
                 if (checkJSON) {
@@ -97,7 +144,10 @@ $("#connect").on("click", () => {
             })
         })
     })
+})
 
+$("#disconnect").on("click", () => {
+    main.disconnect()
 })
 
 function openWebpage(id) {
@@ -229,4 +279,85 @@ $("#cancelRequest").on("click", () => {
     })
 })
 
+//Settings listeners
+$("#customAPISubmit").on("click", () => {
+    log.info(`Main: Setting custom API`)
+    fs.readFile(path.join(__dirname, "../..", "settings.conf"), (error, data) => {
+        if (error) {
+            log.error(`Main: Error reading settings file. Error: ${error}`)
+            swal("Whoops!", "We can't read the settings.conf file.", "error")
+            return
+        }
+        let current = JSON.parse(data)
+        current["customAPI"] = $("#customAPI").val()
+        fs.writeFile(path.join(__dirname, "../..", "settings.conf"), JSON.stringify(current), (error) => {
+            if (error) {
+                log.error(`Main: Error writing to settings file. Error: ${error}`)
+                swal("Whoops!", "We can't write to the settings.conf file.", "error")
+                return
+            }
+            $("#customAPI").val('')
+            $("#settings").modal('toggle')
+        })
+    })
+})
 
+$("#customWebpageSubmit").on("click", () => {
+    log.info(`Main: Setting custom webpage`)
+    fs.readFile(path.join(__dirname, "../..", "settings.conf"), (error, data) => {
+        if (error) {
+            log.error(`Main: Error reading settings file. Error: ${error}`)
+            swal("Whoops!", "We can't read the settings.conf file.", "error")
+            return
+        }
+        let current = JSON.parse(data)
+        current["customWebpage"] = $("#customWebpage").val()
+        fs.writeFile(path.join(__dirname, "../..", "settings.conf"), JSON.stringify(current), (error) => {
+            if (error) {
+                log.error(`Main: Error writing to settings file. Error: ${error}`)
+                swal("Whoops!", "We can't write to the settings.conf file.", "error")
+                return
+            }
+            $("#customWebpage").val('')
+            $("#settings").modal('toggle')
+        })
+    })
+})
+
+$("#rsa_regen").on("click", () => {
+    log.info(`Main: Regenerating RSA keypair`)
+    let key = new nodersa()
+    key.generateKeyPair()
+    let publicKey = key.exportKey('public')
+    let privateKey = key.exportKey('private')
+    fs.unlink(path.join(__dirname, '../..', 'keys/public'), (error) => {
+        if (error) {
+            log.error(`Main: Error occurred deleting public key. Error: ${error}`)
+            swal("Whoops!", "We couldn't delete the original public key.", "error")
+            return;
+        }
+        fs.writeFile(path.join(__dirname, '../..', 'keys/public'), publicKey, (error) => {
+            if (error) {
+                log.error(`Main: Error occurred writing the public key. Error: ${error}`)
+                swal("Whoops!", "We couldn't write the new public key.", "error")
+                return;
+            }
+        })
+        fs.unlink(path.join(__dirname, '../..', 'keys/private'), (error) => {
+            if (error) {
+                log.error(`Main: Error occurred deleting private key. Error: ${error}`)
+                swal("Whoops!", "We couldn't delete the original private key.", "error")
+                return
+            }
+            fs.writeFile(path.join(__dirname, '../..', 'keys/private'), privateKey, (error) => {
+                if (error) {
+                    log.error(`Main: Error occurred writing the private key. Error: ${error}`)
+                    swal("Whoops!", "We couldn't write the new private key.", "error")
+                    return
+                }
+                swal("Success!", "RSA keypair regenerated.", "success")
+                $("#settings").modal('toggle')
+            })
+        })
+    })
+})

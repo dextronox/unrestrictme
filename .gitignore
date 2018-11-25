@@ -63,5 +63,6 @@ typings/
 # update.exe
 update.exe
 log.txt
-log.txt
-log.txt
+settings.conf
+keys/*
+!keys/about

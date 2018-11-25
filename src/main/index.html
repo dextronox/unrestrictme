@@ -12,7 +12,7 @@
     <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
         <a class="navbar-brand" style="color: white">unrestrict.me</a>
     </nav>
-    <div class="container prompt">
+    <div id="disconnected" class="container prompt">
         <h1>Welcome.</h1>
         <p>We're ready to connect. Click the button below to begin.</p>
         <div id="connectButtons">
@@ -37,6 +37,14 @@
             </div>
         </div>
     </div>
+    <div id="connected" class="container prompt" style="display: none">
+        <h1>Browsing securely.</h1>
+        <p>Your traffic is currently being routed through unrestrict.me.</p>
+        <div id="disconnectButtons">
+            <button type="button" class="btn btn-danger btn-lg" id="disconnect">Disconnect from unrestrict.me</button>
+            <button type="button" class="btn btn-secondary btn-lg" data-toggle="modal" data-target="#settings">Settings</button>
+        </div>
+    </div>
     <div class="modal fade" id="settings" tabindex="-1" role="dialog" aria-labelledby="settings" aria-hidden="true">
         <div class="modal-dialog" role="document">
             <div class="modal-content">
@@ -50,22 +58,20 @@
                 <p>unrestrict.me should work 'out of the box', and modifying these settings isn't necessary for the average user. If anything breaks, click "Reset Config".</p>
                 <h5>Custom API Server</h5>
                 <p>Input a custom API server for unrestrict.me to send requests.</p>
-                <form>
-                    <fieldset>
-                        <div class="form-group">
-                            <textarea class="form-control" id="customAPI" rows="1"></textarea>
-                        </div>
-                    </fieldset>
-                </form>
+                <div class="input-group mb-3">
+                    <input id="customAPI" type="text" class="form-control" placeholder="https://..." aria-describedby="basic-addon2">
+                    <div class="input-group-append">
+                        <button id="customAPISubmit" class="btn btn-outline-secondary" type="button">Save</button>
+                    </div>
+                </div>
                 <h5>Custom Webpage</h5>
                 <p>Input a custom webpage for unrestrict.me to navigate you to complete the connection.</p>
-                <form>
-                    <fieldset>
-                        <div class="form-group">
-                            <textarea class="form-control" id="customWebpage" rows="1"></textarea>
-                        </div>
-                    </fieldset>
-                </form>
+                <div class="input-group mb-3">
+                    <input id="customWebpage" type="text" class="form-control" placeholder="https://..." aria-describedby="basic-addon2">
+                    <div class="input-group-append">
+                        <button id="customWebpageSubmit" class="btn btn-outline-secondary" type="button">Save</button>
+                    </div>
+                </div>
                 <h5>Regenerate RSA Keypair</h5>
                 <p>This option regenerates the stored RSA keypair. Any pending connections will be impossible to complete.</p>
                 <button type="button" class="btn btn-danger" id="rsa_regen">Regenerate RSA Keypair</button>
