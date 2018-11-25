@@ -419,7 +419,9 @@ exports.connect = (config) => {
                 let status = {
                     "connected": false
                 }
-                mainWindow.webContents.send('connection', status)
+                if (mainWindow) {
+                    mainWindow.webContents.send('connection', status)
+                }
                 fs.unlink(path.join(__dirname, "current.ovpn"), (error) => {
                     if (error) {
                         log.error(`Main: Error deleting previous config file. This shouldn't matter as it will be overwritten.`)

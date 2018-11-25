@@ -127,16 +127,24 @@ $("#connect").on("click", () => {
                             return
                         }
                         key.importKey(data, 'private')
-                        let decryptedResponse = JSON.parse(key.decrypt(body, 'utf8'))
-                        if (decryptedResponse["success"]) {
-                            log.info(`Renderer: API server created request!`)
-                            openWebpage(decryptedResponse["id"])
-                        } else {
-                            log.error(`Renderer: API server unable to fulfil.`)
-                            swal('Whoops!', "Something went wrong on our end creating your connection request.", "error")
+                        try {
+                            let decryptedResponse = JSON.parse(key.decrypt(body, 'utf8'))
+                            if (decryptedResponse["success"]) {
+                                log.info(`Renderer: API server created request!`)
+                                openWebpage(decryptedResponse["id"])
+                            } else {
+                                log.error(`Renderer: API server unable to fulfil.`)
+                                swal('Whoops!', "Something went wrong on our end creating your connection request.", "error")
+                                $("#loading1").css("display", "none")
+                                $("#connectButtons").css("display", "block")
+                            }
+                        } catch(e) {
+                            log.error(`Renderer: API server sent a response but it wasn't encrypted. Unexpected. Error: ${e}`)
+                            swal("Whoops!", "We received a reponse from the API server, but it wasn't in the format we expected. This is probably a fault on our end.", "error")
                             $("#loading1").css("display", "none")
                             $("#connectButtons").css("display", "block")
                         }
+
                         
                     })
                 }
