@@ -52,6 +52,7 @@ $(document).ready(() => {
 })
 
 $("#connect").on("click", () => {
+    log.info(`Renderer: Creating connection request.`)
     $("#connectButtons").css("display", "none")
     $("#loading1").css("display", "block")
     let settingsFile, requestConfig
@@ -72,7 +73,6 @@ $("#connect").on("click", () => {
                 $("#connectButtons").css("display", "block")
                 return;
             }
-            log.info(settingsFile)
             if (settingsFile["customAPI"]) {
                 log.info(`Renderer: Using custom API entry.`)
                 requestConfig = {
@@ -276,7 +276,7 @@ $("#cancelRequest").on("click", () => {
                 log.info(`Renderer: Request cancelled.`)
                 $("#loading2").css("display", "none")
                 $("#connectButtons").css("display", "block")
-                swal("Success", "Your connection request has been cancelled.", "success")
+                swal("Success!", "Your connection request has been cancelled.", "success")
             } else if (body["error"] === "id") {
                 log.info(`Renderer: Error cancelling request. Id was not found.`)
                 $("#loading2").css("display", "none")
@@ -289,10 +289,10 @@ $("#cancelRequest").on("click", () => {
 
 //Settings listeners
 $("#customAPISubmit").on("click", () => {
-    log.info(`Main: Setting custom API`)
+    log.info(`Renderer: Setting custom API`)
     fs.readFile(path.join(__dirname, "../..", "settings.conf"), (error, data) => {
         if (error) {
-            log.error(`Main: Error reading settings file. Error: ${error}`)
+            log.error(`Renderer: Error reading settings file. Error: ${error}`)
             swal("Whoops!", "We can't read the settings.conf file.", "error")
             return
         }
@@ -300,10 +300,11 @@ $("#customAPISubmit").on("click", () => {
         current["customAPI"] = $("#customAPI").val()
         fs.writeFile(path.join(__dirname, "../..", "settings.conf"), JSON.stringify(current), (error) => {
             if (error) {
-                log.error(`Main: Error writing to settings file. Error: ${error}`)
+                log.error(`Renderer: Error writing to settings file. Error: ${error}`)
                 swal("Whoops!", "We can't write to the settings.conf file.", "error")
                 return
             }
+            log.info(`Renderer: Custom API set.`)
             $("#customAPI").val('')
             $("#settings").modal('toggle')
         })
@@ -311,10 +312,10 @@ $("#customAPISubmit").on("click", () => {
 })
 
 $("#customWebpageSubmit").on("click", () => {
-    log.info(`Main: Setting custom webpage`)
+    log.info(`Renderer: Setting custom webpage`)
     fs.readFile(path.join(__dirname, "../..", "settings.conf"), (error, data) => {
         if (error) {
-            log.error(`Main: Error reading settings file. Error: ${error}`)
+            log.error(`Renderer: Error reading settings file. Error: ${error}`)
             swal("Whoops!", "We can't read the settings.conf file.", "error")
             return
         }
@@ -322,10 +323,11 @@ $("#customWebpageSubmit").on("click", () => {
         current["customWebpage"] = $("#customWebpage").val()
         fs.writeFile(path.join(__dirname, "../..", "settings.conf"), JSON.stringify(current), (error) => {
             if (error) {
-                log.error(`Main: Error writing to settings file. Error: ${error}`)
+                log.error(`Renderer: Error writing to settings file. Error: ${error}`)
                 swal("Whoops!", "We can't write to the settings.conf file.", "error")
                 return
             }
+            log.info(`Renderer: Custom webpage set.`)
             $("#customWebpage").val('')
             $("#settings").modal('toggle')
         })
@@ -333,39 +335,55 @@ $("#customWebpageSubmit").on("click", () => {
 })
 
 $("#rsa_regen").on("click", () => {
-    log.info(`Main: Regenerating RSA keypair`)
+    log.info(`Renderer: Regenerating RSA keypair`)
     let key = new nodersa()
     key.generateKeyPair()
     let publicKey = key.exportKey('public')
     let privateKey = key.exportKey('private')
     fs.unlink(path.join(__dirname, '../..', 'keys/public'), (error) => {
         if (error) {
-            log.error(`Main: Error occurred deleting public key. Error: ${error}`)
+            log.error(`Renderer: Error occurred deleting public key. Error: ${error}`)
             swal("Whoops!", "We couldn't delete the original public key.", "error")
             return;
         }
         fs.writeFile(path.join(__dirname, '../..', 'keys/public'), publicKey, (error) => {
             if (error) {
-                log.error(`Main: Error occurred writing the public key. Error: ${error}`)
+                log.error(`Renderer: Error occurred writing the public key. Error: ${error}`)
                 swal("Whoops!", "We couldn't write the new public key.", "error")
                 return;
             }
         })
         fs.unlink(path.join(__dirname, '../..', 'keys/private'), (error) => {
             if (error) {
-                log.error(`Main: Error occurred deleting private key. Error: ${error}`)
+                log.error(`Renderer: Error occurred deleting private key. Error: ${error}`)
                 swal("Whoops!", "We couldn't delete the original private key.", "error")
                 return
             }
             fs.writeFile(path.join(__dirname, '../..', 'keys/private'), privateKey, (error) => {
                 if (error) {
-                    log.error(`Main: Error occurred writing the private key. Error: ${error}`)
+                    log.error(`Renderer: Error occurred writing the private key. Error: ${error}`)
                     swal("Whoops!", "We couldn't write the new private key.", "error")
                     return
                 }
+                log.info(`Renderer: RSA keypair regenerated.`)
                 swal("Success!", "RSA keypair regenerated.", "success")
                 $("#settings").modal('toggle')
             })
         })
+    })
+})
+
+$("#reset").on("click", () => {
+    log.info(`Resetting config.`)
+    let content = JSON.stringify({})
+    fs.writeFile(path.join(__dirname, "../..", "settings.conf"), content, (error) => {
+        if (error) {
+            log.error(`Renderer: Error writing the settings file. Error: ${error}`)
+            swal("Whoops!", "We can't write the settings.conf file.", "error")
+            return
+        }
+        log.info(`Renderer: Config file reset!`)
+        swal("Success!", "The config file has been reset. All settings are now at default.", "success")
+        $("#settings").modal('toggle')
     })
 })
