@@ -1,8 +1,30 @@
-const {remote} = require("electron")
+const {remote, ipcRenderer} = require("electron")
 const app = remote.app
 const $ = jQuery = require('jquery')
 const path = require("path")
 const main = remote.require(path.resolve(__dirname, '../..', 'main.js'))
+const swal = require('sweetalert')
+
+$(document).ready(() => {
+    ipcRenderer.once(`error`, (event, args) => {
+        if (args["error"] === "writeError") {
+            swal("Whoops!", "We couldn't write your settings file to disk. The application will now restart.", "error").then(() => {
+                app.relaunch()
+                app.quit()
+            })
+        } else if (args["error"] === "tapVerify") {
+            swal("Whoops!", "We couldn't verify that the TAP driver installed correctly. Check the log.txt for more information. The application will now restart.", "error").then(() => {
+                app.relaunch()
+                app.quit()
+            })
+        } else if (args["error"] === "tapInstall") {
+            swal("Whoops!", "The TAP driver did not install correctly, as it is not being seen by the OpenVPN daemon. Check the log.txt for more information. The application will now restart.", "error").then(() => {
+                app.relaunch()
+                app.quit()
+            })
+        }
+    })
+})
 
 $("#step1_button").on("click", () => {
     $("#step1").css("display", "none")

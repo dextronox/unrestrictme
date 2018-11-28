@@ -18,5 +18,7 @@ function loadPage(type) {
         $("#elevate").css('display', 'block')
     } else if (type === "key") {
         $("#key").css('display', 'block')
+    } else if (type === "updateRun") {
+        $("#updateRun").css('display', 'block')
     }
 }

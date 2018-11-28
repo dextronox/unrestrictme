@@ -32,6 +32,11 @@
         <p>unrestrict.me couldn't generate a RSA keypair, used to securely receive information from the API server. </p>
         <p>Check to make sure unrestrict.me has directory permissions. Refer to log.txt for more information.</p>
     </div>
+    <div id="updateRun" class="container prompt" style="display:none">
+        <h1>Uh oh, something's wrong.</h1>
+        <p>We couldn't run the update file. It's mandatory that all installations of unrestrict.me run the latest client version to ensure they remain compatible with our network, and to make sure everyone is protected from possible security vulnerabilities.</p>
+        <p>Refer to the log.txt file for more information.</p>
+    </div>
     <div class="modal fade" id="why" tabindex="-1" role="dialog" aria-labelledby="why" aria-hidden="true">
         <div class="modal-dialog" role="document">
             <div class="modal-content">
@@ -43,6 +48,46 @@
             </div>
             <div class="modal-body">
                 In order for a VPN to work, it needs to make modifications to the system routing table. In essence, it needs to redirect traffic through the VPN as oppose to how it would normally be routed. This is not something that can be done without administrator privileges on most platforms. Whilst workarounds exist, we haven't found them to work consistently across all platforms. If you're worried about us doing anything malicious, you're free to inspect the source code and build the client yourself from the Github repository.
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+            </div>
+            </div>
+        </div>
+    </div>    
+    <div class="modal fade" id="settings" tabindex="-1" role="dialog" aria-labelledby="settings" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Settings</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <p>unrestrict.me should work 'out of the box', and modifying these settings isn't necessary for the average user. If anything breaks, click "Reset Config".</p>
+                <h5>Custom API Server</h5>
+                <p>Input a custom API server for unrestrict.me to send requests.</p>
+                <div class="input-group mb-3">
+                    <input id="customAPI" type="text" class="form-control" placeholder="https://..." aria-describedby="basic-addon2">
+                    <div class="input-group-append">
+                        <button id="customAPISubmit" class="btn btn-outline-secondary" type="button">Save</button>
+                    </div>
+                </div>
+                <h5>Custom Webpage</h5>
+                <p>Input a custom webpage for unrestrict.me to navigate you to complete the connection.</p>
+                <div class="input-group mb-3">
+                    <input id="customWebpage" type="text" class="form-control" placeholder="https://..." aria-describedby="basic-addon2">
+                    <div class="input-group-append">
+                        <button id="customWebpageSubmit" class="btn btn-outline-secondary" type="button">Save</button>
+                    </div>
+                </div>
+                <h5>Regenerate RSA Keypair</h5>
+                <p>This option regenerates the stored RSA keypair. Any pending connections will be impossible to complete.</p>
+                <button type="button" class="btn btn-danger" id="rsa_regen">Regenerate RSA Keypair</button>
+                <h5>Reset Config</h5>
+                <p>This option resets unrestrict.me to default settings.</p>
+                <button type="button" class="btn btn-danger" id="reset">Reset Config</button>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>

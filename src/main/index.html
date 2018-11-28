@@ -21,18 +21,18 @@
         </div>
         <div id="loading1" style="display:none;">
             <div class="alert alert-dismissible alert-secondary">
-                <strong>Creating request.</strong> <p>We're generating a unique request ID for you now. Please wait. You'll be redirected to a webpage for you to choose your preferred location.</p>
+                <strong>(1) Creating request.</strong> <p>We're generating a unique request ID for you now. Please wait. You'll be redirected to a webpage for you to choose your preferred location.</p>
             </div>
         </div>
         <div id="loading2" style="display:none;">
             <div class="alert alert-dismissible alert-success">
-                <strong>Request created.</strong> <p>Please complete the connection in your browser. Once you've selected a location, we'll automatically connect.</p>
+                <strong>(2) Request created.</strong> <p>Please complete the connection in your browser. Once you've selected a location, we'll automatically connect.</p>
                 <button id="cancelRequest" type="button" class="btn btn-danger btn-lg btn-block">Cancel request</button>
             </div>
         </div>
         <div id="loading3" style="display:none;">
             <div class="alert alert-dismissible alert-success">
-                <strong>Location selected.</strong> <p>We're now connecting you to unrestrict.me. The connection should complete momentarily.</p>
+                <strong>(3) Location selected.</strong> <p>We're now connecting you to unrestrict.me. The connection should complete momentarily.</p>
                 <button id="cancelConnection" type="button" class="btn btn-danger btn-lg btn-block">Cancel connection</button>
             </div>
         </div>
@@ -84,6 +84,27 @@
             </div>
             </div>
         </div>
+    </div>
+    <div class="modal fade" id="legal" tabindex="-1" role="dialog" aria-labelledby="legal" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Legal</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <p>unrestrict.me is an Electron application built using open source NodeJS modules. OpenVPN is a registered trademark of OpenVPN Inc.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+            </div>
+            </div>
+        </div>
+    </div>
+    <div class="footer">
+        <p>&copy unrestrict.me <script type="text/javascript">document.write(new Date().getFullYear());</script>. | <a data-toggle="modal" href="#legal">Legal</a></p>
     </div>
 </body>
 <script>

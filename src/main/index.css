@@ -8,10 +8,17 @@ body {
 
 h1 {
     pointer-events: none;
+    user-select: none;
 }
 
 p {
     pointer-events: none;
+    user-select: none;
+}
+
+p a {
+    pointer-events: all;
+    user-select: none;
 }
 
 .btn {
@@ -20,8 +27,15 @@ p {
 
 .navbar {
     pointer-events: none;
+    user-select: none;
 }
 
+.footer {
+    bottom: 0;
+    width: 100%;
+    position: fixed;
+    text-align: center;
+}
 /*!
  * Load Awesome v1.1.0 (http://github.danielcardoso.net/load-awesome/)
  * Copyright 2015 Daniel Cardoso <@DanielCardoso>

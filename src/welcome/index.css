@@ -8,10 +8,13 @@ body {
 
 h1 {
     pointer-events: none;
+    user-select: none;
 }
 p {
     pointer-events: none;
+    user-select: none;
 }
 .navbar {
     pointer-events: none;
+    user-select: none;
 }

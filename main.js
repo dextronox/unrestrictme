@@ -73,11 +73,12 @@ function checkSettings() {
         if (String(error).includes('ENOENT')) {
             log.error("Main: settings.conf does not exist! Assuming new installation.")
             loadErrors["settings"] = 'new_install'
-            checkForUpdates()
+            //Go straight to new install wizard. Skip other checks as they rely on the settings.conf file.
+            evaluateErrors()
         } else if (error) {
             log.error(`Main: Unknown error reading settings.conf. Error: ${error}`)
             loadErrors["settings"] = `${error}`
-            checkForUpdates()
+            evaluateErrors()
         } else {
             log.info("Main: settings.conf found!")
             checkForUpdates()
@@ -86,23 +87,39 @@ function checkSettings() {
 }
 
 function checkForUpdates() {
-    let requestConfig = {
-        url: `${apiEndpoint}/client/version`,
-        method: `get`,
-        timeout: `5000`
-    }
-    request(requestConfig, (error, response, body) => {
-        if (error) {
-            log.error(`Main: Error checking for updates. Error: ${error}`)
-            loadErrors["update"] = `error`
-            checkKeys()
-        } else if (parseFloat(body) <= parseFloat(app.getVersion())){
-            log.info(`Main: Already on newest or newer version than publicly available.`)
-            checkKeys()
+    //This grabs the latest version number from the API
+    let requestConfig, settingsFile
+    log.info(`Main: Checking for updates.`)
+    fs.readFile(path.join(__dirname, 'settings.conf'), 'utf8', (error, data) => {
+        settingsFile = JSON.parse(data)
+        if (settingsFile["customAPI"]) {
+            log.info(`Main: Using custom API.`)
+            requestConfig = {
+                url: `${settingsFile["customAPI"]}/client/version`,
+                timeout: 5000,
+                method: "GET"
+            } 
         } else {
-            log.info(`Main: New version available. New version: ${body}. Current version: ${app.getVersion()}`)
-            update(body)
+            log.info(`Main: Using normal API.`)
+            requestConfig = {
+                url: `https://api.unrestrict.me/client/version`,
+                timeout: 5000,
+                method: "GET"
+            }
         }
+        request(requestConfig, (error, response, body) => {
+            if (error) {
+                log.error(`Main: Error checking for updates. Error: ${error}`)
+                loadErrors["update"] = `error`
+                checkKeys()
+            } else if (parseFloat(body) <= parseFloat(app.getVersion())){
+                log.info(`Main: Already on newest or newer version than publicly available.`)
+                checkKeys()
+            } else {
+                log.info(`Main: New version available. New version: ${body}. Current version: ${app.getVersion()}`)
+                update(body)
+            }
+        })
     })
 }
 
@@ -293,39 +310,66 @@ function createMainWindow() {
 
 //Handles application updates
 function update(version) {
+    let settingsFile, requestConfig
     fs.unlink(path.join(__dirname, 'update.exe'), (error) => {
         if (error) {
             log.error(`Main: Error deleting past update file. This is probably fine because it doesn't exist. Should write over anyway. Error: ${error}`)
         }
     })
-    requestConfig = {
-        url: `https://syd-au-ping.vultr.com/vultr.com.1000MB.bin`,
-        method: `get`,
-        timeout: 15000
-    }
-    progress(request(requestConfig), {
-        throttle: 100
-    })
-    .on('progress', function (state) {
-        log.info(`${state.percent}`)
-        let send = {
-            percent: state.percent,
-            speed: state.speed,
-            remaining: state.time.remaining
-        }
-        if (loadingWindow) {
-            loadingWindow.webContents.send('update', send)
-        }
-    })
-    .on('error', function (error) {
+    fs.readFile(path.join(__dirname, 'settings.conf'), 'utf8', (error, data) => {
         if (error) {
-            log.error(`Main: An error occurred downloading the update. Error: ${error}`)
+            log.error(`Main: Error reading config file whilst attempting to update. Error: ${error}`)
+            createErrorWindow("settings")
+            return;
         }
+        settingsFile = JSON.parse(data)
+        if (settingsFile["customAPI"]) {
+            log.info(`Main: Using custom API.`)
+            requestConfig = {
+                url: `${settingsFile["customAPI"]}/client/builds/${version}/${os.platform()}/${os.arch()}.exe`,
+                timeout: 5000,
+                method: "GET"
+            } 
+        } else {
+            log.info(`Main: Using normal API.`)
+            requestConfig = {
+                url: `https://api.unrestrict.me/client/builds/${version}/${os.platform()}/${os.arch()}.exe`,
+                timeout: 5000,
+                method: "GET"
+            }
+        }
+        progress(request(requestConfig), {
+            throttle: 100
+        })
+        .on('progress', function (state) {
+            log.info(`${state.percent}`)
+            let send = {
+                percent: state.percent,
+                speed: state.speed,
+                remaining: state.time.remaining
+            }
+            if (loadingWindow) {
+                loadingWindow.webContents.send('update', send)
+            }
+        })
+        .on('error', function (error) {
+            if (error) {
+                log.error(`Main: An error occurred downloading the update. Error: ${error}`)
+            }
+        })
+        .on('end', function () {
+            // Run update file
+            exec(`${path.join(__dirname, "update.exe")}`, (error, stdout, stderr) => {
+                if (error) {
+                    log.error(`Main: Could not run update package. Error window will be opened. Error: ${error}`)
+                    createErrorWindow("updateRun")
+                } else {
+                    app.quit()
+                }
+            })
+        })
+        .pipe(fs.createWriteStream('update.exe'));
     })
-    .on('end', function () {
-        // Do something after request finishes
-    })
-    .pipe(fs.createWriteStream('update.exe'));
 }
 
 function quit() {
@@ -360,26 +404,37 @@ exports.tap = () => {
 }
 
 exports.verify = () => {
-    if (os.arch() === "x64") {
-        exec(`"${path.join(__dirname, 'assets', 'openvpn', 'x64', 'openvpn.exe')}" --show-adapters`, (error, stdout, stderr) => {
-            if (error) {
-                log.error(`Main: Could not verify TAP installation. Error: ${error}`)
-            } else if ((stdout.replace('Available TAP-WIN32 adapters [name, GUID]:', '')).replace(/\s/g, '') === "") {
-                log.error(`Main: Install was a failure! Log: ${stdout}`)
-            } else {
-                log.info(`Main: ${stdout}`)
-                let settings = {}
-                fs.writeFile(path.join(__dirname, 'settings.conf'), JSON.stringify(settings), (error) => {
-                    if (error) {
-                        log.error(`Main: Error ocurred writing settings file. Permissions error perhaps?`)
-                    } else {
-                        log.info(`Main: Settings file created!`)
-                        createMainWindow()
-                    }
-                })
+    exec(`"${path.join(__dirname, 'assets', 'openvpn', `${os.arch()}`, 'openvpn.exe')}" --show-adapters`, (error, stdout, stderr) => {
+        if (error) {
+            log.error(`Main: Could not verify TAP installation. Error: ${error}`)
+            let error = {
+                "error": "tapVerify"
             }
-        })
-    }   
+            welcomeWindow.webContents.send("error", error)
+        } else if ((stdout.replace('Available TAP-WIN32 adapters [name, GUID]:', '')).replace(/\s/g, '') === "") {
+            log.error(`Main: Install was a failure! Log: ${stdout}`)
+            let error = {
+                "error": "tapInstall"
+            }
+            welcomeWindow.webContents.send("error", error)
+        } else {
+            log.info(`Main: ${stdout}`)
+            let settings = {}
+            fs.writeFile(path.join(__dirname, 'settings.conf'), JSON.stringify(settings), (error) => {
+                if (error) {
+                    log.error(`Main: Error occurred writing settings file. Permissions error perhaps?`)
+                    let error = {
+                        "error": "writeError"
+                    }
+                    welcomeWindow.webContents.send("error", error)
+                } else {
+                    log.info(`Main: Settings file created!`)
+                    app.relaunch()
+                    app.quit()
+                }
+            })
+        }
+    })
 }
 
 exports.connect = (config) => {
@@ -435,9 +490,10 @@ exports.connect = (config) => {
 }
 
 exports.disconnect = () => {
-    log.info(`Main: We're about to kill OpenVPN`)
+    log.info(`Main: We're about to kill OpenVPN. If OpenVPN is not running, you will see no confirmation it wasn't killed.`)
     exec(`taskkill /IM openvpn.exe /F`, (error, stdout, stderr) => {
         if (error) {
+            log.error(`Main: Error killing OpenVPN. Error: ${error}`)
             let status = {
                 "disconnectError": true
             }
