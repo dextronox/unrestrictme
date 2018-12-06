@@ -287,7 +287,7 @@ function createMainWindow() {
             }
         },
         {
-            label: "Quit unrestrict.me", click: () => {
+            label: "Quit", click: () => {
                 app.isQuiting = true
                 quit()
             }
