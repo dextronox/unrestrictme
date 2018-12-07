@@ -18,12 +18,19 @@ $(document).ready(() => {
             //We'd better change the buttons back before
             $("#loading3").css("display", "none")
             $("#connectButtons").css("display", "block")
-            //Hide the disconnected view, show the connected view
+            //Hide the disconnected view, show the connected view and display alert
             $("#disconnected").css('display', 'none')
             $("#connected").css('display', 'block')
         } else {
-            $("#connected").css('display', 'none')
-            $("#disconnected").css('display', 'block')
+            if ($("#connected").css('display') === 'none') {
+                $("#loading3").css("display", "none")
+                $("#connectButtons").css("display", "block")
+                swal("Whoops!", "We were unable to connect you to unrestrict.me.", "error")
+            } else {
+                $("#connected").css('display', 'none')
+                $("#disconnected").css('display', 'block')
+                swal("Success!", "You have been disconnected from unrestrict.me.", "success")
+            }
         }
     })
     //An OpenVPN error occurred.
@@ -47,6 +54,21 @@ $(document).ready(() => {
             $("#disconnected").css('display', 'block')
             $("#loading3").css("display", "none")
             $("#connectButtons").css("display", "block")
+        }
+    })
+    ipcRenderer.on(`killSwitch`, (event, args) => {
+        //Kill switch has been triggered
+        if (args["enabled"]) {
+            $("#connected").css('display', 'none')
+            $("#disconnected").css('display', 'none')
+            $("#killSwitch").css("display", "block")
+        } else if (!args["enabled"]) {
+            $("#killSwitch").css("display", "none")
+            $("#disconnected").css('display', 'block')
+        } else if (args["error"] === "disable") {
+            swal("Whoops!", "We were unable to disable the kill switch.", "error")
+        } else if (args["error"] === "enable") {
+            swal("Whoops!", "We were unable to enable the kill switch.", "error")
         }
     })
 })
@@ -386,4 +408,18 @@ $("#reset").on("click", () => {
         swal("Success!", "The config file has been reset. All settings are now at default.", "success")
         $("#settings").modal('toggle')
     })
+})
+
+$("#disableKillSwitch").on("click", () => {
+    swal({
+        title: "Are you sure?",
+        text: "Disabling the kill switch will reconnect you to the internet.",
+        icon: "warning",
+        buttons: true,
+        dangerMode: true,
+    }).then((willDisable) => {
+        if (willDisable) {
+            main.disableKillSwitch()
+        }
+    });
 })

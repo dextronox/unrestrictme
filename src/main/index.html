@@ -40,10 +40,20 @@
     <div id="connected" class="container prompt" style="display: none">
         <h1>Browsing securely.</h1>
         <p>Your traffic is currently being routed through unrestrict.me.</p>
-        <div id="disconnectButtons">
+        <div id="disconnectButtons" class="disconnectButtons">
             <button type="button" class="btn btn-danger btn-lg" id="disconnect">Disconnect from unrestrict.me</button>
             <button type="button" class="btn btn-secondary btn-lg" data-toggle="modal" data-target="#settings">Settings</button>
         </div>
+        <div class="alert alert-dismissible alert-secondary">
+            <b>Your IP: </b><p id="placeholderIP" style="display: inline">1.1.1.1</p><br>
+            <b>Your Connection ID: </b><p id="placeholderConnectionID" style="display: inline">1.1.1.1</p><br>
+            <b>Time Remaining: </b><p id="placeholderConnectionID" style="display: inline">1.1.1.1</p>
+        </div>
+    </div>
+    <div id="killSwitch" class="container prompt" style="display: none">
+        <h1>Kill Switch Failsafe Active</h1>
+        <p>Due to an unknown reason connection to unrestrict.me has been dropped. To prevent possible snooping and IP leaks we've disabled your connection to the internet.</p>
+        <button type="button" class="btn btn-danger btn-lg" id="disableKillSwitch">Disable Kill Switch</button>
     </div>
     <div class="modal fade" id="settings" tabindex="-1" role="dialog" aria-labelledby="settings" aria-hidden="true">
         <div class="modal-dialog" role="document">

@@ -11,6 +11,7 @@ const exec = require('child_process').exec
 const request = require("request")
 const progress = require("request-progress")
 const nodersa = require('node-rsa')
+const network = require("network")
 
 //Log
 // Same as for console transport
@@ -34,7 +35,7 @@ log.transports.file.stream = fs.createWriteStream(path.join(__dirname, 'log.txt'
 //Log
 
 //Definition of global variables
-let loadErrors = {}, loadingWindow, errorWindow, welcomeWindow, mainWindow, apiEndpoint = "http://127.0.0.1:3000", tray
+let loadErrors = {}, loadingWindow, errorWindow, welcomeWindow, mainWindow, tray, killSwitchStatus, intentionalDisconnect
 
 app.on('ready', () => {
     appStart()
@@ -263,7 +264,7 @@ function createMainWindow() {
     mainWindow.webContents.on('did-finish-load', () => {
         mainWindow.show()
     })
-    //mainWindow.webContents.openDevTools({mode: "undocked"})
+    mainWindow.webContents.openDevTools({mode: "undocked"})
     mainWindow.setAlwaysOnTop(false)
     mainWindow.on('minimize',function(event){
         event.preventDefault();
@@ -380,14 +381,22 @@ function quit() {
             let status = {
                 "disconnectError": true
             }
-            mainWindow.webContents.send('error', status)
+            try {
+                mainWindow.webContents.send('error', status)
+            } catch(e) {
+                log.error(`Main: Couldn't send OpenVPN status to renderer. Error: ${e}`)
+            }
             app.quit()
             return
         }
         let status = {
             "connected": false
         }
-        mainWindow.webContents.send('connection', status)
+        try {
+            mainWindow.webContents.send('connection', status)
+        } catch(e) {
+            log.error(`Main: Couldn't send OpenVPN status to renderer. Error: ${e}`)
+        }
         log.info(`Main: OpenVPN was killed`)
         app.quit()
     }) 
@@ -438,19 +447,24 @@ exports.verify = () => {
 }
 
 exports.connect = (config) => {
+    intentionalDisconnect = false
     log.info(`Main: Received command to connect OpenVPN with config: ${config}`)
     fs.writeFile(path.join(__dirname, "current.ovpn"), config, (error) => {
         if (error) {
             let status = {
                 "writeError": true
             }
-            mainWindow.webContents.send('error', status)
+            try {
+                mainWindow.webContents.send('error', status)
+            } catch(e) {
+                log.error(`Main: Couldn't send OpenVPN status to renderer. Error: ${e}`)
+            }
             log.info(`Main: Couldn't write the current openvpn file to disk. Error: ${error}`)
             return
         }
         if (os.platform() === "win32") {
-            log.info(`Main: Going to run: "${path.join(__dirname, "assets", "openvpn", `${os.arch()}`)}\\openvpn.exe" --config "${path.join(__dirname, "current.ovpn")}"`)
-            let ovpnProc = exec(`"${path.join(__dirname, "assets", "openvpn", `${os.arch()}`)}\\openvpn.exe" --config "${path.join(__dirname, "current.ovpn")}"`)
+            log.info(`Main: Going to run: "${path.join(__dirname, "assets", "openvpn", `${os.arch()}`)}\\openvpn.exe" --config "${path.join(__dirname, "current.ovpn")}" --connect-retry-max 1 --tls-exit`)
+            let ovpnProc = exec(`"${path.join(__dirname, "assets", "openvpn", `${os.arch()}`)}\\openvpn.exe" --config "${path.join(__dirname, "current.ovpn")}"  --connect-retry-max 1 --tls-exit`)
             ovpnProc.stdout.on('data', (data) => {
                 log.info(`OpenVPN: ${data}`)
                 if (data.includes(`Initialization Sequence Completed`)) {
@@ -458,24 +472,41 @@ exports.connect = (config) => {
                     let status = {
                         "connected": true
                     }
-                    mainWindow.webContents.send('connection', status)
+                    try {
+                        mainWindow.webContents.send('connection', status)
+                    } catch(e) {
+                        log.error(`Main: Couldn't send OpenVPN status to renderer. Error: ${e}`)
+                    }
                 }
                 if (data.includes(`All TAP-Windows adapters on this system are currently in use.`)) {
                     //Couldn't connect, some other VPN (maybe us) is already connected
                     let status = {
                         "tapError": true
                     }
-                    mainWindow.webContents.send('error', status)
+                    try {
+                        mainWindow.webContents.send('error', status)
+                    } catch(e) {
+                        log.error(`Main: Couldn't send OpenVPN status to renderer. Error: ${e}`)
+                    }
                 }
-                
+                if (data.includes('Closing TUN/TAP interface')) {
+                    //OpenVPN has disconnected on its own. Activate kill switch.
+                    log.info(`Main: OpenVPN has disconnected on its own. Enabling kill switch.`)
+                    killSwitchStatus = true
+                    killSwitch(true)
+                }
             })
             ovpnProc.on('close', (data) => {
                 //OpenVPN has closed!
                 let status = {
                     "connected": false
                 }
-                if (mainWindow) {
-                    mainWindow.webContents.send('connection', status)
+                try {
+                    if (!killSwitchStatus && !intentionalDisconnect) {
+                        mainWindow.webContents.send('connection', status)
+                    }
+                } catch(e) {
+                    log.error(`Main: Couldn't send OpenVPN status to renderer. Error: ${e}`)
                 }
                 fs.unlink(path.join(__dirname, "current.ovpn"), (error) => {
                     if (error) {
@@ -490,6 +521,7 @@ exports.connect = (config) => {
 }
 
 exports.disconnect = () => {
+    intentionalDisconnect = true
     log.info(`Main: We're about to kill OpenVPN. If OpenVPN is not running, you will see no confirmation it wasn't killed.`)
     exec(`taskkill /IM openvpn.exe /F`, (error, stdout, stderr) => {
         if (error) {
@@ -497,13 +529,121 @@ exports.disconnect = () => {
             let status = {
                 "disconnectError": true
             }
-            mainWindow.webContents.send('error', status)
+            try {
+                mainWindow.webContents.send('error', status)
+            } catch(e) {
+                log.error(`Main: Couldn't send OpenVPN status to renderer. Error: ${e}`)
+            }
             return
         }
         let status = {
             "connected": false
         }
-        mainWindow.webContents.send('connection', status)
+        try {
+            mainWindow.webContents.send('connection', status)
+        } catch(e) {
+            log.error(`Main: Couldn't send OpenVPN status to renderer. Error: ${e}`)
+        }
         log.info(`Main: OpenVPN was killed`)
     })
+}
+
+exports.disableKillSwitch = () => {
+    killSwitch(false)
+}
+
+function killSwitch(enable) {
+    if (enable) {
+        network.get_interfaces_list(function(error, obj) {
+            let interface = obj.find(function(element) {
+                if (element["gateway_ip"] != null) {
+                    return element
+                }
+            })
+            fs.readFile(path.join(__dirname, 'settings.conf'), 'utf8', (error, data) => {
+                if (error) {
+                    log.error(`Main: Couldn't read settings file to enter kill switch NIC. Will not proceed. Error: ${error}`)
+                    let status = {
+                        "error": "enable"
+                    }
+                    try {
+                        mainWindow.webContents.send('killSwitch', status)
+                    } catch(e) {
+                        log.error(`Main: Couldn't send kill switch status to renderer. Error: ${e}`)
+                    }
+                    return;
+                }
+                let settings = JSON.parse(data)
+                settings["nic"] = interface["name"]
+                fs.writeFile(path.join(__dirname, 'settings.conf'), JSON.stringify(settings), (error) => {
+                    if (error) {
+                        log.error(`Main: Couldn't write settings file to enter kill switch NIC. Will not proceed. Error: ${error}`)
+                        let status = {
+                            "error": "enable"
+                        }
+                        try {
+                            mainWindow.webContents.send('killSwitch', status)
+                        } catch(e) {
+                            log.error(`Main: Couldn't send kill switch status to renderer. Error: ${e}`)
+                        }
+                        return;
+                    }
+                    exec(`netsh interface set interface "${interface["name"]}" admin=disable`, (error, stderr, stdout) => {
+                        if (error) {
+                            log.error(`Main: Couldn't disable network adapter. Error: ${error}`)
+                            let status = {
+                                "error": "enable"
+                            }
+                            try {
+                                mainWindow.webContents.send('killSwitch', status)
+                            } catch(e) {
+                                log.error(`Main: Couldn't send kill switch status to renderer. Error: ${e}`)
+                            }
+                            return;
+                        }
+                        let status = {
+                            "enabled": true
+                        }
+                        try {
+                            mainWindow.webContents.send('killSwitch', status)
+                        } catch(e) {
+                            log.error(`Main: Couldn't send kill switch status to renderer. Error: ${e}`)
+                        }
+                        log.info(`Main: Kill switch enabled.`)
+                    })
+                })
+            })
+        })
+    } else {
+        fs.readFile(path.join(__dirname, 'settings.conf'), 'utf8', (error, data) => {
+            if (error) {
+                log.error(`Main: Couldn't read settings file to retrieve kill switch NIC. Will not proceed. Error: ${error}`)
+                return;
+            }
+            let settings = JSON.parse(data)
+            exec(`netsh interface set interface "${settings["nic"]}" admin=enable`, (error, stderr, stdout) => {
+                if (error) {
+                    log.error(`Main: Couldn't enable network adapter. Error: ${error}`)
+                    let status = {
+                        "error": "disable"
+                    }
+                    try {
+                        mainWindow.webContents.send('killSwitch', status)
+                    } catch(e) {
+                        log.error(`Main: Couldn't send kill switch status to renderer. Error: ${e}`)
+                    }
+                    return;
+                }
+                let status = {
+                    "enabled": false
+                }
+                try {
+                    mainWindow.webContents.send('killSwitch', status)
+                } catch(e) {
+                    log.error(`Main: Couldn't send kill switch status to renderer. Error: ${e}`)
+                }
+                log.info(`Main: Kill switch disabled.`)
+            })
+        })
+    }
 }
