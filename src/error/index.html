@@ -37,6 +37,11 @@
         <p>We couldn't run the update file. It's mandatory that all installations of unrestrict.me run the latest client version to ensure they remain compatible with our network, and to make sure everyone is protected from possible security vulnerabilities.</p>
         <p>Refer to the log.txt file for more information.</p>
     </div>
+    <div id="parse" class="container prompt" style="display:none">
+        <h1>Uh oh, something's wrong.</h1>
+        <p>Your JSON settings file is not formatted correctly, and as such we were unable to parse it. If you've modified this file, make sure it is in valid JSON notation, and try again.</p>
+        <button type="button" class="btn btn-danger" id="clearSettings">Clear Settings File</button>
+    </div>
     <div class="modal fade" id="why" tabindex="-1" role="dialog" aria-labelledby="why" aria-hidden="true">
         <div class="modal-dialog" role="document">
             <div class="modal-content">
