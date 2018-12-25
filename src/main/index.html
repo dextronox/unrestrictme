@@ -27,7 +27,17 @@
         <div id="loading2" style="display:none;">
             <div class="alert alert-dismissible alert-success">
                 <strong>(2) Request created.</strong> <p>Please complete the connection in your browser. Once you've selected a location, we'll automatically connect.</p>
-                <button id="cancelRequest" type="button" class="btn btn-danger btn-lg btn-block">Cancel request</button>
+                <div class="container">
+                    <div class="row">
+                        <div class="col-sm">
+                            <button id="reopenBrowser" type="button" class="btn btn-primary btn-lg btn-block">Open locations</button>
+                        </div>
+                        <div class="col-sm">
+                            <button id="cancelRequest" type="button" class="btn btn-danger btn-lg btn-block">Cancel request</button>
+                        </div>
+                    </div>
+                </div>
+
             </div>
         </div>
         <div id="loading3" style="display:none;">
@@ -66,10 +76,20 @@
             </div>
             <div class="modal-body">
                 <p>unrestrict.me should work 'out of the box', and modifying these settings isn't necessary for the average user. If anything breaks, click "Reset Config".</p>
+                <h5>Kill Switch NIC</h5>
+                <p>Select the adapter from the list below you wish to have disabled when connection is lost to unrestrict.me. By default we try to determine this automatically.</p>
+                <div id="adapterWait">
+                    <p>Please wait. We're getting a list of available adapters.</p>
+                </div>
+                <div class="form-group" id="adapterDiv" style="display:none;">
+                    <select class="form-control" id="adapterSelect">
+                        <option value="-1">Detect Automatically</option>
+                    </select>
+                </div>
                 <h5>Custom API Server</h5>
                 <p>Input a custom API server for unrestrict.me to send requests.</p>
                 <div class="input-group mb-3">
-                    <input id="customAPI" type="text" class="form-control" placeholder="https://..." aria-describedby="basic-addon2">
+                    <input id="customAPI" type="text" class="form-control" placeholder="https://...">
                     <div class="input-group-append">
                         <button id="customAPISubmit" class="btn btn-outline-secondary" type="button">Save</button>
                     </div>
@@ -77,7 +97,7 @@
                 <h5>Custom Webpage</h5>
                 <p>Input a custom webpage for unrestrict.me to navigate you to complete the connection.</p>
                 <div class="input-group mb-3">
-                    <input id="customWebpage" type="text" class="form-control" placeholder="https://..." aria-describedby="basic-addon2">
+                    <input id="customWebpage" type="text" class="form-control" placeholder="https://...">
                     <div class="input-group-append">
                         <button id="customWebpageSubmit" class="btn btn-outline-secondary" type="button">Save</button>
                     </div>
