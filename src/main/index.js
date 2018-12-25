@@ -8,6 +8,7 @@ const fs = require("fs")
 const log = require('electron-log')
 const swal = require('sweetalert')
 const nodersa = require('node-rsa')
+const network = require("network")
 
 let currentRequestId
 
@@ -54,6 +55,10 @@ $(document).ready(() => {
             $("#disconnected").css('display', 'block')
             $("#loading3").css("display", "none")
             $("#connectButtons").css("display", "block")
+        } else if (args["connectError"]) {
+            swal("Whoops!", "We couldn't connect you to OpenVPN. Feel free to try a different location.", "error")
+            $("#loading3").css("display", "none")
+            $("#connectButtons").css("display", "block")
         }
     })
     ipcRenderer.on(`killSwitch`, (event, args) => {
@@ -62,15 +67,47 @@ $(document).ready(() => {
             $("#connected").css('display', 'none')
             $("#disconnected").css('display', 'none')
             $("#killSwitch").css("display", "block")
-        } else if (!args["enabled"]) {
+        } else if (args["enabled"] === false) {
             $("#killSwitch").css("display", "none")
             $("#disconnected").css('display', 'block')
         } else if (args["error"] === "disable") {
-            swal("Whoops!", "We were unable to disable the kill switch.", "error")
+            swal("Whoops!", "We were unable to disable the kill switch. You can try enabling the effected network driver manually. This error may have occurred because the kill switch has already been disabled, in which case the interface should be updated to reflect this shortly.", "error")
         } else if (args["error"] === "enable") {
             swal("Whoops!", "We were unable to enable the kill switch.", "error")
+            $("#connected").css('display', 'none')
+            $("#disconnected").css('display', 'block')
         }
     })
+    network.get_interfaces_list(function(error, obj) {
+        for (i = 0; Object.keys(obj).length >= i; i++) {
+            //This populates the settings list with current adapters.
+            $("#adapterSelect").append(new Option(`${obj[i]["name"]} (${obj[i]["model"]})`, i))
+            if (Object.keys(obj).length -1 === i) {
+                fs.readFile(path.join(__dirname, '../..', 'settings.conf'), 'utf8', (error, data) => {
+                    if (error) {
+                        log.error(`Renderer: Error reading settings file. Error: ${error}`)
+                        swal("Whoops!", "We were unable to read your settings file. Please try rebooting the client.", "error")
+                        return;
+                    }
+                    settingsFile = JSON.parse(data)
+                    if (settingsFile["selectedNic"]) {
+                        //There is a custom adapter selected. In future, we should check it exists, then select it on the settings list.
+                        $("#adapterDiv").css("display", "block")
+                        $("#adapterWait").css("display", "none")
+                        $("#adapterSelect").val(settingsFile["selectedNic"])
+                        log.info(`Renderer: Custom adapter in settings. Reflected in settings.`)
+                    } else {
+                        //No custom adapter selected.
+                        $("#adapterDiv").css("display", "block")
+                        $("#adapterWait").css("display", "none")
+                        log.info(`Renderer: No custom adapter in settings file. Reflected in settings menu.`)
+                    }
+                })
+            }
+        }
+        log.info(`hello`)
+    })
+
 })
 
 $("#connect").on("click", () => {
@@ -127,14 +164,13 @@ $("#connect").on("click", () => {
                 }
                 let checkJSON = body["error"]
                 if (checkJSON) {
-                    let error = checkJSON["error"]
-                    if (error === "internal") {
-                        log.error(`Renderer: Interal API error. Error: ${error}`)
+                    if (checkJSON === "internal") {
+                        log.error(`Renderer: Internal API error. Error: ${checkJSON}`)
                         swal("Whoops!", "Something went wrong on our end, and we were unable to create your connection.", "error")
                         $("#loading1").css("display", "none")
                         $("#connectButtons").css("display", "block")
                     } else {
-                        log.error(`Renderer: API server rejected our request. Error: ${error}`)
+                        log.error(`Renderer: API server rejected our request. Error: ${checkJSON}`)
                         swal("Whoops!", "The API server rejected our request. See log for more info. Try regenerating the keypair.", "error")
                         $("#loading1").css("display", "none")
                         $("#connectButtons").css("display", "block")
@@ -153,24 +189,37 @@ $("#connect").on("click", () => {
                             let decryptedResponse = JSON.parse(key.decrypt(body, 'utf8'))
                             if (decryptedResponse["success"]) {
                                 log.info(`Renderer: API server created request!`)
-                                openWebpage(decryptedResponse["id"])
+                                fs.readFile(path.join(__dirname, "../..", "settings.conf"), (error, data) => {
+                                    if (error) {
+                                        log.error(`Renderer: Error reading settings file. Error: ${error}`)
+                                        swal("Whoops!", "We can't read the settings.conf file.", "error")
+                                        return
+                                    }
+                                    let current = JSON.parse(data)
+                                    current["latestId"] = decryptedResponse["id"]
+                                    fs.writeFile(path.join(__dirname, "../..", "settings.conf"), JSON.stringify(current), (error) => {
+                                        if (error) {
+                                            log.error(`Renderer: Error writing to settings file. Error: ${error}`)
+                                            swal("Whoops!", "We can't write to the settings.conf file.", "error")
+                                            return
+                                        }
+                                        openWebpage(decryptedResponse["id"])
+                                    })
+                                })
                             } else {
                                 log.error(`Renderer: API server unable to fulfil.`)
                                 swal('Whoops!', "Something went wrong on our end creating your connection request.", "error")
                                 $("#loading1").css("display", "none")
                                 $("#connectButtons").css("display", "block")
                             }
-                        } catch(e) {
-                            log.error(`Renderer: API server sent a response but it wasn't encrypted. Unexpected. Error: ${e}`)
-                            swal("Whoops!", "We received a reponse from the API server, but it wasn't in the format we expected. This is probably a fault on our end.", "error")
+                        } catch(error) {
+                            log.error(`Renderer: API server sent a response but it wasn't encrypted. Unexpected. Error: ${error}`)
+                            swal("Whoops!", "We received a response from the API server, but it wasn't in the format we expected. This is probably a fault on our end.", "error")
                             $("#loading1").css("display", "none")
                             $("#connectButtons").css("display", "block")
-                        }
-
-                        
+                        }                        
                     })
                 }
-    
             })
         })
     })
@@ -413,7 +462,7 @@ $("#reset").on("click", () => {
 $("#disableKillSwitch").on("click", () => {
     swal({
         title: "Are you sure?",
-        text: "Disabling the kill switch will reconnect you to the internet.",
+        text: "Disabling the kill switch will reconnect you to the internet. Check to make sure you aren't doing anything in the background.",
         icon: "warning",
         buttons: true,
         dangerMode: true,
@@ -422,4 +471,42 @@ $("#disableKillSwitch").on("click", () => {
             main.disableKillSwitch()
         }
     });
+})
+
+$("#reopenBrowser").on('click', () => {
+    fs.readFile(path.join(__dirname, '../..', 'settings.conf'), 'utf8', (error, data) => {
+        if (error) {
+            log.error(`Renderer: Error reading settings file for customWebpage. Error: ${error}`)
+            swal("Whoops!", "We were unable to read your settings file. Please try rebooting the client.", "error")
+            return;
+        }
+        let settingsFile = JSON.parse(data)
+        if (settingsFile["customWebpage"]) {
+            log.info(`Renderer: Opening webpage with custom URL.`)
+            require('electron').shell.openExternal(`${settingsFile["customWebpage"]}/connection?id=${settingsFile["latestId"]}`)
+        } else {
+            log.info(`Renderer: Opening webpage with standard URL.`)
+            require('electron').shell.openExternal(`https://unrestrict.me/connection?id=${settingsFile["latestId"]}`)
+        }
+    })
+})
+
+$("#adapterSelect").on('change', () => {
+    fs.readFile(path.join(__dirname, "../..", "settings.conf"), (error, data) => {
+        if (error) {
+            log.error(`Renderer: Error reading settings file. Error: ${error}`)
+            swal("Whoops!", "We can't read the settings.conf file.", "error")
+            return
+        }
+        let current = JSON.parse(data)
+        current["selectedNic"] = $("#adapterSelect").val()
+        log.debug(`Renderer: Selected NIC changing to ${$("#adapterSelect").val()}`)
+        fs.writeFile(path.join(__dirname, "../..", "settings.conf"), JSON.stringify(current), (error) => {
+            if (error) {
+                log.error(`Renderer: Error writing to settings file. Error: ${error}`)
+                swal("Whoops!", "We can't write to the settings.conf file.", "error")
+                return
+            }
+        })
+    })
 })
