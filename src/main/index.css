@@ -21,6 +21,11 @@ p a {
     user-select: none;
 }
 
+b {
+    pointer-events: none;
+    user-select: none;
+}
+
 .btn {
     margin-bottom: 10px;
 }
