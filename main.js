@@ -80,9 +80,14 @@ function checkSettings() {
             log.error(`Main: Unknown error reading settings.conf. Error: ${error}`)
             loadErrors["settings"] = `${error}`
             evaluateErrors()
-        } else {
+        }
+        try {
+            JSON.parse(data)
             log.info("Main: settings.conf found!")
             checkForUpdates()
+        } catch (e) {
+            loadErrors["settings"] = "parse"
+            evaluateErrors()
         }
     })
 }
@@ -191,6 +196,9 @@ function evaluateErrors() {
             if (loadErrors["settings"]=== 'new_install') {
                 //New installation
                 createWelcomeWindow()
+            } else if (loadErrors["settings"] === 'parse') {
+                //Unknown error, alert user
+                createErrorWindow('parse')
             } else {
                 //Unknown error, alert user
                 createErrorWindow('settings')
@@ -493,17 +501,27 @@ exports.connect = (config) => {
                     //OpenVPN has disconnected on its own. Activate kill switch.
                     log.info(`Main: OpenVPN has disconnected on its own. Enabling kill switch.`)
                     killSwitchStatus = true
-                    killSwitch(true)
+                }
+                if (data.includes('SIGTERM[soft,tls-error] received, process exiting')) {
+                    //OpenVPN failed to connect
+                    log.info(`Main: OpenVPN failed to connect.`)
+                    intentionalDisconnect = true
+                    let status = {
+                        "connectError": true
+                    }
+                    try {
+                        mainWindow.webContents.send('error', status)
+                    } catch(e) {
+                        log.error(`Main: Couldn't send OpenVPN status to renderer. Error: ${e}`)
+                    }
                 }
             })
             ovpnProc.on('close', (data) => {
                 //OpenVPN has closed!
-                let status = {
-                    "connected": false
-                }
                 try {
-                    if (!killSwitchStatus && !intentionalDisconnect) {
-                        mainWindow.webContents.send('connection', status)
+                    if (killSwitchStatus || !intentionalDisconnect) {
+                        log.info(`Main: Activating failsafe.`)
+                        killSwitch(true)
                     }
                 } catch(e) {
                     log.error(`Main: Couldn't send OpenVPN status to renderer. Error: ${e}`)
@@ -544,7 +562,7 @@ exports.disconnect = () => {
         } catch(e) {
             log.error(`Main: Couldn't send OpenVPN status to renderer. Error: ${e}`)
         }
-        log.info(`Main: OpenVPN was killed`)
+        log.info(`Main: OpenVPN was killed.`)
     })
 }
 
@@ -552,67 +570,48 @@ exports.disableKillSwitch = () => {
     killSwitch(false)
 }
 
+exports.clearSettings = () => {
+    log.info(`Main: Clearing settings file and restarting application.`)
+    let settings = {}
+    fs.writeFile(path.join(__dirname, 'settings.conf'), JSON.stringify(settings), (error) => {
+        if (error) {
+            log.error(`Main: Error occurred writing settings file. Permissions error perhaps?`)
+            let error = {
+                "writeError": true
+            }
+            errorWindow.webContents.send("settingsClear", error)
+        } else {
+            log.info(`Main: Settings file recreated!`)
+            app.relaunch()
+            app.quit()
+        }
+    })
+}
+
 function killSwitch(enable) {
     if (enable) {
-        network.get_interfaces_list(function(error, obj) {
-            let interface = obj.find(function(element) {
-                if (element["gateway_ip"] != null) {
-                    return element
+        fs.readFile(path.join(__dirname, 'settings.conf'), 'utf8', (error, data) => {
+            if (error) {
+                log.error(`Main: Couldn't read settings file to enter kill switch NIC. Will not proceed. Error: ${error}`)
+                let status = {
+                    "error": "enable"
                 }
-            })
-            fs.readFile(path.join(__dirname, 'settings.conf'), 'utf8', (error, data) => {
-                if (error) {
-                    log.error(`Main: Couldn't read settings file to enter kill switch NIC. Will not proceed. Error: ${error}`)
-                    let status = {
-                        "error": "enable"
-                    }
-                    try {
-                        mainWindow.webContents.send('killSwitch', status)
-                    } catch(e) {
-                        log.error(`Main: Couldn't send kill switch status to renderer. Error: ${e}`)
-                    }
-                    return;
+                try {
+                    mainWindow.webContents.send('killSwitch', status)
+                } catch(e) {
+                    log.error(`Main: Couldn't send kill switch status to renderer. Error: ${e}`)
                 }
-                let settings = JSON.parse(data)
-                settings["nic"] = interface["name"]
-                fs.writeFile(path.join(__dirname, 'settings.conf'), JSON.stringify(settings), (error) => {
-                    if (error) {
-                        log.error(`Main: Couldn't write settings file to enter kill switch NIC. Will not proceed. Error: ${error}`)
-                        let status = {
-                            "error": "enable"
-                        }
-                        try {
-                            mainWindow.webContents.send('killSwitch', status)
-                        } catch(e) {
-                            log.error(`Main: Couldn't send kill switch status to renderer. Error: ${e}`)
-                        }
-                        return;
-                    }
-                    exec(`netsh interface set interface "${interface["name"]}" admin=disable`, (error, stderr, stdout) => {
-                        if (error) {
-                            log.error(`Main: Couldn't disable network adapter. Error: ${error}`)
-                            let status = {
-                                "error": "enable"
-                            }
-                            try {
-                                mainWindow.webContents.send('killSwitch', status)
-                            } catch(e) {
-                                log.error(`Main: Couldn't send kill switch status to renderer. Error: ${e}`)
-                            }
-                            return;
-                        }
-                        let status = {
-                            "enabled": true
-                        }
-                        try {
-                            mainWindow.webContents.send('killSwitch', status)
-                        } catch(e) {
-                            log.error(`Main: Couldn't send kill switch status to renderer. Error: ${e}`)
-                        }
-                        log.info(`Main: Kill switch enabled.`)
-                    })
-                })
-            })
+                return;
+            }
+            let settings = JSON.parse(data)
+            if (!settings["selectedNic"] ||settings["selectedNic"] == -1) {
+                //Automatically determine nic.
+                killSwitchEnable("auto")
+            } else {
+                //Use preset nic.
+                killSwitchEnable(settings["selectedNic"])
+            }
+
         })
     } else {
         fs.readFile(path.join(__dirname, 'settings.conf'), 'utf8', (error, data) => {
@@ -645,5 +644,115 @@ function killSwitch(enable) {
                 log.info(`Main: Kill switch disabled.`)
             })
         })
+    }
+}
+
+function killSwitchEnable(nic) {
+    if (os.platform() === "win32") {
+        log.info(`Main: Enabling Kill Switch for ${os.platform()}.`)
+        if (nic === "auto") {
+            log.info(`Main: We will automatically determine the interface to disable.`)
+            network.get_interfaces_list(function(error, obj) {
+                let interface = obj.find(function(element) {
+                    if (element["gateway_ip"] != null) {
+                        return element
+                    }
+                })
+                fs.readFile(path.join(__dirname, 'settings.conf'), 'utf8', (error, data) => {
+                    if (error) {
+                        log.error(`Main: Couldn't read settings file to enter kill switch NIC. Will not proceed. Error: ${error}`)
+                        let status = {
+                            "error": "enable"
+                        }
+                        try {
+                            mainWindow.webContents.send('killSwitch', status)
+                        } catch(e) {
+                            log.error(`Main: Couldn't send kill switch status to renderer. Error: ${e}`)
+                        }
+                        return;
+                    }
+                    let settings = JSON.parse(data)
+                    settings["nic"] = interface["name"]
+                    fs.writeFile(path.join(__dirname, 'settings.conf'), JSON.stringify(settings), (error) => {
+                        if (error) {
+                            log.error(`Main: Couldn't write settings file to enter kill switch NIC. Will not proceed. Error: ${error}`)
+                            let status = {
+                                "error": "enable"
+                            }
+                            try {
+                                mainWindow.webContents.send('killSwitch', status)
+                            } catch(e) {
+                                log.error(`Main: Couldn't send kill switch status to renderer. Error: ${e}`)
+                            }
+                            return;
+                        }
+                        exec(`netsh interface set interface "${interface["name"]}" admin=disable`, (error, stderr, stdout) => {
+                            if (error) {
+                                log.error(`Main: Couldn't disable network adapter. Error: ${error}`)
+                                let status = {
+                                    "error": "enable"
+                                }
+                                try {
+                                    mainWindow.webContents.send('killSwitch', status)
+                                } catch(e) {
+                                    log.error(`Main: Couldn't send kill switch status to renderer. Error: ${e}`)
+                                }
+                                return;
+                            }
+                            let status = {
+                                "enabled": true
+                            }
+                            try {
+                                mainWindow.webContents.send('killSwitch', status)
+                            } catch(e) {
+                                log.error(`Main: Couldn't send kill switch status to renderer. Error: ${e}`)
+                            }
+                            log.info(`Main: Kill switch enabled.`)
+                        })
+                    })
+                })
+            })
+        } else {
+            log.info(`Main: We will disable the user defined NIC.`)
+            network.get_interfaces_list(function(error, obj) {
+                if (error) {
+                    log.error(`Main: Couldn't get the list of network interfaces. Error: ${error}`)
+                    let status = {
+                        "error": "enable"
+                    }
+                    try {
+                        mainWindow.webContents.send('killSwitch', status)
+                    } catch(e) {
+                        log.error(`Main: Couldn't send kill switch status to renderer. Error: ${e}`)
+                    }
+                    return;
+                }
+                let nicNo = parseInt(nic)
+                let nicCmd = obj[parseInt(nic)]["name"]
+                exec(`netsh interface set interface "${nicCmd}" admin=disable`, (error, stderr, stdout) => {
+                    if (error) {
+                        log.error(`Main: Couldn't disable network adapter. Error: ${error}`)
+                        let status = {
+                            "error": "enable"
+                        }
+                        try {
+                            mainWindow.webContents.send('killSwitch', status)
+                        } catch(e) {
+                            log.error(`Main: Couldn't send kill switch status to renderer. Error: ${e}`)
+                        }
+                        return;
+                    }
+                    let status = {
+                        "enabled": true
+                    }
+                    try {
+                        mainWindow.webContents.send('killSwitch', status)
+                    } catch(e) {
+                        log.error(`Main: Couldn't send kill switch status to renderer. Error: ${e}`)
+                    }
+                    log.info(`Main: Kill switch enabled.`)
+                })
+            })
+        }
     }
 }
