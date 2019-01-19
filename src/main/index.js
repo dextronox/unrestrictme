@@ -14,20 +14,25 @@ let currentRequestId
 
 $(document).ready(() => {
     //These are our listeners from the main process.
+    //These manage the connection lifecycle changes.
     ipcRenderer.on(`connection`, (event, args) => {
         if (args["connected"]) {
+            //We are connected to unrestrict.me
             //We'd better change the buttons back before
             $("#loading3").css("display", "none")
             $("#connectButtons").css("display", "block")
-            //Hide the disconnected view, show the connected view and display alert
+            //Hide the disconnected view, show the connected view
             $("#disconnected").css('display', 'none')
             $("#connected").css('display', 'block')
+            populateConnected(args["ip"], currentRequestId)
         } else {
+            //We have failed to connect to unrestrict.me
             if ($("#connected").css('display') === 'none') {
                 $("#loading3").css("display", "none")
                 $("#connectButtons").css("display", "block")
                 swal("Whoops!", "We were unable to connect you to unrestrict.me.", "error")
             } else {
+                //Disconnected from unrestrict.me
                 $("#connected").css('display', 'none')
                 $("#disconnected").css('display', 'block')
                 swal("Success!", "You have been disconnected from unrestrict.me.", "success")
@@ -37,19 +42,21 @@ $(document).ready(() => {
     //An OpenVPN error occurred.
     ipcRenderer.on(`error`, (event, args) => {
         if (args["tapError"]) {
-            //Tell the user
+            //All TAP devices used. In future maybe should kill any rogue ovpn processes to prevent this issue.
             swal("Whoops!", "All TAP devices are currently in use. This means there is another VPN connected.", "error")
             $("#connected").css('display', 'none')
             $("#disconnected").css('display', 'block')
             $("#loading3").css("display", "none")
             $("#connectButtons").css("display", "block")
         } else if (args["writeError"]) {
+            //Issue should never occur because up until this point writing has been successful. Maybe if we run out of storage?
             swal("Whoops!", "We couldn't write the OpenVPN config file to disk.", "error")
             $("#connected").css('display', 'none')
             $("#disconnected").css('display', 'block')
             $("#loading3").css("display", "none")
             $("#connectButtons").css("display", "block")
         } else if (args["disconnectError"]) {
+            //Triggered by taskkill.
             swal("Whoops!", "We couldn't kill OpenVPN. It's possible it's already closed, in which case this message can be ignored.", "error")
             $("#connected").css('display', 'none')
             $("#disconnected").css('display', 'block')
@@ -510,3 +517,31 @@ $("#adapterSelect").on('change', () => {
         })
     })
 })
+
+function populateConnected (localIp, connectionId) {
+    log.info(`Renderer: Populating connected divider.`)
+    //This populates the connected div info panel
+    $("#placeholderIP").html(`${localIp}`)
+    $("#placeholderConnectionID").html(`${connectionId}`)
+    var countdownTo = new Date()
+    countdownTo.setDate(countdownTo.getDate() + 1);
+    // Update the count down every 1 second
+    var x = setInterval(function() {
+        // Get todays date and time
+        var now = new Date().getTime();
+        // Find the distance between now and the count down date
+        var distance = countdownTo - now;
+        // Time calculations for days, hours, minutes and seconds
+        var days = Math.floor(distance / (1000 * 60 * 60 * 24));
+        var hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+        var minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+        var seconds = Math.floor((distance % (1000 * 60)) / 1000);
+        // Display the result in the element with id="demo"
+        $("#placeholderTimeRemaining").html(`${hours}h ${minutes}m (<a href="#" data-toggle="modal" data-target="#timeRemainingFaq">What is this?</a>)`)
+        // If the count down is finished, write some text 
+        if (distance < 0) {
+            clearInterval(x);
+            $("#placeholderTimeRemaining").html("Connection has expired. Expect to disconnect shortly. Fail safe will engage.")
+        }
+    }, 1000); 
+}
