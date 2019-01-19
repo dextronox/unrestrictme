@@ -384,6 +384,7 @@ function update(version) {
 function quit() {
     tray.destroy()
     log.info(`Main: We're about to kill OpenVPN`)
+    intentionalDisconnect = true
     exec(`taskkill /IM openvpn.exe /F`, (error, stdout, stderr) => {
         if (error) {
             let status = {
@@ -473,12 +474,20 @@ exports.connect = (config) => {
         if (os.platform() === "win32") {
             log.info(`Main: Going to run: "${path.join(__dirname, "assets", "openvpn", `${os.arch()}`)}\\openvpn.exe" --config "${path.join(__dirname, "current.ovpn")}" --connect-retry-max 1 --tls-exit`)
             let ovpnProc = exec(`"${path.join(__dirname, "assets", "openvpn", `${os.arch()}`)}\\openvpn.exe" --config "${path.join(__dirname, "current.ovpn")}"  --connect-retry-max 1 --tls-exit`)
+            var datalog
             ovpnProc.stdout.on('data', (data) => {
                 log.info(`OpenVPN: ${data}`)
+                datalog = datalog + data 
                 if (data.includes(`Initialization Sequence Completed`)) {
+                    var ipString = datalog.search("Notified TAP-Windows driver to set a DHCP IP/netmask of")
+                    log.info(ipString)
+                    ipString = datalog.substring(ipString, ipString + 70)
+                    var regexp = /([0-9]{1,3}(\.[0-9]{1,3}){3}|[a-f0-9]{1,4}(:[a-f0-9]{1,4}){7})/g
+                    log.info(`Main: IP list: ${ipString.match(regexp)}`)
                     //Connected to unrestrictme
                     let status = {
-                        "connected": true
+                        "connected": true,
+                        "ip": ipString.match(regexp)
                     }
                     try {
                         mainWindow.webContents.send('connection', status)
@@ -541,7 +550,7 @@ exports.connect = (config) => {
 exports.disconnect = () => {
     intentionalDisconnect = true
     log.info(`Main: We're about to kill OpenVPN. If OpenVPN is not running, you will see no confirmation it wasn't killed.`)
-    exec(`taskkill /IM openvpn.exe /F`, (error, stdout, stderr) => {
+    exec(`taskkill /F /IM openvpn.exe`, (error, stdout, stderr) => {
         if (error) {
             log.error(`Main: Error killing OpenVPN. Error: ${error}`)
             let status = {
