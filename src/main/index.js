@@ -112,7 +112,6 @@ $(document).ready(() => {
                 })
             }
         }
-        log.info(`hello`)
     })
 
 })

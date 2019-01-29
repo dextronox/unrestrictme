@@ -1,7 +1,11 @@
 //unrestrict.me Desktop Application.
 //Dependencies
-const {app, BrowserWindow, ipcMain, Menu, Tray} = require("electron")
+const {app, BrowserWindow, ipcMain, Menu, Tray, dialog} = require("electron")
 const path = require("path")
+module.paths.push(path.resolve('node_modules'));
+module.paths.push(path.resolve('../node_modules'));
+module.paths.push(path.resolve(__dirname, '..', '..', '..', '..', 'resources', 'app', 'node_modules'));
+module.paths.push(path.resolve(__dirname, '..', '..', '..', '..', 'resources', 'app.asar', 'node_modules'));
 const url = require("url")
 const fs = require("fs")
 const log = require("electron-log")
@@ -13,6 +17,13 @@ const progress = require("request-progress")
 const nodersa = require('node-rsa')
 const network = require("network")
 
+
+
+
+//Definition of global variables
+let loadErrors = {}, loadingWindow, errorWindow, welcomeWindow, mainWindow, tray, killSwitchStatus, intentionalDisconnect
+
+function setLogValues() {
 //Log
 // Same as for console transport
 log.transports.file.level = 'info';
@@ -33,12 +44,19 @@ log.transports.file.streamConfig = { flags: 'w' };
 // set existed file stream
 log.transports.file.stream = fs.createWriteStream(path.join(__dirname, 'log.txt'));
 //Log
-
-//Definition of global variables
-let loadErrors = {}, loadingWindow, errorWindow, welcomeWindow, mainWindow, tray, killSwitchStatus, intentionalDisconnect
+}
 
 app.on('ready', () => {
-    appStart()
+    fs.writeFile(path.join(__dirname, "log.txt"), "", (error) => {
+        if (error){
+            console.log(dialog.showMessageBox({type: "error", buttons: ["Ok"], defaultId: 0, title: "Application Initialisation Error", message: `We couldn't write to your log.txt file, which will prevent the application from running. Check permissions. Error: ${error}`}))
+            app.quit()
+            return
+        } else {
+            setLogValues()
+            appStart()
+        }
+    })
 })
 
 
@@ -234,7 +252,7 @@ function createErrorWindow(error) {
         errorWindow.show()
         errorWindow.webContents.send('error', error)
     })
-    //errorWindow.webContents.openDevTools({mode: "undocked"})
+    errorWindow.webContents.openDevTools({mode: "undocked"})
     errorWindow.setAlwaysOnTop(false)
     if (loadingWindow) {
         loadingWindow.close()

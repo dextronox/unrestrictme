@@ -1,3 +1,4 @@
+console.log(process.versions.electron)
 const {remote, ipcRenderer} = require("electron")
 const {app} = remote
 const $ = jQuery = require('jquery')

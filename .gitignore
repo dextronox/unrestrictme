@@ -67,3 +67,4 @@ settings.conf
 keys/*
 !keys/about
 current.ovpn
+dist/*

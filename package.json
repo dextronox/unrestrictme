@@ -2,9 +2,11 @@
   "name": "unrestrictme",
   "version": "1.0.0",
   "description": "Desktop application for connecting to the unrestrict.me VPN network.",
-  "main": "main.js",
+  "main": "./main.js",
   "scripts": {
-    "start": "electron ."
+    "start": "electron .",
+    "pack": "electron-builder --dir",
+    "dist": "electron-builder"
   },
   "repository": "https://github.com/dextronox/unrestrictmeclient",
   "keywords": [
@@ -15,7 +17,46 @@
   "author": "unrestrict.me",
   "license": "MIT License",
   "devDependencies": {
-    "electron": "^3.0.6"
+    "electron": "^3.0.6",
+    "electron-builder": "^20.38.5"
+  },
+  "build": {
+    "appId": "com.unrestrictme.client",
+    "productName": "unrestrict.me Desktop Client",
+    "directories": {
+      "buildResources": "build/",
+      "output": "dist/",
+      "app": "."
+    },
+    "win": {
+      "target": "nsis",
+      "icon": "build/icon.ico",
+      "publisherName": "unrestrict.me",
+      "verifyUpdateCodeSignature": true,
+      "asar": false
+    },
+    "nsis": {
+      "oneClick": true,
+      "runAfterFinish": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    },
+    "mac": {
+      "category": "public.app-category.utilities"
+    },
+    "files": [
+      "**/*",
+      "!package.json",
+      "!log.txt",
+      "!package-lock.json",
+      "!settings.conf",
+      "!settingsTemplate.conf",
+      "!README.md",
+      "!.gitignore",
+      "!**/build",
+      "!**/dist",
+      "!**/keys/*"
+    ]
   },
   "dependencies": {
     "child_process": "^1.0.2",
@@ -31,6 +72,7 @@
     "request-progress": "^3.0.0",
     "shell": "^0.5.0",
     "sweetalert": "^2.1.2",
+    "uri-js": "^4.2.2",
     "url": "^0.11.0"
   }
 }
