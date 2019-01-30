@@ -24,26 +24,13 @@ const network = require("network")
 let loadErrors = {}, loadingWindow, errorWindow, welcomeWindow, mainWindow, tray, killSwitchStatus, intentionalDisconnect
 
 function setLogValues() {
-//Log
-// Same as for console transport
-log.transports.file.level = 'info';
-log.transports.file.format = '{h}:{i}:{s}:{ms} {text}';
- 
-// Set approximate maximum log size in bytes. When it exceeds,
-// the archived log will be saved as the log.old.log file
-log.transports.file.maxSize = 5 * 1024 * 1024;
- 
-// Write to this file, must be set before first logging
-log.transports.file.file = path.join(__dirname, 'log.txt');
- 
-// fs.createWriteStream options, must be set before first logging
-// you can find more information at
-// https://nodejs.org/api/fs.html#fs_fs_createwritestream_path_options
-log.transports.file.streamConfig = { flags: 'w' };
- 
-// set existed file stream
-log.transports.file.stream = fs.createWriteStream(path.join(__dirname, 'log.txt'));
-//Log
+    //This has to be done in a function because if the file does not exist the application will terminate with an exception.
+    log.transports.file.level = 'info';
+    log.transports.file.format = '{h}:{i}:{s}:{ms} {text}';
+    log.transports.file.maxSize = 5 * 1024 * 1024;
+    log.transports.file.file = path.join(__dirname, 'log.txt');
+    log.transports.file.streamConfig = { flags: 'w' };
+    log.transports.file.stream = fs.createWriteStream(path.join(__dirname, 'log.txt'));
 }
 
 app.on('ready', () => {
@@ -78,8 +65,7 @@ function appStart() {
     isElevated().then(elevated => {
         if (!elevated) {
             log.error("Main: Application not run with elevated privileges. OpenVPN will not be able to change routing table.")
-            loadErrors["elevated"] = false
-            checkSettings()
+            createErrorWindow(`elevation`)
         } else {
             log.info("Main: Application is elevated.")
             checkSettings()
@@ -91,27 +77,25 @@ function checkSettings() {
     fs.readFile(path.join(__dirname, 'settings.conf'), 'utf8', (error, data) => {
         if (String(error).includes('ENOENT')) {
             log.error("Main: settings.conf does not exist! Assuming new installation.")
-            loadErrors["settings"] = 'new_install'
             //Go straight to new install wizard. Skip other checks as they rely on the settings.conf file.
-            evaluateErrors()
+            createWelcomeWindow()
         } else if (error) {
             log.error(`Main: Unknown error reading settings.conf. Error: ${error}`)
-            loadErrors["settings"] = `${error}`
-            evaluateErrors()
+            createErrorWindow('settings')
         }
         try {
             JSON.parse(data)
             log.info("Main: settings.conf found!")
             checkForUpdates()
         } catch (e) {
-            loadErrors["settings"] = "parse"
-            evaluateErrors()
+            createErrorWindow('parse')
         }
     })
 }
 
 function checkForUpdates() {
     //This grabs the latest version number from the API
+    //This whole system needs to be reworked prior to release to support electron builder.
     let requestConfig, settingsFile
     log.info(`Main: Checking for updates.`)
     fs.readFile(path.join(__dirname, 'settings.conf'), 'utf8', (error, data) => {
@@ -134,8 +118,7 @@ function checkForUpdates() {
         request(requestConfig, (error, response, body) => {
             if (error) {
                 log.error(`Main: Error checking for updates. Error: ${error}`)
-                loadErrors["update"] = `error`
-                checkKeys()
+                createErrorWindow(`update`)
             } else if (parseFloat(body) <= parseFloat(app.getVersion())){
                 log.info(`Main: Already on newest or newer version than publicly available.`)
                 checkKeys()
@@ -151,15 +134,16 @@ function checkKeys() {
     log.info(`Main: Checking for public/private keys`)
     fs.readFile(path.join(__dirname, 'keys/public'), (error, data) => {
         if (error) {
-            log.error(`Main: Error reading public key. Error: ${error}`)
+            log.error(`Main: Error reading public key. Will now begin key generation. Error: ${error}`)
             createKeys()
         } else {
             fs.readFile(path.join(__dirname, 'keys/private'), (error, data) => {
                 if (error) {
-                    log.error(`Main: Error reading private key. Error: ${error}`)
+                    log.error(`Main: Error reading private key. Will now begin key generation. Error: ${error}`)
                     createKeys()
                 } else {
-                    evaluateErrors()
+                    log.info(`Main: Our install passed preflight checks!`)
+                    createMainWindow()
                 }
             }) 
         }
@@ -174,22 +158,26 @@ function createKeys() {
     let privateKey = key.exportKey('private')
     fs.unlink(path.join(__dirname, 'keys/public'), (error) => {
         if (error) {
-            log.error(`Main: Error occurred deleting public key. Error: ${error}`)
+            //File will simply be created if it does not exist
+            log.error(`Main: Error occurred deleting public key. It might not exist, which is fine. Error: ${error}`)
         }
         fs.writeFile(path.join(__dirname, 'keys/public'), publicKey, (error) => {
             if (error) {
-                loadErrors["publicKey"] = 0
+                createErrorWindow('key')
+                return
             }
         })
         fs.unlink(path.join(__dirname, 'keys/private'), (error) => {
             if (error) {
-                log.error(`Main: Error occurred deleting private key. Error: ${error}`)
+                log.error(`Main: Error occurred deleting private key. It might not exist, which is fine. Error: ${error}`)
             }
             fs.writeFile(path.join(__dirname, 'keys/private'), privateKey, (error) => {
                 if (error) {
-                    loadErrors["privateKey"] = 0
+                    createErrorWindow('key')
+                    return
+                } else {
+                    createMainWindow()
                 }
-                evaluateErrors()
             })
         })
     })
@@ -280,7 +268,7 @@ function createWelcomeWindow() {
 }
 
 function createMainWindow() {
-    mainWindow = new BrowserWindow({show: false, frame: true, width: 600, height: 400, icon: path.resolve(__dirname, 'assets', 'icons', 'win.ico'), 'minWidth': 600, 'minHeight': 400, transparent: false, title: "unrestrict.me Client", resizable: false})
+    mainWindow = new BrowserWindow({show: false, frame: true, width: 600, height: 400, icon: path.resolve(__dirname, 'assets', 'icons', 'win.ico'), 'minWidth': 600, 'minHeight': 400, transparent: false, title: "unrestrict.me Client", resizable: true})
     mainWindow.setMenu(null)
     mainWindow.loadURL(url.format({
         pathname: path.join(__dirname, 'src/main/index.html'),
