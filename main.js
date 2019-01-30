@@ -86,45 +86,45 @@ function checkSettings() {
         try {
             JSON.parse(data)
             log.info("Main: settings.conf found!")
-            checkForUpdates()
+            checkForApi()
         } catch (e) {
             createErrorWindow('parse')
         }
     })
 }
 
-function checkForUpdates() {
-    //This grabs the latest version number from the API
-    //This whole system needs to be reworked prior to release to support electron builder.
+function checkForApi() {
+    //This simply pings the API server to make sure it lives.
     let requestConfig, settingsFile
-    log.info(`Main: Checking for updates.`)
+    log.info(`Main: Checking for API.`)
     fs.readFile(path.join(__dirname, 'settings.conf'), 'utf8', (error, data) => {
         settingsFile = JSON.parse(data)
         if (settingsFile["customAPI"]) {
             log.info(`Main: Using custom API.`)
             requestConfig = {
-                url: `${settingsFile["customAPI"]}/client/version`,
+                url: `${settingsFile["customAPI"]}/client/ping`,
                 timeout: 5000,
                 method: "GET"
             } 
         } else {
             log.info(`Main: Using normal API.`)
             requestConfig = {
-                url: `https://api.unrestrict.me/client/version`,
+                url: `https://api.unrestrict.me/client/ping`,
                 timeout: 5000,
                 method: "GET"
             }
         }
         request(requestConfig, (error, response, body) => {
             if (error) {
-                log.error(`Main: Error checking for updates. Error: ${error}`)
-                createErrorWindow(`update`)
-            } else if (parseFloat(body) <= parseFloat(app.getVersion())){
-                log.info(`Main: Already on newest or newer version than publicly available.`)
+                log.error(`Main: Error checking API. Error: ${error}`)
+                let sendError = {
+                    "type": "apiError",
+                    "error": error
+                }
+                createErrorWindow(`api`, sendError)
+            } else if (body === "Pong!") {
+                log.info(`Main: API responds to ping.`)
                 checkKeys()
-            } else {
-                log.info(`Main: New version available. New version: ${body}. Current version: ${app.getVersion()}`)
-                update(body)
             }
         })
     })
@@ -228,7 +228,7 @@ function createLoadingWindow() {
     loadingWindow.setAlwaysOnTop(true)
 }
 
-function createErrorWindow(error) {
+function createErrorWindow(error, sendError) {
     errorWindow = new BrowserWindow({show: false, frame: true, width: 600, height: 400, icon: path.resolve(__dirname, 'assets', 'icons', 'win.ico'), 'minWidth': 600, 'minHeight': 400, transparent: false, title: "unrestrict.me Client", resizable: false})
     errorWindow.setMenu(null)
     errorWindow.loadURL(url.format({
@@ -239,6 +239,13 @@ function createErrorWindow(error) {
     errorWindow.webContents.on('did-finish-load', () => {
         errorWindow.show()
         errorWindow.webContents.send('error', error)
+        if (sendError["type"] === "apiError") {
+            try {
+                errorWindow.webContents.send('apiError', sendError["error"])
+            } catch(e) {
+                log.error(`Main: Couldn't send update error to renderer. Error: ${e}`)
+            }
+        }
     })
     errorWindow.webContents.openDevTools({mode: "undocked"})
     errorWindow.setAlwaysOnTop(false)

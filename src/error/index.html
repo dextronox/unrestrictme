@@ -17,10 +17,13 @@
         <p>We're unable to read your settings file.</p>
         <p>Please refer to the log.txt file for more information. This is located in the installation directory.</p>
     </div>
-    <div id="update" class="container prompt" style="display:none">
+    <div id="api" class="container prompt" style="display:none">
         <h1>Uh oh, something's wrong.</h1>
-        <p>We're unable to check for updates.</p>
-        <p>This error is either due to a fault on our end, or as a result of a firewall blocking your connection to our API server. Refer to the log.txt for more information.</p>
+        <p>We're unable to ping our API server.</p>
+        <p>This error is either due to a fault on our end, or as a result of a firewall blocking your connection to our API server. Here's the error:</p>
+        <div class="list-group">
+            <p class="list-group-item list-group-item-action disabled" id="apiError"></p>
+        </div>
     </div>
     <div id="elevate" class="container prompt" style="display:none">
         <h1>Uh oh, something's wrong.</h1>

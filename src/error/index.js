@@ -16,6 +16,9 @@ $(document).ready(() => {
             swal("Whoops!", "We couldn't write to your settings file. This is probably a permissions error.", "error")
         }
     })
+    ipcRenderer.on(`apiError`, (event, args) => {
+        $("#apiError").html(JSON.stringify(args).split(',').join(', '))
+    })
 })
 
 $("#clearSettings").on('click', () => {
@@ -25,8 +28,8 @@ $("#clearSettings").on('click', () => {
 function loadPage(type) {
     if (type === "settings") {
         $("#settings").css('display', 'block')
-    } else if (type === "update") {
-        $("#update").css('display', 'block')
+    } else if (type === "api") {
+        $("#api").css('display', 'block')
     } else if (type === "elevation") {
         $("#elevate").css('display', 'block')
     } else if (type === "key") {
