@@ -6,9 +6,10 @@
   "scripts": {
     "start": "electron .",
     "pack": "electron-builder --dir",
-    "dist": "electron-builder"
+    "dist": "electron-builder",
+    "publish": "build -p always"
   },
-  "repository": "https://github.com/dextronox/unrestrictmeclient",
+  "repository": "https://github.com/dextronox/unrestrictme",
   "keywords": [
     "VPN",
     "unrestrict.me",
@@ -16,10 +17,6 @@
   ],
   "author": "unrestrict.me",
   "license": "MIT License",
-  "devDependencies": {
-    "electron": "^3.0.6",
-    "electron-builder": "^20.38.5"
-  },
   "build": {
     "appId": "com.unrestrictme.client",
     "productName": "unrestrict.me Desktop Client",
@@ -44,6 +41,10 @@
     "mac": {
       "category": "public.app-category.utilities"
     },
+    "publish": {
+      "provider": "github",
+      "private": false
+    },
     "files": [
       "**/*",
       "!package.json",
@@ -53,10 +54,15 @@
       "!settingsTemplate.conf",
       "!README.md",
       "!.gitignore",
-      "!**/build",
-      "!**/dist",
-      "!**/keys/*"
+      "!/build",
+      "!/dist",
+      "!/keys/*",
+      "!token"
     ]
+  },
+  "devDependencies": {
+    "electron": "^4.0.2",
+    "electron-builder": "^20.38.5"
   },
   "dependencies": {
     "child_process": "^1.0.2",
