@@ -383,7 +383,7 @@ $("#customAPISubmit").on("click", () => {
             }
             log.info(`Renderer: Custom API set.`)
             $("#customAPI").val('')
-            $("#settings").modal('toggle')
+            swal("Success!", "Your custom API server has been set.", "success")
         })
     })
 })
@@ -406,7 +406,7 @@ $("#customWebpageSubmit").on("click", () => {
             }
             log.info(`Renderer: Custom webpage set.`)
             $("#customWebpage").val('')
-            $("#settings").modal('toggle')
+            swal("Success!", "Your custom webpage has been set.", "success")
         })
     })
 })
