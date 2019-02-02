@@ -82,13 +82,15 @@ function checkSettings() {
         } else if (error) {
             log.error(`Main: Unknown error reading settings.conf. Error: ${error}`)
             createErrorWindow('settings')
-        }
-        try {
-            JSON.parse(data)
-            log.info("Main: settings.conf found!")
-            checkForApi()
-        } catch (e) {
-            createErrorWindow('parse')
+        } else {
+            try {
+                JSON.parse(data)
+                log.info("Main: settings.conf found!")
+                checkForApi()
+            } catch (e) {
+                //We found a file but couldn't parse it.
+                createErrorWindow('parse')
+            }
         }
     })
 }
@@ -125,6 +127,13 @@ function checkForApi() {
             } else if (body === "Pong!") {
                 log.info(`Main: API responds to ping.`)
                 checkKeys()
+            } else {
+                log.error(`Main: API responded to ping, but with a different response than expected. Response received: ${body}`)
+                let sendError = {
+                    "type": "apiError",
+                    "error": `We received a response from the API server, but it was different than expected. The server may be down. Response: ${body}`
+                }
+                createErrorWindow(`api`, sendError)
             }
         })
     })
@@ -247,7 +256,7 @@ function createErrorWindow(error, sendError) {
             }
         }
     })
-    errorWindow.webContents.openDevTools({mode: "undocked"})
+    //errorWindow.webContents.openDevTools({mode: "undocked"})
     errorWindow.setAlwaysOnTop(false)
     if (loadingWindow) {
         loadingWindow.close()
@@ -434,30 +443,51 @@ exports.tap = () => {
     })
 }
 
-exports.verify = () => {
+exports.verify = (first) => {
     exec(`"${path.join(__dirname, 'assets', 'openvpn', `${os.arch()}`, 'openvpn.exe')}" --show-adapters`, (error, stdout, stderr) => {
         if (error) {
             log.error(`Main: Could not verify TAP installation. Error: ${error}`)
-            let error = {
-                "error": "tapVerify"
+            if (first) {
+                let error = {
+                    "error": "tapVerify"
+                }
+                welcomeWindow.webContents.send("errorFirst", error)
+            } else {
+                let error = {
+                    "error": "tapVerify"
+                }
+                welcomeWindow.webContents.send("error", error)
             }
-            welcomeWindow.webContents.send("error", error)
         } else if ((stdout.replace('Available TAP-WIN32 adapters [name, GUID]:', '')).replace(/\s/g, '') === "") {
-            log.error(`Main: Install was a failure! Log: ${stdout}`)
-            let error = {
-                "error": "tapInstall"
+            log.error(`Main: There is no TAP adapter on the system. Log: ${stdout}`)
+            if (first) {
+                let error = {
+                    "error": "tapInstall"
+                }
+                welcomeWindow.webContents.send("errorFirst", error)
+            } else {
+                let error = {
+                    "error": "tapInstall"
+                }
+                welcomeWindow.webContents.send("error", error)
             }
-            welcomeWindow.webContents.send("error", error)
         } else {
             log.info(`Main: ${stdout}`)
             let settings = {}
             fs.writeFile(path.join(__dirname, 'settings.conf'), JSON.stringify(settings), (error) => {
                 if (error) {
                     log.error(`Main: Error occurred writing settings file. Permissions error perhaps?`)
-                    let error = {
-                        "error": "writeError"
+                    if (first) {
+                        let error = {
+                            "error": "writeError"
+                        }
+                        welcomeWindow.webContents.send("errorFirst", error)
+                    } else {
+                        let error = {
+                            "error": "writeError"
+                        }
+                        welcomeWindow.webContents.send("error", error)
                     }
-                    welcomeWindow.webContents.send("error", error)
                 } else {
                     log.info(`Main: Settings file created!`)
                     app.relaunch()
@@ -485,15 +515,14 @@ exports.connect = (config) => {
             return
         }
         if (os.platform() === "win32") {
-            log.info(`Main: Going to run: "${path.join(__dirname, "assets", "openvpn", `${os.arch()}`)}\\openvpn.exe" --config "${path.join(__dirname, "current.ovpn")}" --connect-retry-max 1 --tls-exit`)
-            let ovpnProc = exec(`"${path.join(__dirname, "assets", "openvpn", `${os.arch()}`)}\\openvpn.exe" --config "${path.join(__dirname, "current.ovpn")}"  --connect-retry-max 1 --tls-exit`)
+            log.info(`Main: Going to run: "${path.join(__dirname, "assets", "openvpn", `${os.arch()}`)}\\openvpn.exe" --config "${path.join(__dirname, "current.ovpn")}" --connect-retry-max 1 --tls-exit --mute-replay-warnings`)
+            let ovpnProc = exec(`"${path.join(__dirname, "assets", "openvpn", `${os.arch()}`)}\\openvpn.exe" --config "${path.join(__dirname, "current.ovpn")}"  --connect-retry-max 1 --tls-exit --mute-replay-warnings`)
             var datalog
             ovpnProc.stdout.on('data', (data) => {
                 log.info(`OpenVPN: ${data}`)
                 datalog = datalog + data 
                 if (data.includes(`Initialization Sequence Completed`)) {
                     var ipString = datalog.search("Notified TAP-Windows driver to set a DHCP IP/netmask of")
-                    log.info(ipString)
                     ipString = datalog.substring(ipString, ipString + 70)
                     var regexp = /([0-9]{1,3}(\.[0-9]{1,3}){3}|[a-f0-9]{1,4}(:[a-f0-9]{1,4}){7})/g
                     log.info(`Main: IP list: ${ipString.match(regexp)}`)

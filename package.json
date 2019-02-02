@@ -30,7 +30,8 @@
       "icon": "build/icon.ico",
       "publisherName": "unrestrict.me",
       "verifyUpdateCodeSignature": true,
-      "asar": false
+      "asar": false,
+      "requestedExecutionLevel": "requireAdministrator"
     },
     "nsis": {
       "oneClick": true,

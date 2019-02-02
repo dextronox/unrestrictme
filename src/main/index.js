@@ -10,7 +10,7 @@ const swal = require('sweetalert')
 const nodersa = require('node-rsa')
 const network = require("network")
 
-let currentRequestId
+let currentRequestId, interval
 
 $(document).ready(() => {
     //These are our listeners from the main process.
@@ -518,28 +518,24 @@ $("#adapterSelect").on('change', () => {
 })
 
 function populateConnected (localIp, connectionId) {
+    if (interval) {
+        clearInterval(interval);
+    }
     log.info(`Renderer: Populating connected divider.`)
     //This populates the connected div info panel
     $("#placeholderIP").html(`${localIp}`)
     $("#placeholderConnectionID").html(`${connectionId}`)
     var countdownTo = new Date()
     countdownTo.setDate(countdownTo.getDate() + 1);
-    // Update the count down every 1 second
-    var x = setInterval(function() {
-        // Get todays date and time
+    interval = setInterval(function() {
         var now = new Date().getTime();
-        // Find the distance between now and the count down date
         var distance = countdownTo - now;
-        // Time calculations for days, hours, minutes and seconds
         var days = Math.floor(distance / (1000 * 60 * 60 * 24));
         var hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
         var minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
         var seconds = Math.floor((distance % (1000 * 60)) / 1000);
-        // Display the result in the element with id="demo"
         $("#placeholderTimeRemaining").html(`${hours}h ${minutes}m (<a href="#" data-toggle="modal" data-target="#timeRemainingFaq">What is this?</a>)`)
-        // If the count down is finished, write some text 
         if (distance < 0) {
-            clearInterval(x);
             $("#placeholderTimeRemaining").html("Connection has expired. Expect to disconnect shortly. Fail safe will engage.")
         }
     }, 1000); 

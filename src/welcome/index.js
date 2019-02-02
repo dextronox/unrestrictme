@@ -37,9 +37,26 @@ $("#step2_button").on("click", () => {
 })
 
 $("#step3_button1").on("click", () => {
-    main.tap()
-    $("#step3_button_div1").css("display", "none")
-    $("#step3_button_div2").css("display", "block")
+    ipcRenderer.once("errorFirst", (event, args) => {
+        if (args["error"] === "writeError") {
+            swal("Whoops!", "You already had a TAP adapter installed, however we couldn't write your settings file to disk. The application will now restart.", "error").then(() => {
+                app.relaunch()
+                app.quit()
+            })
+        } else if (args["error"] === "tapVerify") {
+            swal("Whoops!", "We couldn't verify that the TAP driver installed correctly. Check the log.txt for more information. The application will now restart.", "error").then(() => {
+                app.relaunch()
+                app.quit()
+            })
+        } else if (args["error"] === "tapInstall") {
+            main.tap()
+            $("#step3_button_div1").css("display", "none")
+            $("#step3_button_div2").css("display", "block")
+        }
+    })
+    main.verify(true)
+    $("#step3_button_div1").attr("disabled", true)
+    
 })
 
 $("#step3_button2").on("click", () => {
