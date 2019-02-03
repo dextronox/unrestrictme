@@ -248,11 +248,13 @@ function createErrorWindow(error, sendError) {
     errorWindow.webContents.on('did-finish-load', () => {
         errorWindow.show()
         errorWindow.webContents.send('error', error)
-        if (sendError["type"] === "apiError") {
-            try {
-                errorWindow.webContents.send('apiError', sendError["error"])
-            } catch(e) {
-                log.error(`Main: Couldn't send update error to renderer. Error: ${e}`)
+        if (sendError) {
+            if (sendError["type"] === "apiError") {
+                try {
+                    errorWindow.webContents.send('apiError', sendError["error"])
+                } catch(e) {
+                    log.error(`Main: Couldn't send update error to renderer. Error: ${e}`)
+                }
             }
         }
     })
