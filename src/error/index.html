@@ -20,10 +20,23 @@
     <div id="api" class="container prompt" style="display:none">
         <h1>Uh oh, something's wrong.</h1>
         <p>We're unable to ping our API server.</p>
-        <p>This error is either due to a fault on our end, or as a result of a firewall blocking your connection to our API server. Here's the error:</p>
-        <div class="list-group">
-            <p class="list-group-item list-group-item-action disabled" id="apiError"></p>
+        <p>This error is probably due to a firewall blocking your connection to our servers. Try running in rescue mode.</p>
+        <div class="row">
+            <div class="col-sm">
+                <button type="button" id="rescueMode" class="btn btn-danger btn-lg btn-block">Start Rescue Mode</button>
+            </div>
+            <div class="col-sm">
+                <button type="button" data-toggle="collapse" data-target="#viewError" aria-expanded="false" aria-controls="viewError" class="btn btn-secondary btn-lg btn-block">View Error</button>
+            </div>
         </div>
+        <div class="collapse" id="viewError" style="margin-top: 0.5em">
+            <div class="card card-body">
+                <div class="list-group">
+                    <p class="list-group-item list-group-item-action disabled" id="apiError"></p>
+                </div>
+            </div>
+        </div>
+        
     </div>
     <div id="elevate" class="container prompt" style="display:none">
         <h1>Uh oh, something's wrong.</h1>
@@ -44,6 +57,10 @@
         <h1>Uh oh, something's wrong.</h1>
         <p>Your JSON settings file is not formatted correctly, and as such we were unable to parse it. If you've modified this file, make sure it is in valid JSON notation, and try again.</p>
         <button type="button" class="btn btn-danger" id="clearSettings">Clear Settings File</button>
+    </div>
+    <div id="rescueModeConnecting" class="container prompt" style="display:none">
+        <h1>Launching Rescue Mode.</h1>
+        <p>Once rescue mode is running you'll be able to connect to the full unrestrict.me.</p>
     </div>
     <div class="modal fade" id="why" tabindex="-1" role="dialog" aria-labelledby="why" aria-hidden="true">
         <div class="modal-dialog" role="document">

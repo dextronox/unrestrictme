@@ -40,3 +40,19 @@ function loadPage(type) {
         $("#parse").css('display', 'block')
     }
 }
+
+$("#rescueMode").on('click', () => {
+    log.info(`Renderer: User wishes to engage rescue mode.`)
+    swal({
+        title: "Rescue Mode",
+        text: "Rescue mode will activate a VPN which only allows connections to our servers. We should then be able to ping the API and then start the client.",
+        buttons: true,
+        dangerMode: true,
+    }).then((bool) => {
+        if (bool) {
+            $("#api").css("display", "none")
+            $("#rescueModeConnecting").css("display", "block")
+            main.rescueMode()
+        }
+    })
+})
