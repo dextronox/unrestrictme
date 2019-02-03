@@ -16,10 +16,10 @@
     "proxy"
   ],
   "author": "unrestrict.me",
-  "license": "MIT License",
+  "license": "MIT",
   "build": {
     "appId": "com.unrestrictme.client",
-    "productName": "unrestrict.me Desktop Client",
+    "productName": "unrestrict.me",
     "directories": {
       "buildResources": "build/",
       "output": "dist/",
@@ -34,10 +34,11 @@
       "requestedExecutionLevel": "requireAdministrator"
     },
     "nsis": {
-      "oneClick": true,
+      "oneClick": false,
       "runAfterFinish": true,
       "createDesktopShortcut": true,
-      "createStartMenuShortcut": true
+      "createStartMenuShortcut": true,
+      "allowToChangeInstallationDirectory": true
     },
     "mac": {
       "category": "public.app-category.utilities"
