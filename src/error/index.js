@@ -50,9 +50,12 @@ $("#rescueMode").on('click', () => {
         dangerMode: true,
     }).then((bool) => {
         if (bool) {
+            log.info(`Renderer: We will attempt to engage rescue mode.`)
             $("#api").css("display", "none")
             $("#rescueModeConnecting").css("display", "block")
             main.rescueMode()
+        } else {
+            log.info(`Renderer: User chose not to enable rescue mode.`)
         }
     })
 })

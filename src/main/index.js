@@ -24,7 +24,44 @@ $(document).ready(() => {
             //Hide the disconnected view, show the connected view
             $("#disconnected").css('display', 'none')
             $("#connected").css('display', 'block')
-            populateConnected(args["ip"], currentRequestId)
+            //Clear the counter and the tag.
+            clearInterval(interval);
+            $("#placeholderTimeRemaining").html("")
+            fs.readFile(path.join(__dirname, '../..', 'settings.conf'), 'utf8', (error, data) => {
+                if (error) {
+                    log.error(`Renderer: Error reading settings file. Error: ${error}`)
+                    swal("Whoops!", "We were unable to read your settings file. Please try rebooting the client.", "error")
+                    return;
+                }
+                let requestConfig
+                settingsFile = JSON.parse(data)
+                if (settingsFile["customAPI"]) {
+                    log.info(`Renderer: Using custom API.`)
+                    requestConfig = {
+                        url: `${settingsFile["customAPI"]}/client/ip`,
+                        timeout: 5000,
+                        method: "GET"
+                    } 
+                } else {
+                    log.info(`Renderer: Using normal API.`)
+                    requestConfig = {
+                        url: `https://api.unrestrict.me/client/ip`,
+                        timeout: 5000,
+                        method: "GET"
+                    }
+                }
+                request(requestConfig, (error, response, body) => {
+                    if (error) {
+                        log.error(`Renderer: Error getting public IP. Error: ${error}`)
+                    } else {
+                        if (/^(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/.test(body) || body === "::ffff:127.0.0.1") {
+                            populateConnected(args["ip"], body, currentRequestId)
+                        } else {
+                            populateConnected(args["ip"], "API Failure", currentRequestId)
+                        }
+                    }
+                })
+            })
         } else {
             //We have failed to connect to unrestrict.me
             if ($("#connected").css('display') === 'none') {
@@ -84,6 +121,9 @@ $(document).ready(() => {
             $("#connected").css('display', 'none')
             $("#disconnected").css('display', 'block')
         }
+    })
+    ipcRenderer.on(`trayError`, (event, args) => {
+        swal("Whoops!", "We were unable to get your IP address from our API server.", "error")
     })
     network.get_interfaces_list(function(error, obj) {
         for (i = 0; Object.keys(obj).length >= i; i++) {
@@ -411,6 +451,52 @@ $("#customWebpageSubmit").on("click", () => {
     })
 })
 
+$("#customAPIClear").on("click", () => {
+    log.info(`Renderer: Clearing custom API.`)
+    fs.readFile(path.join(__dirname, "../..", "settings.conf"), (error, data) => {
+        if (error) {
+            log.error(`Renderer: Error reading settings file. Error: ${error}`)
+            swal("Whoops!", "We can't read the settings.conf file.", "error")
+            return
+        }
+        let current = JSON.parse(data)
+        delete current["customAPI"]
+        fs.writeFile(path.join(__dirname, "../..", "settings.conf"), JSON.stringify(current), (error) => {
+            if (error) {
+                log.error(`Renderer: Error writing to settings file. Error: ${error}`)
+                swal("Whoops!", "We can't write to the settings.conf file.", "error")
+                return
+            }
+            log.info(`Renderer: Custom API cleared.`)
+            $("#customAPI").val('')
+            swal("Success!", "Your custom API server has been cleared.", "success")
+        })
+    })
+})
+
+$("#customWebpageClear").on("click", () => {
+    log.info(`Renderer: Clearing custom webpage.`)
+    fs.readFile(path.join(__dirname, "../..", "settings.conf"), (error, data) => {
+        if (error) {
+            log.error(`Renderer: Error reading settings file. Error: ${error}`)
+            swal("Whoops!", "We can't read the settings.conf file.", "error")
+            return
+        }
+        let current = JSON.parse(data)
+        delete current["customWebpage"]
+        fs.writeFile(path.join(__dirname, "../..", "settings.conf"), JSON.stringify(current), (error) => {
+            if (error) {
+                log.error(`Renderer: Error writing to settings file. Error: ${error}`)
+                swal("Whoops!", "We can't write to the settings.conf file.", "error")
+                return
+            }
+            log.info(`Renderer: Custom webpage cleared.`)
+            $("#customWebpage").val('')
+            swal("Success!", "Your custom webpage server has been cleared.", "success")
+        })
+    })
+})
+
 $("#rsa_regen").on("click", () => {
     log.info(`Renderer: Regenerating RSA keypair`)
     let key = new nodersa()
@@ -517,14 +603,15 @@ $("#adapterSelect").on('change', () => {
     })
 })
 
-function populateConnected (localIp, connectionId) {
+function populateConnected (localIp, publicIp, connectionId) {
     if (interval) {
         clearInterval(interval);
     }
     log.info(`Renderer: Populating connected divider.`)
     //This populates the connected div info panel
-    $("#placeholderIP").html(`${localIp}`)
+    $("#placeholderIP").html(`${localIp} / ${publicIp}`)
     $("#placeholderConnectionID").html(`${connectionId}`)
+    $("#placeholderTimeRemaining").css("display", "inline")
     var countdownTo = new Date()
     countdownTo.setDate(countdownTo.getDate() + 1);
     interval = setInterval(function() {
