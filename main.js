@@ -1,6 +1,6 @@
 //unrestrict.me Desktop Application.
 //Dependencies
-const {app, BrowserWindow, ipcMain, Menu, Tray, dialog} = require("electron")
+const {app, BrowserWindow, ipcMain, Menu, Tray, dialog, clipboard} = require("electron")
 const path = require("path")
 module.paths.push(path.resolve('node_modules'));
 module.paths.push(path.resolve('../node_modules'));
@@ -28,13 +28,13 @@ function setLogValues() {
     log.transports.file.level = 'info';
     log.transports.file.format = '{h}:{i}:{s}:{ms} {text}';
     log.transports.file.maxSize = 5 * 1024 * 1024;
-    log.transports.file.file = path.join(__dirname, 'log.txt');
     log.transports.file.streamConfig = { flags: 'w' };
-    log.transports.file.stream = fs.createWriteStream(path.join(__dirname, 'log.txt'));
 }
 
 app.on('ready', () => {
-    fs.writeFile(path.join(__dirname, "log.txt"), "", (error) => {
+    setLogValues()
+    appStart()
+/*     fs.writeFile(path.join(__dirname, "log.txt"), "", (error) => {
         if (error){
             console.log(dialog.showMessageBox({type: "error", buttons: ["Ok"], defaultId: 0, title: "Application Initialisation Error", message: `We couldn't write to your log.txt file, which will prevent the application from running. Check permissions. Error: ${error}`}))
             app.quit()
@@ -43,7 +43,7 @@ app.on('ready', () => {
             setLogValues()
             appStart()
         }
-    })
+    }) */
 })
 
 
@@ -258,7 +258,7 @@ function createErrorWindow(error, sendError) {
             }
         }
     })
-    //errorWindow.webContents.openDevTools({mode: "undocked"})
+    errorWindow.webContents.openDevTools({mode: "undocked"})
     errorWindow.setAlwaysOnTop(false)
     if (loadingWindow) {
         loadingWindow.close()
@@ -317,6 +317,48 @@ function createMainWindow() {
         {
             label: "Show unrestrict.me", click: () => {
                 mainWindow.show()
+            }
+        },
+        {
+            label: "Copy IP to Clipboard", click: () => {
+                fs.readFile(path.join(__dirname, 'settings.conf'), 'utf8', (error, data) => {
+                    if (error) {
+                        log.error(`Renderer: Error reading settings file. Error: ${error}`)
+                        mainWindow.webContents.send("trayError", "")
+                        return;
+                    }
+                    let requestConfig
+                    settingsFile = JSON.parse(data)
+                    if (settingsFile["customAPI"]) {
+                        log.info(`Renderer: Using custom API.`)
+                        requestConfig = {
+                            url: `${settingsFile["customAPI"]}/client/ip`,
+                            timeout: 5000,
+                            method: "GET"
+                        } 
+                    } else {
+                        log.info(`Renderer: Using normal API.`)
+                        requestConfig = {
+                            url: `https://api.unrestrict.me/client/ip`,
+                            timeout: 5000,
+                            method: "GET"
+                        }
+                    }
+                    request(requestConfig, (error, response, body) => {
+                        if (error) {
+                            log.error(`Renderer: Error getting public IP. Error: ${error}`)
+                        } else {
+                            if (/^(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/.test(body) || body === "::ffff:127.0.0.1") {
+                                clipboard.writeText(body)
+                                log.info(`Renderer: IP address copied to clipboard.`)
+                            } else {
+                                mainWindow.show()
+                                mainWindow.webContents.send("trayError", "")
+                                log.error(`Renderer: Failed to get IP address for clipboard.`)
+                            }
+                        }
+                    })
+                })
             }
         },
         {
@@ -703,6 +745,7 @@ function killSwitch(enable) {
 function killSwitchEnable(nic) {
     if (os.platform() === "win32") {
         log.info(`Main: Enabling Kill Switch for ${os.platform()}.`)
+        //This refers to the function nic, stupid.
         if (nic === "auto") {
             log.info(`Main: We will automatically determine the interface to disable.`)
             network.get_interfaces_list(function(error, obj) {
