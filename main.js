@@ -16,9 +16,20 @@ const request = require("request")
 const progress = require("request-progress")
 const nodersa = require('node-rsa')
 const network = require("network")
+const appLock = app.requestSingleInstanceLock()
 
-
-
+if (!appLock) {
+    app.quit()
+} else {
+    app.on('second-instance', (event, commandLine, workingDirectory) => {
+        if (mainWindow) {
+            if (mainWindow.isMinimized()) {
+                mainWindow.restore()
+            }
+            mainWindow.focus()
+        }
+    })
+}
 
 //Definition of global variables
 let loadErrors = {}, loadingWindow, errorWindow, welcomeWindow, mainWindow, tray, killSwitchStatus, intentionalDisconnect
@@ -238,7 +249,7 @@ function createLoadingWindow() {
 }
 
 function createErrorWindow(error, sendError) {
-    errorWindow = new BrowserWindow({show: false, frame: true, width: 600, height: 400, icon: path.resolve(__dirname, 'assets', 'icons', 'win.ico'), 'minWidth': 600, 'minHeight': 400, transparent: false, title: "unrestrict.me Client", resizable: false})
+    errorWindow = new BrowserWindow({show: false, frame: true, width: 600, height: 420, icon: path.resolve(__dirname, 'assets', 'icons', 'win.ico'), 'minWidth': 600, 'minHeight': 420, transparent: false, title: "unrestrict.me Client", resizable: false})
     errorWindow.setMenu(null)
     errorWindow.loadURL(url.format({
         pathname: path.join(__dirname, 'src/error/index.html'),
@@ -258,7 +269,7 @@ function createErrorWindow(error, sendError) {
             }
         }
     })
-    errorWindow.webContents.openDevTools({mode: "undocked"})
+    //errorWindow.webContents.openDevTools({mode: "undocked"})
     errorWindow.setAlwaysOnTop(false)
     if (loadingWindow) {
         loadingWindow.close()
@@ -267,7 +278,7 @@ function createErrorWindow(error, sendError) {
 }
 
 function createWelcomeWindow() {
-    welcomeWindow = new BrowserWindow({show: false, frame: true, width: 600, height: 400, icon: path.resolve(__dirname, 'assets', 'icons', 'win.ico'), 'minWidth': 600, 'minHeight': 400, transparent: false, title: "unrestrict.me Client", resizable: false})
+    welcomeWindow = new BrowserWindow({show: false, frame: true, width: 600, height: 420, icon: path.resolve(__dirname, 'assets', 'icons', 'win.ico'), 'minWidth': 600, 'minHeight': 420, transparent: false, title: "unrestrict.me Client", resizable: false})
     welcomeWindow.setMenu(null)
     welcomeWindow.loadURL(url.format({
         pathname: path.join(__dirname, 'src/welcome/index.html'),
@@ -286,7 +297,7 @@ function createWelcomeWindow() {
 }
 
 function createMainWindow() {
-    mainWindow = new BrowserWindow({show: false, frame: true, width: 600, height: 400, icon: path.resolve(__dirname, 'assets', 'icons', 'win.ico'), 'minWidth': 600, 'minHeight': 400, transparent: false, title: "unrestrict.me Client", resizable: true})
+    mainWindow = new BrowserWindow({show: false, frame: true, width: 600, height: 420, icon: path.resolve(__dirname, 'assets', 'icons', 'win.ico'), 'minWidth': 600, 'minHeight': 420, transparent: false, title: "unrestrict.me Client", resizable: false})
     mainWindow.setMenu(null)
     mainWindow.loadURL(url.format({
         pathname: path.join(__dirname, 'src/main/index.html'),
@@ -296,7 +307,7 @@ function createMainWindow() {
     mainWindow.webContents.on('did-finish-load', () => {
         mainWindow.show()
     })
-    mainWindow.webContents.openDevTools({mode: "undocked"})
+    //mainWindow.webContents.openDevTools({mode: "undocked"})
     mainWindow.setAlwaysOnTop(false)
     mainWindow.on('minimize',function(event){
         event.preventDefault();
@@ -520,7 +531,7 @@ exports.verify = (first) => {
             let settings = {}
             fs.writeFile(path.join(__dirname, 'settings.conf'), JSON.stringify(settings), (error) => {
                 if (error) {
-                    log.error(`Main: Error occurred writing settings file. Permissions error perhaps?`)
+                    log.error(`Main: Error occurred writing settings file. Permissions error perhaps? Error: ${error}`)
                     if (first) {
                         let error = {
                             "error": "writeError"
@@ -559,26 +570,30 @@ exports.connect = (config) => {
             return
         }
         if (os.platform() === "win32") {
-            log.info(`Main: Going to run: "${path.join(__dirname, "assets", "openvpn", `${os.arch()}`)}\\openvpn.exe" --config "${path.join(__dirname, "current.ovpn")}" --connect-retry-max 1 --tls-exit --mute-replay-warnings`)
-            let ovpnProc = exec(`"${path.join(__dirname, "assets", "openvpn", `${os.arch()}`)}\\openvpn.exe" --config "${path.join(__dirname, "current.ovpn")}"  --connect-retry-max 1 --tls-exit --mute-replay-warnings`)
+            log.info(`Main: Going to run: "${path.join(__dirname, "assets", "openvpn", `${os.arch()}`)}\\openvpn.exe" --config "${path.join(__dirname, "current.ovpn")}" --connect-retry-max 1 --tls-exit --mute-replay-warnings --connect-timeout 15`)
+            let ovpnProc = exec(`"${path.join(__dirname, "assets", "openvpn", `${os.arch()}`)}\\openvpn.exe" --config "${path.join(__dirname, "current.ovpn")}"  --connect-retry-max 1 --tls-exit --mute-replay-warnings --connect-timeout 15`)
             var datalog
             ovpnProc.stdout.on('data', (data) => {
                 log.info(`OpenVPN: ${data}`)
                 datalog = datalog + data 
                 if (data.includes(`Initialization Sequence Completed`)) {
-                    var ipString = datalog.search("Notified TAP-Windows driver to set a DHCP IP/netmask of")
-                    ipString = datalog.substring(ipString, ipString + 70)
-                    var regexp = /([0-9]{1,3}(\.[0-9]{1,3}){3}|[a-f0-9]{1,4}(:[a-f0-9]{1,4}){7})/g
-                    log.info(`Main: IP list: ${ipString.match(regexp)}`)
-                    //Connected to unrestrictme
-                    let status = {
-                        "connected": true,
-                        "ip": ipString.match(regexp)
-                    }
-                    try {
-                        mainWindow.webContents.send('connection', status)
-                    } catch(e) {
-                        log.error(`Main: Couldn't send OpenVPN status to renderer. Error: ${e}`)
+                    let initializeCount = (datalog.match(/Initialization Sequence Completed/g) || []).length;
+                    if (initializeCount <= 1) {
+                        //Send required information to main window.
+                        var ipString = datalog.search("Notified TAP-Windows driver to set a DHCP IP/netmask of")
+                        ipString = datalog.substring(ipString, ipString + 70)
+                        var regexp = /([0-9]{1,3}(\.[0-9]{1,3}){3}|[a-f0-9]{1,4}(:[a-f0-9]{1,4}){7})/g
+                        log.info(`Main: IP list: ${ipString.match(regexp)}`)
+                        //Connected to unrestrictme
+                        let status = {
+                            "connected": true,
+                            "ip": ipString.match(regexp)
+                        }
+                        try {
+                            mainWindow.webContents.send('connection', status)
+                        } catch(e) {
+                            log.error(`Main: Couldn't send OpenVPN status to renderer. Error: ${e}`)
+                        }
                     }
                 }
                 if (data.includes(`All TAP-Windows adapters on this system are currently in use.`)) {
@@ -598,17 +613,26 @@ exports.connect = (config) => {
                     killSwitchStatus = true
                 }
                 if (data.includes('SIGTERM[soft,tls-error] received, process exiting')) {
-                    //OpenVPN failed to connect
-                    log.info(`Main: OpenVPN failed to connect.`)
-                    intentionalDisconnect = true
-                    let status = {
-                        "connectError": true
+                    //OpenVPN failed to connect, check if had already connected.
+                    if (!datalog.includes(`Initialization Sequence Completed`)) {
+                        log.info(`Main: OpenVPN failed to connect.`)
+                        intentionalDisconnect = true
+                        let status = {
+                            "connectError": true
+                        }
+                        try {
+                            mainWindow.webContents.send('error', status)
+                        } catch(e) {
+                            log.error(`Main: Couldn't send OpenVPN status to renderer. Error: ${e}`)
+                        }
                     }
-                    try {
-                        mainWindow.webContents.send('error', status)
-                    } catch(e) {
-                        log.error(`Main: Couldn't send OpenVPN status to renderer. Error: ${e}`)
+                }
+                if (data.includes(`Inactivity timeout (--ping-restart), restarting`)) {
+                    //Something has caused the VPN to restart. Alert the user that there are issues.
+                    let error = {
+                        "inactivityTimeout": true
                     }
+                    mainWindow.webContents.send("error", error)
                 }
             })
             ovpnProc.on('close', (data) => {
@@ -633,7 +657,7 @@ exports.connect = (config) => {
     }) 
 }
 
-exports.disconnect = () => {
+exports.disconnect = (preconnect) => {
     intentionalDisconnect = true
     log.info(`Main: We're about to kill OpenVPN. If OpenVPN is not running, you will see no confirmation it wasn't killed.`)
     exec(`taskkill /F /IM openvpn.exe`, (error, stdout, stderr) => {
@@ -649,14 +673,26 @@ exports.disconnect = () => {
             }
             return
         }
-        let status = {
-            "connected": false
+        if (preconnect) {
+            let status = {
+                "connectionCancelled": true
+            }
+            try {
+                mainWindow.webContents.send('connection', status)
+            } catch(e) {
+                log.error(`Main: Couldn't send OpenVPN status to renderer. Error: ${e}`)
+            }
+        } else {
+            let status = {
+                "connected": false
+            }
+            try {
+                mainWindow.webContents.send('connection', status)
+            } catch(e) {
+                log.error(`Main: Couldn't send OpenVPN status to renderer. Error: ${e}`)
+            }
         }
-        try {
-            mainWindow.webContents.send('connection', status)
-        } catch(e) {
-            log.error(`Main: Couldn't send OpenVPN status to renderer. Error: ${e}`)
-        }
+
         log.info(`Main: OpenVPN was killed.`)
     })
 }
@@ -749,7 +785,7 @@ function killSwitchEnable(nic) {
         if (nic === "auto") {
             log.info(`Main: We will automatically determine the interface to disable.`)
             network.get_interfaces_list(function(error, obj) {
-                let interface = obj.find(function(element) {
+                let autoInterface = obj.find(function(element) {
                     if (element["gateway_ip"] != null) {
                         return element
                     }
@@ -768,7 +804,7 @@ function killSwitchEnable(nic) {
                         return;
                     }
                     let settings = JSON.parse(data)
-                    settings["nic"] = interface["name"]
+                    settings["nic"] = autoInterface["name"]
                     fs.writeFile(path.join(__dirname, 'settings.conf'), JSON.stringify(settings), (error) => {
                         if (error) {
                             log.error(`Main: Couldn't write settings file to enter kill switch NIC. Will not proceed. Error: ${error}`)
@@ -782,7 +818,7 @@ function killSwitchEnable(nic) {
                             }
                             return;
                         }
-                        exec(`netsh interface set interface "${interface["name"]}" admin=disable`, (error, stderr, stdout) => {
+                        exec(`netsh interface set interface "${autoInterface["name"]}" admin=disable`, (error, stderr, stdout) => {
                             if (error) {
                                 log.error(`Main: Couldn't disable network adapter. Error: ${error}`)
                                 let status = {
