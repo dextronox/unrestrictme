@@ -8,6 +8,10 @@ h1 {
     pointer-events: none;
     user-select: none;
 }
+h5 {
+    pointer-events: none;
+    user-select: none;
+}
 p {
     pointer-events: none;
     user-select: none;
