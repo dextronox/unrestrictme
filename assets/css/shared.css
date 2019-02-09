@@ -1,0 +1,36 @@
+body {
+    background-color: #e9ecef;
+}
+.prompt {
+    margin-top: 25q;
+}
+h1 {
+    pointer-events: none;
+    user-select: none;
+}
+p {
+    pointer-events: none;
+    user-select: none;
+}
+p a {
+    pointer-events: all;
+    user-select: none;
+}
+b {
+    pointer-events: none;
+    user-select: none;
+}
+.navbar {
+    pointer-events: none;
+    user-select: none;
+}
+.navbar img {
+	height: 3em;
+	pointer-events: none;
+	-webkit-touch-callout: none; /* iOS Safari */
+    -webkit-user-select: none; /* Safari */
+     -khtml-user-select: none; /* Konqueror HTML */
+       -moz-user-select: none; /* Firefox */
+        -ms-user-select: none; /* Internet Explorer/Edge */
+            user-select: none;
+}
