@@ -4,6 +4,7 @@ const $ = jQuery = require('jquery')
 const path = require("path")
 const main = remote.require(path.resolve(__dirname, '../..', 'main.js'))
 const swal = require('sweetalert')
+const log = require("electron-log")
 
 $(document).ready(() => {
     ipcRenderer.once(`error`, (event, args) => {

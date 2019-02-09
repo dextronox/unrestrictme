@@ -62,18 +62,22 @@ $(document).ready(() => {
                     }
                 })
             })
-        } else {
-            //We have failed to connect to unrestrict.me
+        } else if (args["connectionCancelled"]) {
+            $("#loading3").css("display", "none")
+            $("#connectButtons").css("display", "block")
+        } else if (!args["connected"]) {
             if ($("#connected").css('display') === 'none') {
+                //We have failed to connect to unrestrict.me
                 $("#loading3").css("display", "none")
                 $("#connectButtons").css("display", "block")
                 swal("Whoops!", "We were unable to connect you to unrestrict.me.", "error")
             } else {
-                //Disconnected from unrestrict.me
-                $("#connected").css('display', 'none')
-                $("#disconnected").css('display', 'block')
+                $("#connected").css("display", "none")
+                $("#connectButtons").css("display", "block")
+                $("#disconnected").css("display", "block")
                 swal("Success!", "You have been disconnected from unrestrict.me.", "success")
             }
+
         }
     })
     //An OpenVPN error occurred.
@@ -103,6 +107,8 @@ $(document).ready(() => {
             swal("Whoops!", "We couldn't connect you to OpenVPN. Feel free to try a different location.", "error")
             $("#loading3").css("display", "none")
             $("#connectButtons").css("display", "block")
+        } else if (args["inactivityTimeout"]) {
+            
         }
     })
     ipcRenderer.on(`killSwitch`, (event, args) => {
@@ -402,6 +408,11 @@ $("#cancelRequest").on("click", () => {
             }
         })
     })
+})
+
+$("#cancelConnection").on("click", () => {
+    log.info(`Renderer: We're going to cancel our connection to unrestrict.me`)
+    main.disconnect(true)
 })
 
 //Settings listeners
