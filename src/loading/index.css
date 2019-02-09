@@ -18,15 +18,6 @@ body {
     align-items: center; /* align vertical */
 }
 
-h1 {
-    pointer-events: none;
-    user-select: none;
-}
-p {
-    pointer-events: none;
-    user-select: none;
-}
-
 /*!
  * Load Awesome v1.1.0 (http://github.danielcardoso.net/load-awesome/)
  * Copyright 2015 Daniel Cardoso <@DanielCardoso>
