@@ -27,10 +27,13 @@
     },
     "win": {
       "target": "nsis",
-      "icon": "build/icon.ico",
+      "icon": "build/win.ico",
       "publisherName": "unrestrict.me",
       "verifyUpdateCodeSignature": true,
-      "asar": false,
+      "asar": true,
+      "asarUnpack": [
+        "log.txt"
+      ],
       "requestedExecutionLevel": "requireAdministrator"
     },
     "nsis": {
