@@ -607,9 +607,7 @@ exports.verify = (first) => {
                             })
                         }
                     })
-                } else {
-                    log.info(stdout)
-                    log.info(stderr)
+                } else if (!stdout.includes('built on')) {
                     log.error(`Main: Couldn't detect whether OpenVPN is installed. Error: ${error}`)
                     let sendError = {
                         "error": "openvpnVerify"
