@@ -41,7 +41,10 @@
       "allowToChangeInstallationDirectory": true
     },
     "linux": {
-      "target": "AppImage"
+      "target": "deb",
+      "icon": "build/icon.png",
+      "synopsis": "Connect to unrestrict.me",
+      "category": "Network"
     },
     "deb": {
       "depends": [
