@@ -563,7 +563,10 @@ exports.verify = (first) => {
                         if (String(os["dist"]).includes("Ubuntu") || String(os["dist"]).includes("Debian")) {
                             log.info(`Main: Will install OpenVPN for Debian/Ubuntu`)
                             exec(`apt -y install openvpn`, (error, stdout, stderr) => {
-                                log.info(`${stdout} + ${stderr}`)
+                                let status = {
+                                    "status": "installing"
+                                }
+                                welcomeWindow.webContents.send("aptInstall", error)
                                 if (error) {
                                     //Couldn't run the install command.
                                     log.error(`Main: Failed to run command to install OpenVPN. Error: ${error}`)
