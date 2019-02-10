@@ -16,6 +16,7 @@ const request = require("request")
 const progress = require("request-progress")
 const nodersa = require('node-rsa')
 const network = require("network")
+const getos = require("getos")
 const appLock = app.requestSingleInstanceLock()
 
 if (!appLock) {
@@ -499,58 +500,145 @@ exports.tap = () => {
 }
 
 exports.verify = (first) => {
-    exec(`"${path.join(__dirname, 'assets', 'openvpn', `${os.arch()}`, 'openvpn.exe')}" --show-adapters`, (error, stdout, stderr) => {
-        if (error) {
-            log.error(`Main: Could not verify TAP installation. Error: ${error}`)
-            if (first) {
-                let error = {
-                    "error": "tapVerify"
-                }
-                welcomeWindow.webContents.send("errorFirst", error)
-            } else {
-                let error = {
-                    "error": "tapVerify"
-                }
-                welcomeWindow.webContents.send("error", error)
-            }
-        } else if ((stdout.replace('Available TAP-WIN32 adapters [name, GUID]:', '')).replace(/\s/g, '') === "") {
-            log.error(`Main: There is no TAP adapter on the system. Log: ${stdout}`)
-            if (first) {
-                let error = {
-                    "error": "tapInstall"
-                }
-                welcomeWindow.webContents.send("errorFirst", error)
-            } else {
-                let error = {
-                    "error": "tapInstall"
-                }
-                welcomeWindow.webContents.send("error", error)
-            }
-        } else {
-            log.info(`Main: ${stdout}`)
-            let settings = {}
-            fs.writeFile(path.join(__dirname, 'settings.conf'), JSON.stringify(settings), (error) => {
-                if (error) {
-                    log.error(`Main: Error occurred writing settings file. Permissions error perhaps? Error: ${error}`)
-                    if (first) {
-                        let error = {
-                            "error": "writeError"
-                        }
-                        welcomeWindow.webContents.send("errorFirst", error)
-                    } else {
-                        let error = {
-                            "error": "writeError"
-                        }
-                        welcomeWindow.webContents.send("error", error)
+    if (os.platform() === "win32") {
+        exec(`"${path.join(__dirname, 'assets', 'openvpn', `${os.arch()}`, 'openvpn.exe')}" --show-adapters`, (error, stdout, stderr) => {
+            if (error) {
+                log.error(`Main: Could not verify TAP installation. Error: ${error}`)
+                if (first) {
+                    let error = {
+                        "error": "tapVerify"
                     }
+                    welcomeWindow.webContents.send("errorFirst", error)
                 } else {
-                    log.info(`Main: Settings file created!`)
-                    app.relaunch()
-                    app.quit()
+                    let error = {
+                        "error": "tapVerify"
+                    }
+                    welcomeWindow.webContents.send("error", error)
                 }
-            })
+            } else if ((stdout.replace('Available TAP-WIN32 adapters [name, GUID]:', '')).replace(/\s/g, '') === "") {
+                log.error(`Main: There is no TAP adapter on the system. Log: ${stdout}`)
+                if (first) {
+                    let error = {
+                        "error": "tapInstall"
+                    }
+                    welcomeWindow.webContents.send("errorFirst", error)
+                } else {
+                    let error = {
+                        "error": "tapInstall"
+                    }
+                    welcomeWindow.webContents.send("error", error)
+                }
+            } else {
+                log.info(`Main: ${stdout}`)
+                let settings = {}
+                fs.writeFile(path.join(__dirname, 'settings.conf'), JSON.stringify(settings), (error) => {
+                    if (error) {
+                        log.error(`Main: Error occurred writing settings file. Permissions error perhaps? Error: ${error}`)
+                        if (first) {
+                            let error = {
+                                "error": "writeError"
+                            }
+                            welcomeWindow.webContents.send("errorFirst", error)
+                        } else {
+                            let error = {
+                                "error": "writeError"
+                            }
+                            welcomeWindow.webContents.send("error", error)
+                        }
+                    } else {
+                        log.info(`Main: Settings file created!`)
+                        app.relaunch()
+                        app.quit()
+                    }
+                })
+            }
+        })
+    } else if (os.platform() === "linux") {
+        exec(`openvpn`, (error, stdout, stderr) => {
+            if (error) {
+                let error = {
+                    "error": "openvpnVerify"
+                }
+                welcomeWindow.webContents.send("errorFirst", error)
+                return;
+            }
+            if (stdout.includes(`built on`)) {
+                fs.writeFile(path.join(__dirname, 'settings.conf'), JSON.stringify(settings), (error) => {
+                    if (error) {
+                        log.error(`Main: Error occurred writing settings file. Permissions error perhaps? Error: ${error}`)
+                        if (first) {
+                            let error = {
+                                "error": "writeError"
+                            }
+                            welcomeWindow.webContents.send("errorFirst", error)
+                        } else {
+                            let error = {
+                                "error": "writeError"
+                            }
+                            welcomeWindow.webContents.send("error", error)
+                        }
+                    } else {
+                        log.info(`Main: Settings file created!`)
+                        app.relaunch()
+                        app.quit()
+                    }
+                })
+            } else {
+                //OpenVPN not installed. Get from package repository.
+                getos((error, os) => {
+                    if (os["dist"].includes("Ubunutu") || os["dist"].includes("Debian")) {
+                        exec(`apt -y install openvpn`, (error, stdout, stderr) => {
+                            if (error) {
+                                //Couldn't run the install command.
+                                log.error(`Main: Failed to run command to install OpenVPN. Error: ${error}`)
+                                let error = {
+                                    "error": "openvpnInstall"
+                                }
+                                welcomeWindow.webContents.send("errorFirst", error)
+                                return;
+                            }
+                            if (stdout.includes("E:")) {
+                                //An error occurred installing OpenVPN
+                                log.error(`Main: Failed to install OpenVPN. Stdout: ${stdout}`)
+                                let error = {
+                                    "error": "openvpnInstall"
+                                }
+                                welcomeWindow.webContents.send("errorFirst", error)
+                                return;
+                            } else {
+                                fs.writeFile(path.join(__dirname, 'settings.conf'), JSON.stringify(settings), (error) => {
+                                    if (error) {
+                                        log.error(`Main: Error occurred writing settings file. Permissions error perhaps? Error: ${error}`)
+                                        if (first) {
+                                            let error = {
+                                                "error": "writeError"
+                                            }
+                                            welcomeWindow.webContents.send("errorFirst", error)
+                                        } else {
+                                            let error = {
+                                                "error": "writeError"
+                                            }
+                                            welcomeWindow.webContents.send("error", error)
+                                        }
+                                    } else {
+                                        log.info(`Main: Settings file created!`)
+                                        app.relaunch()
+                                        app.quit()
+                                    }
+                                }) 
+                            }
+                        })
+                    }
+                })
+            }
+        })
+    } else {
+        let error = {
+            "error": "unsupportedOS"
         }
-    })
+        welcomeWindow.webContents.send("errorFirst", error)
+    }
+
 }
 
 exports.connect = (config) => {

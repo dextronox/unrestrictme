@@ -40,19 +40,33 @@ $("#step2_button").on("click", () => {
 $("#step3_button1").on("click", () => {
     ipcRenderer.once("errorFirst", (event, args) => {
         if (args["error"] === "writeError") {
-            swal("Whoops!", "You already had a TAP adapter installed, however we couldn't write your settings file to disk. The application will now restart.", "error").then(() => {
-                app.relaunch()
+            $("#step3_button_div1").css("display", "none")
+            swal("Whoops!", "You already had a TAP adapter installed, however we couldn't write your settings file to disk. The application will now close to preserve the log.", "error").then(() => {
                 app.quit()
             })
         } else if (args["error"] === "tapVerify") {
-            swal("Whoops!", "We couldn't verify that the TAP driver installed correctly. Check the log.txt for more information. The application will now restart.", "error").then(() => {
-                app.relaunch()
+            $("#step3_button_div1").css("display", "none")
+            swal("Whoops!", "We couldn't verify that the TAP driver installed correctly. Check the log.txt for more information. The application will now close to preserve the log.", "error").then(() => {
                 app.quit()
             })
         } else if (args["error"] === "tapInstall") {
             main.tap()
-            $("#step3_button_div1").css("display", "none")
             $("#step3_button_div2").css("display", "block")
+        } else if (args["error"] === "unsupportedOS") {
+            $("#step3_button_div1").css("display", "none")
+            swal("Whoops!", "Your platform is not supported.", "error").then(() => {
+                app.quit()
+            })
+        } else if (args["error"] === "openvpnVerify") {
+            $("#step3_button_div1").css("display", "none")
+            swal("Whoops!", "We couldn't check whether OpenVPN is installed. Check the log file for more information.", "error").then(() => {
+                app.quit()
+            })
+        } else if (args["error"] === "openvpnInstall") {
+            $("#step3_button_div1").css("display", "none")
+            swal("Whoops!", "We couldn't install OpenVPN. Check the log file for more information.", "error").then(() => {
+                app.quit()
+            })
         }
     })
     main.verify(true)
