@@ -560,7 +560,6 @@ exports.verify = (first) => {
                     //OpenVPN not installed. Get from package repository.
                     log.info(`Main: Installing OpenVPN from package repository.`)
                     getos((error, os) => {
-                        log.info(`${String(os["dist"]).includes("Ubuntu")} + ${String(os["dist"]).includes("Debian")}`)
                         if (String(os["dist"]).includes("Ubuntu") || String(os["dist"]).includes("Debian")) {
                             log.info(`Main: Will install OpenVPN for Debian/Ubuntu`)
                             exec(`apt -y install openvpn`, (error, stdout, stderr) => {
@@ -583,6 +582,7 @@ exports.verify = (first) => {
                                     welcomeWindow.webContents.send("errorFirst", error)
                                     return;
                                 } else {
+                                    let settings = {}
                                     fs.writeFile(path.join(__dirname, 'settings.conf'), JSON.stringify(settings), (error) => {
                                         if (error) {
                                             log.error(`Main: Error occurred writing settings file. Permissions error perhaps? Error: ${error}`)
@@ -618,6 +618,7 @@ exports.verify = (first) => {
 
             }
             if (stdout.includes(`built on`)) {
+                let settings = {}
                 fs.writeFile(path.join(__dirname, 'settings.conf'), JSON.stringify(settings), (error) => {
                     if (error) {
                         log.error(`Main: Error occurred writing settings file. Permissions error perhaps? Error: ${error}`)
