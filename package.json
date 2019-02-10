@@ -57,7 +57,7 @@
         "openvpn"
       ],
       "maintainer": "unrestrict.me",
-      "icon": "build/256x256.png"
+      "icon": "256x256.png"
     },
     "mac": {
       "category": "public.app-category.utilities"
