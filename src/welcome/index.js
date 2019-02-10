@@ -26,7 +26,6 @@ $(document).ready(() => {
         }
     })
     ipcRenderer.on(`aptInstall`, (event, args) => {
-        log.info(args)
         if (args["status"] === "installing") {
             $("#step3_repository_installing").css("display", "block")
         }
