@@ -560,8 +560,8 @@ exports.verify = (first) => {
                     //OpenVPN not installed. Get from package repository.
                     log.info(`Main: Installing OpenVPN from package repository.`)
                     getos((error, os) => {
-                        log.info(`${String(os["dist"]).includes("Ubunutu")} + ${String(os["dist"]).includes("Debian")}`)
-                        if (String(os["dist"]).includes("Ubunutu") || String(os["dist"]).includes("Debian")) {
+                        log.info(`${String(os["dist"]).includes("Ubuntu")} + ${String(os["dist"]).includes("Debian")}`)
+                        if (String(os["dist"]).includes("Ubuntu") || String(os["dist"]).includes("Debian")) {
                             log.info(`Main: Will install OpenVPN for Debian/Ubuntu`)
                             exec(`apt -y install openvpn`, (error, stdout, stderr) => {
                                 log.info(`${stdout} + ${stderr}`)
