@@ -557,10 +557,10 @@ exports.verify = (first) => {
         exec(`openvpn`, (error, stdout, stderr) => {
             if (error) {
                 log.error(`Main: Couldn't detect whether OpenVPN is installed. Error: ${error}`)
-                let error = {
+                let sendError = {
                     "error": "openvpnVerify"
                 }
-                welcomeWindow.webContents.send("errorFirst", error)
+                welcomeWindow.webContents.send("errorFirst", sendError)
                 return;
             }
             if (stdout.includes(`built on`)) {
