@@ -561,12 +561,12 @@ exports.verify = (first) => {
                     log.info(`Main: Installing OpenVPN from package repository.`)
                     getos((error, os) => {
                         if (String(os["dist"]).includes("Ubuntu") || String(os["dist"]).includes("Debian")) {
-                            log.info(`Main: Will install OpenVPN for Debian/Ubuntu`)
+                            log.info(`Main: Will install OpenVPN for Debian/Ubuntu.`)
+                            let status = {
+                                "status": "installing"
+                            }
+                            welcomeWindow.webContents.send("aptInstall", status)
                             exec(`apt -y install openvpn`, (error, stdout, stderr) => {
-                                let status = {
-                                    "status": "installing"
-                                }
-                                welcomeWindow.webContents.send("aptInstall", status)
                                 if (error) {
                                     //Couldn't run the install command.
                                     log.error(`Main: Failed to run command to install OpenVPN. Error: ${error}`)
