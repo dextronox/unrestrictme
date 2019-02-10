@@ -558,9 +558,12 @@ exports.verify = (first) => {
             if (error) {
                 if (String(error).includes("openvpn: not found")) {
                     //OpenVPN not installed. Get from package repository.
+                    log.info(`Main: Installing OpenVPN from package repository.`)
                     getos((error, os) => {
                         if (os["dist"].includes("Ubunutu") || os["dist"].includes("Debian")) {
+                            log.info(`Main: Will install OpenVPN for Debian/Ubuntu`)
                             exec(`apt -y install openvpn`, (error, stdout, stderr) => {
+                                log.info(`${stdout} + ${stderr}`)
                                 if (error) {
                                     //Couldn't run the install command.
                                     log.error(`Main: Failed to run command to install OpenVPN. Error: ${error}`)
