@@ -55,7 +55,8 @@
         "libxtst6",
         "libnss3",
         "openvpn"
-      ]
+      ],
+      "maintainer": "unrestrict.me"
     },
     "mac": {
       "category": "public.app-category.utilities"
