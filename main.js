@@ -279,7 +279,7 @@ function createErrorWindow(error, sendError) {
 }
 
 function createWelcomeWindow() {
-    welcomeWindow = new BrowserWindow({show: false, frame: true, width: 600, height: 420, icon: path.resolve(__dirname, 'assets', 'icons', 'win.ico'), 'minWidth': 600, 'minHeight': 420, transparent: false, title: "unrestrict.me Client", resizable: false})
+    welcomeWindow = new BrowserWindow({show: false, frame: true, width: 600, height: 420, icon: path.resolve(__dirname, 'assets', 'icons', 'linux.png'), 'minWidth': 600, 'minHeight': 420, transparent: false, title: "unrestrict.me Client", resizable: false})
     welcomeWindow.setMenu(null)
     welcomeWindow.loadURL(url.format({
         pathname: path.join(__dirname, 'src/welcome/index.html'),
