@@ -556,12 +556,62 @@ exports.verify = (first) => {
     } else if (os.platform() === "linux") {
         exec(`openvpn`, (error, stdout, stderr) => {
             if (error) {
-                log.error(`Main: Couldn't detect whether OpenVPN is installed. Error: ${error}`)
-                let sendError = {
-                    "error": "openvpnVerify"
+                if (error.includes("openvpn: not found")) {
+                    //OpenVPN not installed. Get from package repository.
+                    getos((error, os) => {
+                        if (os["dist"].includes("Ubunutu") || os["dist"].includes("Debian")) {
+                            exec(`apt -y install openvpn`, (error, stdout, stderr) => {
+                                if (error) {
+                                    //Couldn't run the install command.
+                                    log.error(`Main: Failed to run command to install OpenVPN. Error: ${error}`)
+                                    let error = {
+                                        "error": "openvpnInstall"
+                                    }
+                                    welcomeWindow.webContents.send("errorFirst", error)
+                                    return;
+                                }
+                                if (stdout.includes("E:")) {
+                                    //An error occurred installing OpenVPN
+                                    log.error(`Main: Failed to install OpenVPN. Stdout: ${stdout}`)
+                                    let error = {
+                                        "error": "openvpnInstall"
+                                    }
+                                    welcomeWindow.webContents.send("errorFirst", error)
+                                    return;
+                                } else {
+                                    fs.writeFile(path.join(__dirname, 'settings.conf'), JSON.stringify(settings), (error) => {
+                                        if (error) {
+                                            log.error(`Main: Error occurred writing settings file. Permissions error perhaps? Error: ${error}`)
+                                            if (first) {
+                                                let error = {
+                                                    "error": "writeError"
+                                                }
+                                                welcomeWindow.webContents.send("errorFirst", error)
+                                            } else {
+                                                let error = {
+                                                    "error": "writeError"
+                                                }
+                                                welcomeWindow.webContents.send("error", error)
+                                            }
+                                        } else {
+                                            log.info(`Main: Settings file created!`)
+                                            app.relaunch()
+                                            app.quit()
+                                        }
+                                    }) 
+                                }
+                            })
+                        }
+                    })
+                } else {
+                    log.error(`Main: Couldn't detect whether OpenVPN is installed. Error: ${error}`)
+                    let sendError = {
+                        "error": "openvpnVerify"
+                    }
+                    welcomeWindow.webContents.send("errorFirst", sendError)
+                    return;
                 }
-                welcomeWindow.webContents.send("errorFirst", sendError)
-                return;
+
             }
             if (stdout.includes(`built on`)) {
                 fs.writeFile(path.join(__dirname, 'settings.conf'), JSON.stringify(settings), (error) => {
@@ -585,52 +635,7 @@ exports.verify = (first) => {
                     }
                 })
             } else {
-                //OpenVPN not installed. Get from package repository.
-                getos((error, os) => {
-                    if (os["dist"].includes("Ubunutu") || os["dist"].includes("Debian")) {
-                        exec(`apt -y install openvpn`, (error, stdout, stderr) => {
-                            if (error) {
-                                //Couldn't run the install command.
-                                log.error(`Main: Failed to run command to install OpenVPN. Error: ${error}`)
-                                let error = {
-                                    "error": "openvpnInstall"
-                                }
-                                welcomeWindow.webContents.send("errorFirst", error)
-                                return;
-                            }
-                            if (stdout.includes("E:")) {
-                                //An error occurred installing OpenVPN
-                                log.error(`Main: Failed to install OpenVPN. Stdout: ${stdout}`)
-                                let error = {
-                                    "error": "openvpnInstall"
-                                }
-                                welcomeWindow.webContents.send("errorFirst", error)
-                                return;
-                            } else {
-                                fs.writeFile(path.join(__dirname, 'settings.conf'), JSON.stringify(settings), (error) => {
-                                    if (error) {
-                                        log.error(`Main: Error occurred writing settings file. Permissions error perhaps? Error: ${error}`)
-                                        if (first) {
-                                            let error = {
-                                                "error": "writeError"
-                                            }
-                                            welcomeWindow.webContents.send("errorFirst", error)
-                                        } else {
-                                            let error = {
-                                                "error": "writeError"
-                                            }
-                                            welcomeWindow.webContents.send("error", error)
-                                        }
-                                    } else {
-                                        log.info(`Main: Settings file created!`)
-                                        app.relaunch()
-                                        app.quit()
-                                    }
-                                }) 
-                            }
-                        })
-                    }
-                })
+
             }
         })
     } else {
