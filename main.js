@@ -556,7 +556,7 @@ exports.verify = (first) => {
     } else if (os.platform() === "linux") {
         exec(`openvpn`, (error, stdout, stderr) => {
             if (error) {
-                if (error.includes("openvpn: not found")) {
+                if (toString(error).includes("openvpn: not found")) {
                     //OpenVPN not installed. Get from package repository.
                     getos((error, os) => {
                         if (os["dist"].includes("Ubunutu") || os["dist"].includes("Debian")) {
