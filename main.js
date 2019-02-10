@@ -566,7 +566,7 @@ exports.verify = (first) => {
                                 let status = {
                                     "status": "installing"
                                 }
-                                welcomeWindow.webContents.send("aptInstall", error)
+                                welcomeWindow.webContents.send("aptInstall", status)
                                 if (error) {
                                     //Couldn't run the install command.
                                     log.error(`Main: Failed to run command to install OpenVPN. Error: ${error}`)
