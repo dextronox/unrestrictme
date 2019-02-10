@@ -558,7 +558,7 @@ exports.verify = (first) => {
             log.info(String(error).includes("openvpn: not found"))
             log.info(String(error))
             if (error) {
-                if (toString(error).includes("openvpn: not found")) {
+                if (String(error).includes("openvpn: not found")) {
                     //OpenVPN not installed. Get from package repository.
                     getos((error, os) => {
                         if (os["dist"].includes("Ubunutu") || os["dist"].includes("Debian")) {
