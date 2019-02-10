@@ -556,6 +556,7 @@ exports.verify = (first) => {
     } else if (os.platform() === "linux") {
         exec(`openvpn`, (error, stdout, stderr) => {
             if (error) {
+                log.error(`Main: Couldn't detect whether OpenVPN is installed. Error: ${error}`)
                 let error = {
                     "error": "openvpnVerify"
                 }
