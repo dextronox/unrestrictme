@@ -54,6 +54,15 @@ $(document).ready(() => {
 
             } else if (args["update"] === "installingOpenVPN") {
                 $("#step3_repository_installing").css("display", "block")
+            } else if (args["update"] === "InstallComplete") {
+                swal({
+                    title: "Success!",
+                    text: "Everything has been setup and you are ready to use unrestrict.me. Due to platform limitations, you must reopen the program manually to begin connecting.",
+                    icon: "success",
+                    button: "Okay"
+                }).then((restart) => {
+                    main.quit()
+                });
             }
         }
     })

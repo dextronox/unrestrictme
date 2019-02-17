@@ -617,8 +617,17 @@ exports.dependenciesCheck = (verifyTap) => {
                                             welcomeWindow.webContents.send(`statusUpdate`, ipcUpdate)
                                         } else {
                                             log.info(`Main: Settings file created!`)
-                                            app.relaunch()
-                                            app.quit()
+                                            if (os.platform() === "win32") {
+                                                app.relaunch()
+                                                app.quit()
+                                            } else {
+                                                //Show alert to user and have them run quit()
+                                                let ipcUpdate = {
+                                                    "update": "InstallComplete"
+                                                }
+                                                welcomeWindow.webContents.send(`statusUpdate`, ipcUpdate)
+                                            }
+
                                         }
                                     }) 
                                 }
