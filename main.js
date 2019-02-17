@@ -33,7 +33,7 @@ if (!appLock) {
 }
 
 //Definition of global variables
-let loadErrors = {}, loadingWindow, errorWindow, welcomeWindow, mainWindow, tray, killSwitchStatus, intentionalDisconnect
+let loadErrors = {}, loadingWindow, errorWindow, welcomeWindow, mainWindow, tray, killSwitchStatus, intentionalDisconnect, configDir
 
 function setLogValues() {
     //This has to be done in a function because if the file does not exist the application will terminate with an exception.
@@ -43,8 +43,18 @@ function setLogValues() {
     log.transports.file.streamConfig = { flags: 'w' };
 }
 
+function setConfigDir() {
+    if (os.platform() === "win32") {
+        //Set for install directory.
+        configDir = path.join(__dirname)
+    } else if (os.platform() === "linux") {
+        configDir = path.join("~/.config/unrestrictme/")
+    }
+}
+
 app.on('ready', () => {
     setLogValues()
+    setConfigDir()
     appStart()
 /*     fs.writeFile(path.join(__dirname, "log.txt"), "", (error) => {
         if (error){
@@ -92,7 +102,7 @@ function appStart() {
 }
 
 function checkSettings() {
-    fs.readFile(path.join(__dirname, 'settings.conf'), 'utf8', (error, data) => {
+    fs.readFile(path.join(configDir, 'settings.conf'), 'utf8', (error, data) => {
         if (String(error).includes('ENOENT')) {
             log.error("Main: settings.conf does not exist! Assuming new installation.")
             //Go straight to new install wizard. Skip other checks as they rely on the settings.conf file.
@@ -117,7 +127,7 @@ function checkForApi() {
     //This simply pings the API server to make sure it lives.
     let requestConfig, settingsFile
     log.info(`Main: Checking for API.`)
-    fs.readFile(path.join(__dirname, 'settings.conf'), 'utf8', (error, data) => {
+    fs.readFile(path.join(configDir, 'settings.conf'), 'utf8', (error, data) => {
         settingsFile = JSON.parse(data)
         if (settingsFile["customAPI"]) {
             log.info(`Main: Using custom API.`)
@@ -314,7 +324,7 @@ function createMainWindow() {
     mainWindow.webContents.on('did-finish-load', () => {
         mainWindow.show()
     })
-    //mainWindow.webContents.openDevTools({mode: "undocked"})
+    mainWindow.webContents.openDevTools({mode: "undocked"})
     mainWindow.setAlwaysOnTop(false)
     mainWindow.on('minimize',function(event){
         event.preventDefault();
@@ -339,7 +349,7 @@ function createMainWindow() {
         },
         {
             label: "Copy IP to Clipboard", click: () => {
-                fs.readFile(path.join(__dirname, 'settings.conf'), 'utf8', (error, data) => {
+                fs.readFile(path.join(configDir, 'settings.conf'), 'utf8', (error, data) => {
                     if (error) {
                         log.error(`Renderer: Error reading settings file. Error: ${error}`)
                         mainWindow.webContents.send("trayError", "")
@@ -409,7 +419,7 @@ function update(version) {
             log.error(`Main: Error deleting past update file. This is probably fine because it doesn't exist. Should write over anyway. Error: ${error}`)
         }
     })
-    fs.readFile(path.join(__dirname, 'settings.conf'), 'utf8', (error, data) => {
+    fs.readFile(path.join(configDir, 'settings.conf'), 'utf8', (error, data) => {
         if (error) {
             log.error(`Main: Error reading config file whilst attempting to update. Error: ${error}`)
             createErrorWindow("settings")
@@ -533,7 +543,7 @@ exports.dependenciesCheck = (verifyTap) => {
             } else {
                 log.info(`Main: ${stdout}`)
                 let settings = {}
-                fs.writeFile(path.join(__dirname, 'settings.conf'), JSON.stringify(settings), (error) => {
+                fs.writeFile(path.join(configDir, 'settings.conf'), JSON.stringify(settings), (error) => {
                     if (error) {
                         log.error(`Main: Error occurred writing settings file. Permissions error perhaps? Error: ${error}`)
                         let ipcUpdate = {
@@ -593,7 +603,7 @@ exports.dependenciesCheck = (verifyTap) => {
                                     welcomeWindow.webContents.send(`statusUpdate`, ipcUpdate)
                                 } else {
                                     let settings = {}
-                                    fs.writeFile(path.join(__dirname, 'settings.conf'), JSON.stringify(settings), (error) => {
+                                    fs.writeFile(path.join(configDir, 'settings.conf'), JSON.stringify(settings), (error) => {
                                         if (error) {
                                             log.error(`Main: Error occurred writing settings file. Permissions error perhaps? Error: ${error}`)
                                             let ipcUpdate = {
@@ -618,7 +628,7 @@ exports.dependenciesCheck = (verifyTap) => {
             }
             if (String(stdout).includes(`built on`)) {
                 let settings = {}
-                fs.writeFile(path.join(__dirname, 'settings.conf'), JSON.stringify(settings), (error) => {
+                fs.writeFile(path.join(configDir, 'settings.conf'), JSON.stringify(settings), (error) => {
                     if (error) {
                         log.error(`Main: Error occurred writing settings file. Permissions error perhaps? Error: ${error}`)
                         let ipcUpdate = {
@@ -794,7 +804,7 @@ exports.disableKillSwitch = () => {
 exports.clearSettings = () => {
     log.info(`Main: Clearing settings file and restarting application.`)
     let settings = {}
-    fs.writeFile(path.join(__dirname, 'settings.conf'), JSON.stringify(settings), (error) => {
+    fs.writeFile(path.join(configDir, 'settings.conf'), JSON.stringify(settings), (error) => {
         if (error) {
             log.error(`Main: Error occurred writing settings file. Permissions error perhaps?`)
             let error = {
@@ -811,7 +821,7 @@ exports.clearSettings = () => {
 
 function killSwitch(enable) {
     if (enable) {
-        fs.readFile(path.join(__dirname, 'settings.conf'), 'utf8', (error, data) => {
+        fs.readFile(path.join(configDir, 'settings.conf'), 'utf8', (error, data) => {
             if (error) {
                 log.error(`Main: Couldn't read settings file to enter kill switch NIC. Will not proceed. Error: ${error}`)
                 let status = {
@@ -835,7 +845,7 @@ function killSwitch(enable) {
 
         })
     } else {
-        fs.readFile(path.join(__dirname, 'settings.conf'), 'utf8', (error, data) => {
+        fs.readFile(path.join(configDir, 'settings.conf'), 'utf8', (error, data) => {
             if (error) {
                 log.error(`Main: Couldn't read settings file to retrieve kill switch NIC. Will not proceed. Error: ${error}`)
                 return;
@@ -880,7 +890,7 @@ function killSwitchEnable(nic) {
                         return element
                     }
                 })
-                fs.readFile(path.join(__dirname, 'settings.conf'), 'utf8', (error, data) => {
+                fs.readFile(path.join(configDir, 'settings.conf'), 'utf8', (error, data) => {
                     if (error) {
                         log.error(`Main: Couldn't read settings file to enter kill switch NIC. Will not proceed. Error: ${error}`)
                         let status = {
@@ -895,7 +905,7 @@ function killSwitchEnable(nic) {
                     }
                     let settings = JSON.parse(data)
                     settings["nic"] = autoInterface["name"]
-                    fs.writeFile(path.join(__dirname, 'settings.conf'), JSON.stringify(settings), (error) => {
+                    fs.writeFile(path.join(configDir, 'settings.conf'), JSON.stringify(settings), (error) => {
                         if (error) {
                             log.error(`Main: Couldn't write settings file to enter kill switch NIC. Will not proceed. Error: ${error}`)
                             let status = {

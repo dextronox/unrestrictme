@@ -9,10 +9,19 @@ const log = require('electron-log')
 const swal = require('sweetalert')
 const nodersa = require('node-rsa')
 const network = require("network")
+const os = require("os")
 
-let currentRequestId, interval
-
+let currentRequestId, interval, configDir
+function setConfigDir() {
+    if (os.platform() === "win32") {
+        //Set for install directory.
+        configDir = path.join(__dirname, "../..")
+    } else if (os.platform() === "linux") {
+        configDir = path.join("~/.config/unrestrictme/")
+    }
+}
 $(document).ready(() => {
+    setConfigDir()
     //These are our listeners from the main process.
     //These manage the connection lifecycle changes.
     ipcRenderer.on(`connection`, (event, args) => {
@@ -27,7 +36,7 @@ $(document).ready(() => {
             //Clear the counter and the tag.
             clearInterval(interval);
             $("#placeholderTimeRemaining").html("")
-            fs.readFile(path.join(__dirname, '../..', 'settings.conf'), 'utf8', (error, data) => {
+            fs.readFile(path.join(configDir, 'settings.conf'), 'utf8', (error, data) => {
                 if (error) {
                     log.error(`Renderer: Error reading settings file. Error: ${error}`)
                     swal("Whoops!", "We were unable to read your settings file. Please try rebooting the client.", "error")
@@ -136,7 +145,7 @@ $(document).ready(() => {
             //This populates the settings list with current adapters.
             $("#adapterSelect").append(new Option(`${obj[i]["name"]} (${obj[i]["model"]})`, i))
             if (Object.keys(obj).length -1 === i) {
-                fs.readFile(path.join(__dirname, '../..', 'settings.conf'), 'utf8', (error, data) => {
+                fs.readFile(path.join(configDir, 'settings.conf'), 'utf8', (error, data) => {
                     if (error) {
                         log.error(`Renderer: Error reading settings file. Error: ${error}`)
                         swal("Whoops!", "We were unable to read your settings file. Please try rebooting the client.", "error")
@@ -167,7 +176,7 @@ $("#connect").on("click", () => {
     $("#connectButtons").css("display", "none")
     $("#loading1").css("display", "block")
     let settingsFile, requestConfig
-    fs.readFile(path.join(__dirname, '../..', 'settings.conf'), 'utf8', (error, data) => {
+    fs.readFile(path.join(configDir, 'settings.conf'), 'utf8', (error, data) => {
         if (error) {
             log.error(`Renderer: Error reading settings file. Error: ${error}`)
             swal("Whoops!", "We were unable to read your settings file. Please try rebooting the client.", "error")
@@ -241,7 +250,7 @@ $("#connect").on("click", () => {
                             let decryptedResponse = JSON.parse(key.decrypt(body, 'utf8'))
                             if (decryptedResponse["success"]) {
                                 log.info(`Renderer: API server created request!`)
-                                fs.readFile(path.join(__dirname, "../..", "settings.conf"), (error, data) => {
+                                fs.readFile(path.join(configDir, "settings.conf"), (error, data) => {
                                     if (error) {
                                         log.error(`Renderer: Error reading settings file. Error: ${error}`)
                                         swal("Whoops!", "We can't read the settings.conf file.", "error")
@@ -249,7 +258,7 @@ $("#connect").on("click", () => {
                                     }
                                     let current = JSON.parse(data)
                                     current["latestId"] = decryptedResponse["id"]
-                                    fs.writeFile(path.join(__dirname, "../..", "settings.conf"), JSON.stringify(current), (error) => {
+                                    fs.writeFile(path.join(configDir, "settings.conf"), JSON.stringify(current), (error) => {
                                         if (error) {
                                             log.error(`Renderer: Error writing to settings file. Error: ${error}`)
                                             swal("Whoops!", "We can't write to the settings.conf file.", "error")
@@ -286,7 +295,7 @@ function openWebpage(id) {
     $("#loading1").css("display", "none")
     $("#loading2").css("display", "block")
     log.info(`Renderer: Opening connection webpage with connection id ${id}`)
-    fs.readFile(path.join(__dirname, '../..', 'settings.conf'), 'utf8', (error, data) => {
+    fs.readFile(path.join(configDir, 'settings.conf'), 'utf8', (error, data) => {
         if (error) {
             log.error(`Renderer: Error reading settings file for customWebpage. Error: ${error}`)
             swal("Whoops!", "We were unable to read your settings file. Please try rebooting the client.", "error")
@@ -308,7 +317,7 @@ function openWebpage(id) {
 function monitorRequest(id) {
     log.info(`Renderer: Checking if config file is ready...`)
     let requestConfig
-    fs.readFile(path.join(__dirname, '../..', 'settings.conf'), 'utf8', (error, data) => {
+    fs.readFile(path.join(configDir, 'settings.conf'), 'utf8', (error, data) => {
         let settingsFile = JSON.parse(data)
         if (settingsFile["customAPI"]) {
             log.info(`Renderer: Using custom API.`)
@@ -364,7 +373,7 @@ function monitorRequest(id) {
 $("#cancelRequest").on("click", () => {
     let settingsFile, requestConfig
     log.info(`Renderer: Request cancellation instruction received.`)
-    fs.readFile(path.join(__dirname, '../..', 'settings.conf'), 'utf8', (error, data) => {
+    fs.readFile(path.join(configDir, 'settings.conf'), 'utf8', (error, data) => {
         settingsFile = JSON.parse(data)
         if (settingsFile["customAPI"]) {
             log.info(`Renderer: Using custom API.`)
@@ -418,7 +427,7 @@ $("#cancelConnection").on("click", () => {
 //Settings listeners
 $("#customAPISubmit").on("click", () => {
     log.info(`Renderer: Setting custom API`)
-    fs.readFile(path.join(__dirname, "../..", "settings.conf"), (error, data) => {
+    fs.readFile(path.join(configDir, "settings.conf"), (error, data) => {
         if (error) {
             log.error(`Renderer: Error reading settings file. Error: ${error}`)
             swal("Whoops!", "We can't read the settings.conf file.", "error")
@@ -426,7 +435,7 @@ $("#customAPISubmit").on("click", () => {
         }
         let current = JSON.parse(data)
         current["customAPI"] = $("#customAPI").val()
-        fs.writeFile(path.join(__dirname, "../..", "settings.conf"), JSON.stringify(current), (error) => {
+        fs.writeFile(path.join(configDir, "settings.conf"), JSON.stringify(current), (error) => {
             if (error) {
                 log.error(`Renderer: Error writing to settings file. Error: ${error}`)
                 swal("Whoops!", "We can't write to the settings.conf file.", "error")
@@ -441,7 +450,7 @@ $("#customAPISubmit").on("click", () => {
 
 $("#customWebpageSubmit").on("click", () => {
     log.info(`Renderer: Setting custom webpage`)
-    fs.readFile(path.join(__dirname, "../..", "settings.conf"), (error, data) => {
+    fs.readFile(path.join(configDir, "settings.conf"), (error, data) => {
         if (error) {
             log.error(`Renderer: Error reading settings file. Error: ${error}`)
             swal("Whoops!", "We can't read the settings.conf file.", "error")
@@ -449,7 +458,7 @@ $("#customWebpageSubmit").on("click", () => {
         }
         let current = JSON.parse(data)
         current["customWebpage"] = $("#customWebpage").val()
-        fs.writeFile(path.join(__dirname, "../..", "settings.conf"), JSON.stringify(current), (error) => {
+        fs.writeFile(path.join(configDir, "settings.conf"), JSON.stringify(current), (error) => {
             if (error) {
                 log.error(`Renderer: Error writing to settings file. Error: ${error}`)
                 swal("Whoops!", "We can't write to the settings.conf file.", "error")
@@ -464,7 +473,7 @@ $("#customWebpageSubmit").on("click", () => {
 
 $("#customAPIClear").on("click", () => {
     log.info(`Renderer: Clearing custom API.`)
-    fs.readFile(path.join(__dirname, "../..", "settings.conf"), (error, data) => {
+    fs.readFile(path.join(configDir, "settings.conf"), (error, data) => {
         if (error) {
             log.error(`Renderer: Error reading settings file. Error: ${error}`)
             swal("Whoops!", "We can't read the settings.conf file.", "error")
@@ -472,7 +481,7 @@ $("#customAPIClear").on("click", () => {
         }
         let current = JSON.parse(data)
         delete current["customAPI"]
-        fs.writeFile(path.join(__dirname, "../..", "settings.conf"), JSON.stringify(current), (error) => {
+        fs.writeFile(path.join(configDir, "settings.conf"), JSON.stringify(current), (error) => {
             if (error) {
                 log.error(`Renderer: Error writing to settings file. Error: ${error}`)
                 swal("Whoops!", "We can't write to the settings.conf file.", "error")
@@ -487,7 +496,7 @@ $("#customAPIClear").on("click", () => {
 
 $("#customWebpageClear").on("click", () => {
     log.info(`Renderer: Clearing custom webpage.`)
-    fs.readFile(path.join(__dirname, "../..", "settings.conf"), (error, data) => {
+    fs.readFile(path.join(configDir, "settings.conf"), (error, data) => {
         if (error) {
             log.error(`Renderer: Error reading settings file. Error: ${error}`)
             swal("Whoops!", "We can't read the settings.conf file.", "error")
@@ -495,7 +504,7 @@ $("#customWebpageClear").on("click", () => {
         }
         let current = JSON.parse(data)
         delete current["customWebpage"]
-        fs.writeFile(path.join(__dirname, "../..", "settings.conf"), JSON.stringify(current), (error) => {
+        fs.writeFile(path.join(configDir, "settings.conf"), JSON.stringify(current), (error) => {
             if (error) {
                 log.error(`Renderer: Error writing to settings file. Error: ${error}`)
                 swal("Whoops!", "We can't write to the settings.conf file.", "error")
@@ -550,7 +559,7 @@ $("#rsa_regen").on("click", () => {
 $("#reset").on("click", () => {
     log.info(`Resetting config.`)
     let content = JSON.stringify({})
-    fs.writeFile(path.join(__dirname, "../..", "settings.conf"), content, (error) => {
+    fs.writeFile(path.join(configDir, "settings.conf"), content, (error) => {
         if (error) {
             log.error(`Renderer: Error writing the settings file. Error: ${error}`)
             swal("Whoops!", "We can't write the settings.conf file.", "error")
@@ -577,7 +586,7 @@ $("#disableKillSwitch").on("click", () => {
 })
 
 $("#reopenBrowser").on('click', () => {
-    fs.readFile(path.join(__dirname, '../..', 'settings.conf'), 'utf8', (error, data) => {
+    fs.readFile(path.join(configDir, 'settings.conf'), 'utf8', (error, data) => {
         if (error) {
             log.error(`Renderer: Error reading settings file for customWebpage. Error: ${error}`)
             swal("Whoops!", "We were unable to read your settings file. Please try rebooting the client.", "error")
@@ -595,7 +604,7 @@ $("#reopenBrowser").on('click', () => {
 })
 
 $("#adapterSelect").on('change', () => {
-    fs.readFile(path.join(__dirname, "../..", "settings.conf"), (error, data) => {
+    fs.readFile(path.join(configDir, "settings.conf"), (error, data) => {
         if (error) {
             log.error(`Renderer: Error reading settings file. Error: ${error}`)
             swal("Whoops!", "We can't read the settings.conf file.", "error")
@@ -604,7 +613,7 @@ $("#adapterSelect").on('change', () => {
         let current = JSON.parse(data)
         current["selectedNic"] = $("#adapterSelect").val()
         log.debug(`Renderer: Selected NIC changing to ${$("#adapterSelect").val()}`)
-        fs.writeFile(path.join(__dirname, "../..", "settings.conf"), JSON.stringify(current), (error) => {
+        fs.writeFile(path.join(configDir, "settings.conf"), JSON.stringify(current), (error) => {
             if (error) {
                 log.error(`Renderer: Error writing to settings file. Error: ${error}`)
                 swal("Whoops!", "We can't write to the settings.conf file.", "error")
