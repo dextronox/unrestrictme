@@ -7,6 +7,56 @@ const swal = require('sweetalert')
 const log = require("electron-log")
 
 $(document).ready(() => {
+    ipcRenderer.on(`statusUpdate`, (event, args) => {
+        if (args["error"]) {
+            //An error occurred doing something. Let the user know.
+            if (args["error"] === "TAPVerifyInstall") {
+                //We couldn't verify if a TAP adapter was installed.
+                //WINDOWS
+                swal("Whoops!", "We couldn't verify if a TAP adapter is installed. Check to ensure the OpenVPN executable is in the appropriate directory.", "error")
+                $("#errorExcerpt").css("display", "block")
+                $("#errorExcerptText").html(args["errorText"])
+            } else if (args["error"] === "TAPInstallationFailure") {
+                //There is STILL no adapter on the system.
+                //WINDOWS
+                swal("Whoops!", "The TAP adapter installation was a failure.", "error")
+                $("#errorExcerpt").css("display", "block")
+                $("#errorExcerptText").html("Check the log.txt file for more information.")
+            } else if (args["error"] === "operatingSystemCheck") {
+                swal("Whoops!", "A programmatic error occurred getting operating system information.", "error")
+                $("#errorExcerpt").css("display", "block")
+                $("#errorExcerptText").html("Check the log.txt file for more information.")
+            } else if (args["error"] === "sudoFail") {
+                //User didn't give us sudo permissions. Displaying option to retry.
+                //LINUX
+                swal("Whoops!", "We couldn't run the command to install OpenVPN. To do this, we require sudo privileges.", "error")
+                $("#step3_repository_installing").css("display", "none")
+                $("#step3_button_div1").css("display", "block")
+            } else if (args["error"] === "OpenVPNInstallFail") {
+                //OpenVPN failed to be installed from the repository
+                //LINUX
+                swal("Whoops!", "We couldn't install OpenVPN from the package repository.", "error")
+                $("#step3_repository_installing").css("display", "none")
+                $("#errorExcerpt").css("display", "block")
+                $("#errorExcerptText").html(args["errorText"])
+            } else if (args["error"] === "writingSettingsFile") {
+                //We couldn't write to settings.conf
+                //WINDOWS+LINUX
+                $("#step3_repository_installing").css("display", "none")
+                $("#errorExcerpt").css("display", "block")
+                $("#errorExcerptText").html(args["errorText"])
+                swal("Whoops!", "We were unable to create a settings.conf file.", "error")
+            }
+        } else if (args["update"]) {
+            if (args["update"] === "installingTAPAdapter") {
+                //The TAP installer dialogue will be opened.
+                $("#step3_button_div2").css("display", "block")
+
+            } else if (args["update"] === "installingOpenVPN") {
+                $("#step3_repository_installing").css("display", "block")
+            }
+        }
+    })
     ipcRenderer.once(`error`, (event, args) => {
         if (args["error"] === "writeError") {
             swal("Whoops!", "We couldn't write your settings file to disk. The application will now restart.", "error").then(() => {
@@ -43,39 +93,13 @@ $("#step2_button").on("click", () => {
 })
 
 $("#step3_button1").on("click", () => {
-    ipcRenderer.once("errorFirst", (event, args) => {
-        if (args["error"] === "writeError") {
-            swal("Whoops!", "You already had a TAP adapter installed, however we couldn't write your settings file to disk. The application will now close to preserve the log.", "error").then(() => {
-                app.quit()
-            })
-        } else if (args["error"] === "tapVerify") {
-            swal("Whoops!", "We couldn't verify that the TAP driver installed correctly. Check the log.txt for more information. The application will now close to preserve the log.", "error").then(() => {
-                app.quit()
-            })
-        } else if (args["error"] === "tapInstall") {
-            main.tap()
-            $("#step3_button_div2").css("display", "block")
-        } else if (args["error"] === "unsupportedOS") {
-            swal("Whoops!", "Your platform is not supported.", "error").then(() => {
-                app.quit()
-            })
-        } else if (args["error"] === "openvpnVerify") {
-            swal("Whoops!", "We couldn't check whether OpenVPN is installed. Check the log file for more information.", "error").then(() => {
-                app.quit()
-            })
-        } else if (args["error"] === "openvpnInstall") {
-            swal("Whoops!", "We couldn't install OpenVPN. Check the log file for more information.", "error").then(() => {
-                app.quit()
-            })
-        }
-    })
-    main.verify(true)
+    main.dependenciesCheck()
     $("#step3_button_div1").css("display", "none")
-    
 })
 
 $("#step3_button2").on("click", () => {
-    main.verify()
+    $("#step3_button_div2").css("display", "none")
+    main.dependenciesCheck(true)
 })
 
 
