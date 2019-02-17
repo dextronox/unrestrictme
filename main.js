@@ -13,10 +13,10 @@ const os = require("os")
 const isElevated = require("is-elevated")
 const exec = require('child_process').exec
 const request = require("request")
-const progress = require("request-progress")
 const nodersa = require('node-rsa')
 const network = require("network")
 const getos = require("getos")
+const sudo = require('sudo-prompt');
 const appLock = app.requestSingleInstanceLock()
 
 if (!appLock) {
@@ -489,7 +489,7 @@ function quit() {
     }) 
 }
 
-exports.tap = () => {
+function openTapInstaller () {
     exec(`"${path.join(__dirname, 'assets', 'openvpn', 'tap-windows.exe')}"`, (error, stdout, stderr) => {
         if (error) {
             log.error(`Main: Could not run TAP installer. Error: ${error}`)
@@ -499,34 +499,30 @@ exports.tap = () => {
     })
 }
 
-exports.verify = (first) => {
+exports.dependenciesCheck = (verifyTap) => {
     if (os.platform() === "win32") {
         exec(`"${path.join(__dirname, 'assets', 'openvpn', `${os.arch()}`, 'openvpn.exe')}" --show-adapters`, (error, stdout, stderr) => {
             if (error) {
                 log.error(`Main: Could not verify TAP installation. Error: ${error}`)
-                if (first) {
-                    let error = {
-                        "error": "tapVerify"
-                    }
-                    welcomeWindow.webContents.send("errorFirst", error)
-                } else {
-                    let error = {
-                        "error": "tapVerify"
-                    }
-                    welcomeWindow.webContents.send("error", error)
+                let ipcUpdate = {
+                    "error": "TAPVerifyInstall",
+                    "errorText": error
                 }
+                welcomeWindow.webContents.send(`statusUpdate`, ipcUpdate)
             } else if ((stdout.replace('Available TAP-WIN32 adapters [name, GUID]:', '')).replace(/\s/g, '') === "") {
-                log.error(`Main: There is no TAP adapter on the system. Log: ${stdout}`)
-                if (first) {
-                    let error = {
-                        "error": "tapInstall"
+                if (verifyTap) {
+                    log.error(`Main: TAP installation was a failure. Alert the user.`)
+                    let ipcUpdate = {
+                        "error": "TAPInstallationFailure"
                     }
-                    welcomeWindow.webContents.send("errorFirst", error)
+                    welcomeWindow.webContents.send(`statusUpdate`, ipcUpdate)
                 } else {
-                    let error = {
-                        "error": "tapInstall"
+                    log.error(`Main: There is no TAP adapter on the system. Log: ${stdout}`)
+                    openTapInstaller()
+                    let ipcUpdate = {
+                        "update":"installingTAPAdapter"
                     }
-                    welcomeWindow.webContents.send("error", error)
+                    welcomeWindow.webContents.send(`statusUpdate`, ipcUpdate)
                 }
             } else {
                 log.info(`Main: ${stdout}`)
@@ -534,17 +530,11 @@ exports.verify = (first) => {
                 fs.writeFile(path.join(__dirname, 'settings.conf'), JSON.stringify(settings), (error) => {
                     if (error) {
                         log.error(`Main: Error occurred writing settings file. Permissions error perhaps? Error: ${error}`)
-                        if (first) {
-                            let error = {
-                                "error": "writeError"
-                            }
-                            welcomeWindow.webContents.send("errorFirst", error)
-                        } else {
-                            let error = {
-                                "error": "writeError"
-                            }
-                            welcomeWindow.webContents.send("error", error)
+                        let ipcUpdate = {
+                            "error":"writingSettingsFile",
+                            "errorText": error
                         }
+                        welcomeWindow.webContents.send(`statusUpdate`, ipcUpdate)
                     } else {
                         log.info(`Main: Settings file created!`)
                         app.relaunch()
@@ -560,46 +550,50 @@ exports.verify = (first) => {
                     //OpenVPN not installed. Get from package repository.
                     log.info(`Main: Installing OpenVPN from package repository.`)
                     getos((error, os) => {
+                        if (error) {
+                            log.error(`Main: Error checking operating system environment. Error: ${error}`)
+                            let ipcUpdate = {
+                                "error": "operatingSystemCheck"
+                            }
+                            welcomeWindow.webContents.send(`statusUpdate`, ipcUpdate)
+                            return;
+                        }
                         if (String(os["dist"]).includes("Ubuntu") || String(os["dist"]).includes("Debian")) {
                             log.info(`Main: Will install OpenVPN for Debian/Ubuntu.`)
-                            let status = {
-                                "status": "installing"
+                            let options = {
+                                name: "unrestrict.me"
                             }
-                            welcomeWindow.webContents.send("aptInstall", status)
-                            exec(`apt -y install openvpn`, (error, stdout, stderr) => {
+                            sudo.exec(`apt -y install openvpn`, options, (error, stdout, stderr) => {
+                                let ipcUpdate = {
+                                    "status": "installingOpenVPN"
+                                }
+                                mainWindow.webContents.send(`statusUpdate`, ipcUpdate)
                                 if (error) {
                                     //Couldn't run the install command.
                                     log.error(`Main: Failed to run command to install OpenVPN. Error: ${error}`)
-                                    let error = {
-                                        "error": "openvpnInstall"
+                                    let ipcUpdate = {
+                                        "error": "sudoFail"
                                     }
-                                    welcomeWindow.webContents.send("errorFirst", error)
-                                    return;
+                                    welcomeWindow.webContents.send(`statusUpdate`, ipcUpdate)
                                 }
                                 if (stdout.includes("E:")) {
                                     //An error occurred installing OpenVPN
                                     log.error(`Main: Failed to install OpenVPN. Stdout: ${stdout}`)
-                                    let error = {
-                                        "error": "openvpnInstall"
+                                    let ipcUpdate = {
+                                        "error": "OpenVPNInstallFail",
+                                        "errorText": stdout
                                     }
-                                    welcomeWindow.webContents.send("errorFirst", error)
-                                    return;
+                                    welcomeWindow.webContents.send(`statusUpdate`, ipcUpdate)
                                 } else {
                                     let settings = {}
                                     fs.writeFile(path.join(__dirname, 'settings.conf'), JSON.stringify(settings), (error) => {
                                         if (error) {
                                             log.error(`Main: Error occurred writing settings file. Permissions error perhaps? Error: ${error}`)
-                                            if (first) {
-                                                let error = {
-                                                    "error": "writeError"
-                                                }
-                                                welcomeWindow.webContents.send("errorFirst", error)
-                                            } else {
-                                                let error = {
-                                                    "error": "writeError"
-                                                }
-                                                welcomeWindow.webContents.send("error", error)
+                                            let ipcUpdate = {
+                                                "error":"writingSettingsFile",
+                                                "errorText": error
                                             }
+                                            welcomeWindow.webContents.send(`statusUpdate`, ipcUpdate)
                                         } else {
                                             log.info(`Main: Settings file created!`)
                                             app.relaunch()
@@ -612,11 +606,6 @@ exports.verify = (first) => {
                     })
                 } else if (!stdout.includes('built on')) {
                     log.error(`Main: Couldn't detect whether OpenVPN is installed. Error: ${error}`)
-                    let sendError = {
-                        "error": "openvpnVerify"
-                    }
-                    welcomeWindow.webContents.send("errorFirst", sendError)
-                    return;
                 }
 
             }
@@ -625,17 +614,11 @@ exports.verify = (first) => {
                 fs.writeFile(path.join(__dirname, 'settings.conf'), JSON.stringify(settings), (error) => {
                     if (error) {
                         log.error(`Main: Error occurred writing settings file. Permissions error perhaps? Error: ${error}`)
-                        if (first) {
-                            let error = {
-                                "error": "writeError"
-                            }
-                            welcomeWindow.webContents.send("errorFirst", error)
-                        } else {
-                            let error = {
-                                "error": "writeError"
-                            }
-                            welcomeWindow.webContents.send("error", error)
+                        let ipcUpdate = {
+                            "error":"writingSettingsFile",
+                            "errorText": error
                         }
+                        welcomeWindow.webContents.send(`statusUpdate`, ipcUpdate)
                     } else {
                         log.info(`Main: Settings file created!`)
                         app.relaunch()
@@ -647,10 +630,8 @@ exports.verify = (first) => {
             }
         })
     } else {
-        let error = {
-            "error": "unsupportedOS"
-        }
-        welcomeWindow.webContents.send("errorFirst", error)
+        log.error(`Main: This is not a supported system. Time to exit.`)
+        app.quit()
     }
 
 }
