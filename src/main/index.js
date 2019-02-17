@@ -15,7 +15,7 @@ let currentRequestId, interval, configDir
 function setConfigDir() {
     if (os.platform() === "win32") {
         //Set for install directory.
-        configDir = path.join(__dirname, "../..")
+        configDir = path.join(__dirname, "../..", "config")
     } else if (os.platform() === "linux") {
         configDir = path.join(os.homedir(), ".config/unrestrictme")
     }
@@ -185,7 +185,7 @@ $("#connect").on("click", () => {
             return;
         }
         settingsFile = JSON.parse(data)
-        fs.readFile(path.join(__dirname, '../..', 'keys/public'), 'utf8', (error, data) => {
+        fs.readFile(path.join(configDir, 'public'), 'utf8', (error, data) => {
             if (error) {
                 log.error(`Renderer: Error reading public key for new connection request. Error: ${error}`)
                 swal("Whoops!", "We were unable to read your public key file. Try regenerating your keypair from the settings menu.", "error")
@@ -239,7 +239,7 @@ $("#connect").on("click", () => {
                 } else {
                     log.info(`Renderer: We sent a valid request! Decrypting response...`)
                     let key = new nodersa()
-                    fs.readFile(path.join(__dirname, '../..', 'keys/private'), 'utf8', (error, data) => {
+                    fs.readFile(path.join(configDir, 'private'), 'utf8', (error, data) => {
                         if (error) {
                             log.error(`Renderer: Error reading private key file. Error: ${error}`)
                             swal("Whoops!", "We sent a valid request, but we can't read the private key to decrypt the response. Try regenerating the keypair.")
@@ -351,7 +351,7 @@ function monitorRequest(id) {
                 }
             } catch (error) {
                 let key = new nodersa()
-                fs.readFile(path.join(__dirname, '../..', 'keys/private'), 'utf8', (error, data) => {
+                fs.readFile(path.join(configDir, 'private'), 'utf8', (error, data) => {
                     if (error) {
                         log.error(`Renderer: Error reading private key file. Error: ${error}`)
                         swal("Whoops!", "Our config file is available, but we can't read the private key to decrypt the response. Try regenerating the keypair.")
@@ -523,26 +523,26 @@ $("#rsa_regen").on("click", () => {
     key.generateKeyPair()
     let publicKey = key.exportKey('public')
     let privateKey = key.exportKey('private')
-    fs.unlink(path.join(__dirname, '../..', 'keys/public'), (error) => {
+    fs.unlink(path.join(configDir, 'public'), (error) => {
         if (error) {
             log.error(`Renderer: Error occurred deleting public key. Error: ${error}`)
             swal("Whoops!", "We couldn't delete the original public key.", "error")
             return;
         }
-        fs.writeFile(path.join(__dirname, '../..', 'keys/public'), publicKey, (error) => {
+        fs.writeFile(path.join(configDir, 'public'), publicKey, (error) => {
             if (error) {
                 log.error(`Renderer: Error occurred writing the public key. Error: ${error}`)
                 swal("Whoops!", "We couldn't write the new public key.", "error")
                 return;
             }
         })
-        fs.unlink(path.join(__dirname, '../..', 'keys/private'), (error) => {
+        fs.unlink(path.join(configDir, 'private'), (error) => {
             if (error) {
                 log.error(`Renderer: Error occurred deleting private key. Error: ${error}`)
                 swal("Whoops!", "We couldn't delete the original private key.", "error")
                 return
             }
-            fs.writeFile(path.join(__dirname, '../..', 'keys/private'), privateKey, (error) => {
+            fs.writeFile(path.join(configDir, 'private'), privateKey, (error) => {
                 if (error) {
                     log.error(`Renderer: Error occurred writing the private key. Error: ${error}`)
                     swal("Whoops!", "We couldn't write the new private key.", "error")
