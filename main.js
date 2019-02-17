@@ -573,7 +573,7 @@ exports.dependenciesCheck = (verifyTap) => {
                                 let ipcUpdate = {
                                     "status": "installingOpenVPN"
                                 }
-                                mainWindow.webContents.send(`statusUpdate`, ipcUpdate)
+                                welcomeWindow.webContents.send(`statusUpdate`, ipcUpdate)
                                 if (error) {
                                     //Couldn't run the install command.
                                     log.error(`Main: Failed to run command to install OpenVPN. Error: ${error}`)
