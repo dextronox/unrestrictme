@@ -169,12 +169,12 @@ function checkForApi() {
 
 function checkKeys() {
     log.info(`Main: Checking for public/private keys`)
-    fs.readFile(path.join(__dirname, 'keys/public'), (error, data) => {
+    fs.readFile(path.join(configDir, 'keys/public'), (error, data) => {
         if (error) {
             log.error(`Main: Error reading public key. Will now begin key generation. Error: ${error}`)
             createKeys()
         } else {
-            fs.readFile(path.join(__dirname, 'keys/private'), (error, data) => {
+            fs.readFile(path.join(configDir, 'keys/private'), (error, data) => {
                 if (error) {
                     log.error(`Main: Error reading private key. Will now begin key generation. Error: ${error}`)
                     createKeys()
@@ -193,22 +193,22 @@ function createKeys() {
     key.generateKeyPair()
     let publicKey = key.exportKey('public')
     let privateKey = key.exportKey('private')
-    fs.unlink(path.join(__dirname, 'keys/public'), (error) => {
+    fs.unlink(path.join(configDir, 'keys/public'), (error) => {
         if (error) {
             //File will simply be created if it does not exist
             log.error(`Main: Error occurred deleting public key. It might not exist, which is fine. Error: ${error}`)
         }
-        fs.writeFile(path.join(__dirname, 'keys/public'), publicKey, (error) => {
+        fs.writeFile(path.join(configDir, 'keys/public'), publicKey, (error) => {
             if (error) {
                 createErrorWindow('key')
                 return
             }
         })
-        fs.unlink(path.join(__dirname, 'keys/private'), (error) => {
+        fs.unlink(path.join(configDir, 'keys/private'), (error) => {
             if (error) {
                 log.error(`Main: Error occurred deleting private key. It might not exist, which is fine. Error: ${error}`)
             }
-            fs.writeFile(path.join(__dirname, 'keys/private'), privateKey, (error) => {
+            fs.writeFile(path.join(configDir, 'keys/private'), privateKey, (error) => {
                 if (error) {
                     createErrorWindow('key')
                     return
