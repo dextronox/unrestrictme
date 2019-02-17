@@ -56,8 +56,7 @@
         "libnotify4",
         "libappindicator1",
         "libxtst6",
-        "libnss3",
-        "openvpn"
+        "libnss3"
       ],
       "maintainer": "unrestrict.me"
     },
