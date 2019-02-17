@@ -46,7 +46,8 @@
     "linux": {
       "target": "deb",
       "synopsis": "Connect to unrestrict.me",
-      "category": "Network"
+      "category": "Network",
+      "asar": false
     },
     "deb": {
       "depends": [

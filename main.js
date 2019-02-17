@@ -74,15 +74,21 @@ app.on('activate', function () {
 
 function appStart() {
     createLoadingWindow()
-    isElevated().then(elevated => {
-        if (!elevated) {
-            log.error("Main: Application not run with elevated privileges. OpenVPN will not be able to change routing table.")
-            createErrorWindow(`elevation`)
-        } else {
-            log.info("Main: Application is elevated.")
-            checkSettings()
-        }
-    })
+    if (os.platform() === "win32") {
+        isElevated().then(elevated => {
+            if (!elevated) {
+                log.error("Main: Application not run with elevated privileges. OpenVPN will not be able to change routing table.")
+                createErrorWindow(`elevation`)
+            } else {
+                log.info("Main: Application is elevated.")
+                checkSettings()
+            }
+        })
+    } else {
+        log.info("Main: Application does not need to be elevated.")
+        checkSettings()
+    }
+
 }
 
 function checkSettings() {
