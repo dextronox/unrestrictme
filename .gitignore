@@ -68,3 +68,4 @@ keys/*
 !keys/about
 current.ovpn
 dist/*
+config/*

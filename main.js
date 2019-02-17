@@ -339,8 +339,11 @@ function createMainWindow() {
     
         return false;
     });
-    
-    tray = new Tray(path.join(__dirname, "assets", "icons", "win.ico"))
+    if (os.platform() === "win32") {
+        tray = new Tray(path.join(__dirname, "assets", "icons", "win.ico"))
+    } else {
+        tray = new Tray(path.join(__dirname, "assets", "icons", "icon.png"))
+    }
     let contextMenu = Menu.buildFromTemplate([
         {
             label: "Show unrestrict.me", click: () => {
