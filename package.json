@@ -44,10 +44,21 @@
       "uninstallDisplayName": "unrestrict.me"
     },
     "linux": {
-      "target": "AppImage",
+      "target": "deb",
       "synopsis": "Connect to unrestrict.me",
       "category": "Network",
       "asar": false
+    },
+    "deb": {
+      "depends": [
+        "gconf2",
+        "gconf-service",
+        "libnotify4",
+        "libappindicator1",
+        "libxtst6",
+        "libnss3"
+      ],
+      "maintainer": "unrestrict.me"
     },
     "mac": {
       "category": "public.app-category.utilities"
