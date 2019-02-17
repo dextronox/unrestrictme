@@ -61,6 +61,7 @@ $(document).ready(() => {
                     icon: "success",
                     button: "Okay"
                 }).then((restart) => {
+                    log.info(`Renderer: unrestrict.me will now close because setup is complete.`)
                     main.quit()
                 });
             }
