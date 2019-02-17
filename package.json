@@ -47,7 +47,13 @@
       "target": "AppImage",
       "synopsis": "Connect to unrestrict.me",
       "category": "Network",
-      "asar": false
+      "asar": false,
+      "icon": "icon.icns"
+    },
+    "appImage": {
+      "synopsis": "unrestrict.me Linux Client",
+      "category": "Network",
+      "desktop": "unrestrictme"
     },
     "mac": {
       "category": "public.app-category.utilities"

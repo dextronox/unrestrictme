@@ -324,7 +324,7 @@ function createMainWindow() {
     mainWindow.webContents.on('did-finish-load', () => {
         mainWindow.show()
     })
-    mainWindow.webContents.openDevTools({mode: "undocked"})
+    //mainWindow.webContents.openDevTools({mode: "undocked"})
     mainWindow.setAlwaysOnTop(false)
     mainWindow.on('minimize',function(event){
         event.preventDefault();
