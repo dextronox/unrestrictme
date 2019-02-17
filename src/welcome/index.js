@@ -39,6 +39,18 @@ $(document).ready(() => {
                 $("#step3_repository_installing").css("display", "none")
                 $("#errorExcerpt").css("display", "block")
                 $("#errorExcerptText").html(args["errorText"])
+            } else if (args["error"] === "builtOnMissing") {
+                //OpenVPN command ran, but it didn't contain the text we expected it to.
+                //LINUX
+                swal({
+                    title: "Whoops!",
+                    text: "OpenVPN is installed, but we didn't get the output we expected. Check the log file for more information.",
+                    icon: "success",
+                    button: "Close"
+                }).then((restart) => {
+                    log.info(`Renderer: unrestrict.me will now close because OpenVPN installation is broken.`)
+                    app.quit()
+                });
             } else if (args["error"] === "writingSettingsFile") {
                 //We couldn't write to settings.conf
                 //WINDOWS+LINUX
