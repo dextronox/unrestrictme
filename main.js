@@ -28,6 +28,7 @@ if (!appLock) {
                 mainWindow.restore()
             }
             mainWindow.focus()
+            mainWindow.show()
         }
     })
 }
@@ -385,7 +386,7 @@ function createMainWindow() {
                             } else {
                                 mainWindow.show()
                                 mainWindow.webContents.send("trayError", "")
-                                log.error(`Renderer: Failed to get IP address for clipboard.`)
+                                log.error(`Renderer: Failed to get IP address for clipboard. We got: ${body}`)
                             }
                         }
                     })

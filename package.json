@@ -53,7 +53,8 @@
     "appImage": {
       "synopsis": "unrestrict.me Linux Client",
       "category": "Network",
-      "desktop": "unrestrictme"
+      "desktop": "unrestrictme",
+      "systemIntegration": "doNotAsk"
     },
     "mac": {
       "category": "public.app-category.utilities"
