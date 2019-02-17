@@ -581,6 +581,7 @@ exports.dependenciesCheck = (verifyTap) => {
                                         "error": "sudoFail"
                                     }
                                     welcomeWindow.webContents.send(`statusUpdate`, ipcUpdate)
+                                    return;
                                 }
                                 if (String(stdout).includes("E:")) {
                                     //An error occurred installing OpenVPN
