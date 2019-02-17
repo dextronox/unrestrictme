@@ -832,9 +832,6 @@ exports.clearSettings = () => {
     })
 }
 
-exports.quitRemote = () => {
-    quit()
-}
 function killSwitch(enable) {
     if (enable) {
         fs.readFile(path.join(configDir, 'settings.conf'), 'utf8', (error, data) => {
