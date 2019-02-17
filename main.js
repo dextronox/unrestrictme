@@ -567,7 +567,7 @@ exports.dependenciesCheck = (verifyTap) => {
                         if (String(os["dist"]).includes("Ubuntu") || String(os["dist"]).includes("Debian")) {
                             log.info(`Main: Will install OpenVPN for Debian/Ubuntu.`)
                             let options = {
-                                name: "unrestrict.me"
+                                name: "unrestrictme"
                             }
                             sudo.exec(`apt -y install openvpn`, options, (error, stdout, stderr) => {
                                 let ipcUpdate = {
