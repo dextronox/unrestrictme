@@ -38,7 +38,10 @@
       "runAfterFinish": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "allowToChangeInstallationDirectory": true
+      "allowToChangeInstallationDirectory": true,
+      "installerSidebar": "sidebar.bmp",
+      "uninstallerSidebar": "sidebar.bmp",
+      "uninstallDisplayName": "unrestrict.me"
     },
     "linux": {
       "target": "deb",
@@ -84,10 +87,8 @@
     "electron-builder": "^20.38.5"
   },
   "dependencies": {
-    "alertifyjs": "^1.11.2",
     "child_process": "^1.0.2",
     "electron-log": "^2.2.17",
-    "fs": "0.0.1-security",
     "getos": "^3.1.1",
     "is-elevated": "^2.0.1",
     "jquery": "^3.3.1",
@@ -96,10 +97,8 @@
     "os": "^0.1.1",
     "path": "^0.12.7",
     "request": "^2.88.0",
-    "request-progress": "^3.0.0",
     "shell": "^0.5.0",
-    "sweetalert": "^2.1.2",
-    "uri-js": "^4.2.2",
-    "url": "^0.11.0"
+    "sudo-prompt": "^8.2.5",
+    "sweetalert": "^2.1.2"
   }
 }
