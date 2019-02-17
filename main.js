@@ -585,7 +585,7 @@ exports.dependenciesCheck = (verifyTap) => {
                             }
                             sudo.exec(`apt -y install openvpn`, options, (error, stdout, stderr) => {
                                 let ipcUpdate = {
-                                    "status": "installingOpenVPN"
+                                    "update": "installingOpenVPN"
                                 }
                                 welcomeWindow.webContents.send(`statusUpdate`, ipcUpdate)
                                 if (error) {
