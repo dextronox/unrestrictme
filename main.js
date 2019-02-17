@@ -582,7 +582,7 @@ exports.dependenciesCheck = (verifyTap) => {
                                     }
                                     welcomeWindow.webContents.send(`statusUpdate`, ipcUpdate)
                                 }
-                                if (stdout.includes("E:")) {
+                                if (String(stdout).includes("E:")) {
                                     //An error occurred installing OpenVPN
                                     log.error(`Main: Failed to install OpenVPN. Stdout: ${stdout}`)
                                     let ipcUpdate = {
@@ -610,12 +610,12 @@ exports.dependenciesCheck = (verifyTap) => {
                             })
                         }
                     })
-                } else if (!stdout.includes('built on')) {
+                } else if (!String(stdout).includes('built on')) {
                     log.error(`Main: Couldn't detect whether OpenVPN is installed. Error: ${error}`)
                 }
 
             }
-            if (stdout.includes(`built on`)) {
+            if (String(stdout).includes(`built on`)) {
                 let settings = {}
                 fs.writeFile(path.join(__dirname, 'settings.conf'), JSON.stringify(settings), (error) => {
                     if (error) {
