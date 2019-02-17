@@ -580,14 +580,14 @@ exports.dependenciesCheck = (verifyTap) => {
                         }
                         if (String(os["dist"]).includes("Ubuntu") || String(os["dist"]).includes("Debian")) {
                             log.info(`Main: Will install OpenVPN for Debian/Ubuntu.`)
+                            let ipcUpdate = {
+                                "update": "installingOpenVPN"
+                            }
+                            welcomeWindow.webContents.send(`statusUpdate`, ipcUpdate)
                             let options = {
                                 name: "unrestrictme"
                             }
                             sudo.exec(`apt -y install openvpn`, options, (error, stdout, stderr) => {
-                                let ipcUpdate = {
-                                    "update": "installingOpenVPN"
-                                }
-                                welcomeWindow.webContents.send(`statusUpdate`, ipcUpdate)
                                 if (error) {
                                     //Couldn't run the install command.
                                     log.error(`Main: Failed to run command to install OpenVPN. Error: ${error}`)
