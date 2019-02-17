@@ -569,7 +569,7 @@ exports.dependenciesCheck = (verifyTap) => {
                 if (String(error).includes("openvpn: not found")) {
                     //OpenVPN not installed. Get from package repository.
                     log.info(`Main: Installing OpenVPN from package repository.`)
-                    getos((error, os) => {
+                    getos((error, ops) => {
                         if (error) {
                             log.error(`Main: Error checking operating system environment. Error: ${error}`)
                             let ipcUpdate = {
@@ -578,7 +578,7 @@ exports.dependenciesCheck = (verifyTap) => {
                             welcomeWindow.webContents.send(`statusUpdate`, ipcUpdate)
                             return;
                         }
-                        if (String(os["dist"]).includes("Ubuntu") || String(os["dist"]).includes("Debian")) {
+                        if (String(ops["dist"]).includes("Ubuntu") || String(ops["dist"]).includes("Debian")) {
                             log.info(`Main: Will install OpenVPN for Debian/Ubuntu.`)
                             let ipcUpdate = {
                                 "update": "installingOpenVPN"
