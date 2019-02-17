@@ -17,7 +17,7 @@ function setConfigDir() {
         //Set for install directory.
         configDir = path.join(__dirname, "../..")
     } else if (os.platform() === "linux") {
-        configDir = path.join(os.homedir())
+        configDir = path.join(os.homedir(), ".config/unrestrictme")
     }
 }
 $(document).ready(() => {
