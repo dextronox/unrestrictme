@@ -17,7 +17,7 @@ $(document).ready(() => {
         }
     })
     ipcRenderer.on(`apiError`, (event, args) => {
-        $("#apiError").html(JSON.stringify(args).split(',').join(', '))
+        $("#apiError").html(String(args).split(',').join(', '))
     })
 })
 
