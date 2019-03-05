@@ -34,7 +34,7 @@ if (!appLock) {
 }
 
 //Definition of global variables
-let loadErrors = {}, loadingWindow, errorWindow, welcomeWindow, mainWindow, tray, killSwitchStatus, intentionalDisconnect, configDir
+let loadErrors = {}, loadingWindow, errorWindow, welcomeWindow, mainWindow, tray, killSwitchStatus, intentionalDisconnect
 
 function setLogValues() {
     //This has to be done in a function because if the file does not exist the application will terminate with an exception.
@@ -44,29 +44,9 @@ function setLogValues() {
     log.transports.file.streamConfig = { flags: 'w' };
 }
 
-function setConfigDir() {
-    if (os.platform() === "win32") {
-        //Set for install directory.
-        configDir = path.join(__dirname, "config")
-    } else if (os.platform() === "linux") {
-        configDir = path.join(os.homedir(), ".config/unrestrictme")
-    }
-}
-
 app.on('ready', () => {
     setLogValues()
-    setConfigDir()
     appStart()
-/*     fs.writeFile(path.join(__dirname, "log.txt"), "", (error) => {
-        if (error){
-            console.log(dialog.showMessageBox({type: "error", buttons: ["Ok"], defaultId: 0, title: "Application Initialisation Error", message: `We couldn't write to your log.txt file, which will prevent the application from running. Check permissions. Error: ${error}`}))
-            app.quit()
-            return
-        } else {
-            setLogValues()
-            appStart()
-        }
-    }) */
 })
 
 
@@ -88,22 +68,29 @@ function appStart() {
     if (os.platform() === "win32") {
         isElevated().then(elevated => {
             if (!elevated) {
-                log.error("Main: Application not run with elevated privileges. OpenVPN will not be able to change routing table.")
+                log.error("Main: Application not run without elevated privileges. OpenVPN will not be able to change routing table.")
                 createErrorWindow(`elevation`)
             } else {
                 log.info("Main: Application is elevated.")
                 checkSettings()
             }
         })
-    } else {
-        log.info("Main: Application does not need to be elevated.")
-        checkSettings()
+    } else if (os.platform() === "linux") {
+        isElevated().then(elevated => {
+            if (!elevated) {
+                log.error("Main: Application is not elevated. Consequently, we will run with limited functionality.")
+                checkSettings()
+            } else {
+                log.info("Main: Application is elevated.")
+                checkSettings()
+            }
+        })
     }
 
 }
 
 function checkSettings() {
-    fs.readFile(path.join(configDir, 'settings.conf'), 'utf8', (error, data) => {
+    fs.readFile(path.join(app.getPath('userData'), 'settings.conf'), 'utf8', (error, data) => {
         if (String(error).includes('ENOENT')) {
             log.error("Main: settings.conf does not exist! Assuming new installation.")
             //Go straight to new install wizard. Skip other checks as they rely on the settings.conf file.
@@ -128,7 +115,7 @@ function checkForApi() {
     //This simply pings the API server to make sure it lives.
     let requestConfig, settingsFile
     log.info(`Main: Checking for API.`)
-    fs.readFile(path.join(configDir, 'settings.conf'), 'utf8', (error, data) => {
+    fs.readFile(path.join(app.getPath('userData'), 'settings.conf'), 'utf8', (error, data) => {
         settingsFile = JSON.parse(data)
         if (settingsFile["customAPI"]) {
             log.info(`Main: Using custom API.`)
@@ -170,12 +157,12 @@ function checkForApi() {
 
 function checkKeys() {
     log.info(`Main: Checking for public/private keys`)
-    fs.readFile(path.join(configDir, 'public'), (error, data) => {
+    fs.readFile(path.join(app.getPath('userData'), 'public'), (error, data) => {
         if (error) {
             log.error(`Main: Error reading public key. Will now begin key generation. Error: ${error}`)
             createKeys()
         } else {
-            fs.readFile(path.join(configDir, 'private'), (error, data) => {
+            fs.readFile(path.join(app.getPath('userData'), 'private'), (error, data) => {
                 if (error) {
                     log.error(`Main: Error reading private key. Will now begin key generation. Error: ${error}`)
                     createKeys()
@@ -194,22 +181,22 @@ function createKeys() {
     key.generateKeyPair()
     let publicKey = key.exportKey('public')
     let privateKey = key.exportKey('private')
-    fs.unlink(path.join(configDir, 'public'), (error) => {
+    fs.unlink(path.join(app.getPath('userData'), 'public'), (error) => {
         if (error) {
             //File will simply be created if it does not exist
             log.error(`Main: Error occurred deleting public key. It might not exist, which is fine. Error: ${error}`)
         }
-        fs.writeFile(path.join(configDir, 'public'), publicKey, (error) => {
+        fs.writeFile(path.join(app.getPath('userData'), 'public'), publicKey, (error) => {
             if (error) {
                 createErrorWindow('key')
                 return
             }
         })
-        fs.unlink(path.join(configDir, 'private'), (error) => {
+        fs.unlink(path.join(app.getPath('userData'), 'private'), (error) => {
             if (error) {
                 log.error(`Main: Error occurred deleting private key. It might not exist, which is fine. Error: ${error}`)
             }
-            fs.writeFile(path.join(configDir, 'private'), privateKey, (error) => {
+            fs.writeFile(path.join(app.getPath('userData'), 'private'), privateKey, (error) => {
                 if (error) {
                     createErrorWindow('key')
                     return
@@ -353,7 +340,7 @@ function createMainWindow() {
         },
         {
             label: "Copy IP to Clipboard", click: () => {
-                fs.readFile(path.join(configDir, 'settings.conf'), 'utf8', (error, data) => {
+                fs.readFile(path.join(app.getPath('userData'), 'settings.conf'), 'utf8', (error, data) => {
                     if (error) {
                         log.error(`Renderer: Error reading settings file. Error: ${error}`)
                         mainWindow.webContents.send("trayError", "")
@@ -378,6 +365,8 @@ function createMainWindow() {
                     }
                     request(requestConfig, (error, response, body) => {
                         if (error) {
+                            mainWindow.show()
+                            mainWindow.webContents.send("trayError", "")
                             log.error(`Renderer: Error getting public IP. Error: ${error}`)
                         } else {
                             if (/^(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/.test(body) || body === "::ffff:127.0.0.1") {
@@ -386,7 +375,7 @@ function createMainWindow() {
                             } else {
                                 mainWindow.show()
                                 mainWindow.webContents.send("trayError", "")
-                                log.error(`Renderer: Failed to get IP address for clipboard. We got: ${body}`)
+                                log.error(`Renderer: Failed to get IP address. We got a response, however: ${body}`)
                             }
                         }
                     })
@@ -423,7 +412,7 @@ function update(version) {
             log.error(`Main: Error deleting past update file. This is probably fine because it doesn't exist. Should write over anyway. Error: ${error}`)
         }
     })
-    fs.readFile(path.join(configDir, 'settings.conf'), 'utf8', (error, data) => {
+    fs.readFile(path.join(app.getPath('userData'), 'settings.conf'), 'utf8', (error, data) => {
         if (error) {
             log.error(`Main: Error reading config file whilst attempting to update. Error: ${error}`)
             createErrorWindow("settings")
@@ -481,32 +470,82 @@ function update(version) {
 
 function quit() {
     tray.destroy()
-    log.info(`Main: We're about to kill OpenVPN`)
+    log.info(`Main: We're about to kill OpenVPN.`)
     intentionalDisconnect = true
-    exec(`taskkill /IM openvpn.exe /F`, (error, stdout, stderr) => {
-        if (error) {
+    if (os.platform() === "win32") {
+        exec(`taskkill /IM openvpn.exe /F`, (error, stdout, stderr) => {
+            if (error) {
+                log.error(`Main: An error occurred killing OpenVPN. Error: ${error}`)
+                mainWindow.show()
+                let status = {
+                    "disconnectError": true
+                }
+                try {
+                    mainWindow.webContents.send('error', status)
+                } catch(e) {
+                    log.error(`Main: Couldn't send OpenVPN status to renderer. Error: ${e}`)
+                }
+                app.quit()
+                return;
+            }
+            log.error(`Main: OpenVPN should have been killed.`)
             let status = {
-                "disconnectError": true
+                "connected": false
             }
             try {
-                mainWindow.webContents.send('error', status)
+                mainWindow.webContents.send('connection', status)
             } catch(e) {
                 log.error(`Main: Couldn't send OpenVPN status to renderer. Error: ${e}`)
             }
+            log.info(`Main: OpenVPN was killed`)
             app.quit()
-            return
+        })
+    } else if (os.platform() === "linux") {
+        //This needs to be expanded to check if the process is running first, otherwise we're prompting the user unnecessarily.
+        let options = {
+            name: "unrestrictme"
         }
-        let status = {
-            "connected": false
-        }
-        try {
-            mainWindow.webContents.send('connection', status)
-        } catch(e) {
-            log.error(`Main: Couldn't send OpenVPN status to renderer. Error: ${e}`)
-        }
-        log.info(`Main: OpenVPN was killed`)
-        app.quit()
-    }) 
+        sudo.exec(`pkill openvpn`, options, (error, stdout, stderr) => {
+            if (error) {
+                if (String(error).includes("User did not grant permission")) {
+                    log.error("Main: User did not grant permission to disconnect.")
+                    mainWindow.show()
+                    let status = {
+                        "disconnectError": "permission"
+                    }
+                    try {
+                        mainWindow.webContents.send('error', status)
+                    } catch(e) {
+                        log.error(`Main: Couldn't send OpenVPN status to renderer. Error: ${e}`)
+                    }
+                    return;
+                }
+                log.error(`Main: An error occurred killing OpenVPN. Error: ${error}`)
+                mainWindow.show()
+                let status = {
+                    "disconnectError": true
+                }
+                try {
+                    mainWindow.webContents.send('error', status)
+                } catch(e) {
+                    log.error(`Main: Couldn't send OpenVPN status to renderer. Error: ${e}`)
+                }
+                app.quit()
+                return;
+            }
+            let status = {
+                "connected": false
+            }
+            try {
+                mainWindow.webContents.send('connection', status)
+            } catch(e) {
+                log.error(`Main: Couldn't send OpenVPN status to renderer. Error: ${e}`)
+            }
+            log.info(`Main: OpenVPN was killed`)
+            app.quit()
+        })
+    }
+
 }
 
 function openTapInstaller () {
@@ -547,7 +586,7 @@ exports.dependenciesCheck = (verifyTap) => {
             } else {
                 log.info(`Main: ${stdout}`)
                 let settings = {}
-                fs.writeFile(path.join(configDir, 'settings.conf'), JSON.stringify(settings), (error) => {
+                fs.writeFile(path.join(app.getPath('userData'), 'settings.conf'), JSON.stringify(settings), (error) => {
                     if (error) {
                         log.error(`Main: Error occurred writing settings file. Permissions error perhaps? Error: ${error}`)
                         let ipcUpdate = {
@@ -566,79 +605,11 @@ exports.dependenciesCheck = (verifyTap) => {
     } else if (os.platform() === "linux") {
         exec(`openvpn`, (error, stdout, stderr) => {
             if (error) {
-                if (String(error).includes("openvpn: not found")) {
-                    //OpenVPN not installed. Get from package repository.
-                    log.info(`Main: Installing OpenVPN from package repository.`)
-                    getos((error, ops) => {
-                        if (error) {
-                            log.error(`Main: Error checking operating system environment. Error: ${error}`)
-                            let ipcUpdate = {
-                                "error": "operatingSystemCheck"
-                            }
-                            welcomeWindow.webContents.send(`statusUpdate`, ipcUpdate)
-                            return;
-                        }
-                        if (String(ops["dist"]).includes("Ubuntu") || String(ops["dist"]).includes("Debian")) {
-                            log.info(`Main: Will install OpenVPN for Debian/Ubuntu.`)
-                            let ipcUpdate = {
-                                "update": "installingOpenVPN"
-                            }
-                            welcomeWindow.webContents.send(`statusUpdate`, ipcUpdate)
-                            let options = {
-                                name: "unrestrictme"
-                            }
-                            sudo.exec(`apt -y install openvpn`, options, (error, stdout, stderr) => {
-                                if (error) {
-                                    //Couldn't run the install command.
-                                    log.error(`Main: Failed to run command to install OpenVPN. Error: ${error}`)
-                                    let ipcUpdate = {
-                                        "error": "sudoFail"
-                                    }
-                                    welcomeWindow.webContents.send(`statusUpdate`, ipcUpdate)
-                                    return;
-                                }
-                                if (String(stdout).includes("E:")) {
-                                    //An error occurred installing OpenVPN
-                                    log.error(`Main: Failed to install OpenVPN. Stdout: ${stdout}`)
-                                    let ipcUpdate = {
-                                        "error": "OpenVPNInstallFail",
-                                        "errorText": stdout
-                                    }
-                                    welcomeWindow.webContents.send(`statusUpdate`, ipcUpdate)
-                                } else {
-                                    let settings = {}
-                                    fs.writeFile(path.join(configDir, 'settings.conf'), JSON.stringify(settings), (error) => {
-                                        if (error) {
-                                            log.error(`Main: Error occurred writing settings file. Permissions error perhaps? Error: ${error}`)
-                                            let ipcUpdate = {
-                                                "error":"writingSettingsFile",
-                                                "errorText": error
-                                            }
-                                            welcomeWindow.webContents.send(`statusUpdate`, ipcUpdate)
-                                        } else {
-                                            log.info(`Main: Settings file created!`)
-                                            //Show alert to user and have them run quit()
-                                            let ipcUpdate = {
-                                                "update": "InstallComplete"
-                                            }
-                                            welcomeWindow.webContents.send(`statusUpdate`, ipcUpdate)
-                                        }
-                                    }) 
-                                }
-                            })
-                        }
-                    })
-                } else if (!String(stdout).includes('built on')) {
-                    log.error(`Main: Couldn't detect whether OpenVPN is installed. Error: ${error}`)
-                    let ipcUpdate = {
-                        "error": "builtOnMissing"
-                    }
-                    welcomeWindow.webContents.send(`statusUpdate`, ipcUpdate)
-                }
+                installDependenciesLinux(error)
             }
             if (String(stdout).includes(`built on`)) {
                 let settings = {}
-                fs.writeFile(path.join(configDir, 'settings.conf'), JSON.stringify(settings), (error) => {
+                fs.writeFile(path.join(app.getPath('userData'), 'settings.conf'), JSON.stringify(settings), (error) => {
                     if (error) {
                         log.error(`Main: Error occurred writing settings file. Permissions error perhaps? Error: ${error}`)
                         let ipcUpdate = {
@@ -656,7 +627,7 @@ exports.dependenciesCheck = (verifyTap) => {
                     }
                 })
             } else {
-
+                installDependenciesLinux(stdout)
             }
         })
     } else {
@@ -668,8 +639,9 @@ exports.dependenciesCheck = (verifyTap) => {
 
 exports.connect = (config) => {
     intentionalDisconnect = false
+    killSwitchStatus = false
     log.info(`Main: Received command to connect OpenVPN with config: ${config}`)
-    fs.writeFile(path.join(__dirname, "current.ovpn"), config, (error) => {
+    fs.writeFile(path.join(app.getPath('userData'), "current.ovpn"), config, (error) => {
         if (error) {
             let status = {
                 "writeError": true
@@ -683,8 +655,8 @@ exports.connect = (config) => {
             return
         }
         if (os.platform() === "win32") {
-            log.info(`Main: Going to run: "${path.join(__dirname, "assets", "openvpn", `${os.arch()}`)}\\openvpn.exe" --config "${path.join(__dirname, "current.ovpn")}" --connect-retry-max 1 --tls-exit --mute-replay-warnings --connect-timeout 15`)
-            let ovpnProc = exec(`"${path.join(__dirname, "assets", "openvpn", `${os.arch()}`)}\\openvpn.exe" --config "${path.join(__dirname, "current.ovpn")}"  --connect-retry-max 1 --tls-exit --mute-replay-warnings --connect-timeout 15`)
+            log.info(`Main: Going to run: "${path.join(__dirname, "assets", "openvpn", `${os.arch()}`)}\\openvpn.exe" --config "${path.join(app.getPath('userData'), "current.ovpn")}" --connect-retry-max 1 --tls-exit --mute-replay-warnings --connect-timeout 15`)
+            let ovpnProc = exec(`"${path.join(__dirname, "assets", "openvpn", `${os.arch()}`)}\\openvpn.exe" --config "${path.join(app.getPath('userData'), "current.ovpn")}"  --connect-retry-max 1 --tls-exit --mute-replay-warnings --connect-timeout 15`)
             var datalog
             ovpnProc.stdout.on('data', (data) => {
                 log.info(`OpenVPN: ${data}`)
@@ -758,14 +730,216 @@ exports.connect = (config) => {
                 } catch(e) {
                     log.error(`Main: Couldn't send OpenVPN status to renderer. Error: ${e}`)
                 }
-                fs.unlink(path.join(__dirname, "current.ovpn"), (error) => {
+                fs.unlink(path.join(app.getPath('userData'), "current.ovpn"), (error) => {
                     if (error) {
                         log.error(`Main: Error deleting previous config file. This shouldn't matter as it will be overwritten.`)
                     }
                 })
             })
-        } else {
-            //This needs to be expanded to support other OSs.
+        } else if (os.platform() === "linux") {
+            log.info(`Main: Going to run: touch /var/log/openvpn.log && chown ${process.env.USER}:nogroup /var/log/openvpn.log && openvpn --config "${path.join(app.getPath('userData'), "current.ovpn")}" --connect-retry-max 1 --tls-exit --mute-replay-warnings --connect-timeout 15 --daemon`)
+            let options = {
+                name: "unrestrictme"
+            }
+            var datalog
+            sudo.exec(`sh -c "touch /var/log/openvpn.log && chown ${process.env.USER}:nogroup /var/log/openvpn.log && openvpn --config '${path.join(app.getPath('userData'), "current.ovpn")}' --connect-retry-max 1 --tls-exit --mute-replay-warnings --connect-timeout 15 --daemon"`, options, (error, stdout, stderr) => {
+                if (error) {
+                    if (String(error).includes("User did not grant permission")) {
+                        log.error("Main: We cannot connect without super user privileges!")
+                        intentionalDisconnect = true
+                        let status = {
+                            "requireSudo": true
+                        }
+                        try {
+                            mainWindow.webContents.send('error', status)
+                        } catch(e) {
+                            log.error(`Main: Couldn't send OpenVPN status to renderer. Error: ${e}`)
+                        }
+                        return;
+                    }
+                    log.error(`Main: OpenVPN failed to connect. Error: ${error}`)
+                    intentionalDisconnect = true
+                    let status = {
+                        "connectError": true
+                    }
+                    try {
+                        mainWindow.webContents.send('error', status)
+                    } catch(e) {
+                        log.error(`Main: Couldn't send OpenVPN status to renderer. Error: ${e}`)
+                    }
+                    return;
+                }
+                monitorOpenVPNLog()
+                function monitorOpenVPNLog() {
+                    fs.readFile(`/var/log/openvpn.log`, (error, wholeLog) => {
+                        let data = String(wholeLog).replace(datalog, '')
+                        datalog = String(wholeLog)
+                        if (data != "") {
+                            //Prevents empty logging
+                            log.info(`OpenVPN: ${data}`)
+                        }
+                        if (data.includes(`Initialization Sequence Completed`)) {
+                            let initializeCount = (datalog.match(/Initialization Sequence Completed/g) || []).length;
+                            if (initializeCount <= 1) {
+                                //Send required information to main window.
+                                var ipString = datalog.search("Peer Connection Initiated with")
+                                ipString = datalog.substring(ipString, ipString + 70)
+                                var regexp = /([0-9]{1,3}(\.[0-9]{1,3}){3}|[a-f0-9]{1,4}(:[a-f0-9]{1,4}){7})/g
+                                log.info(`Main: IP list: ${ipString.match(regexp)}`)
+                                //Connected to unrestrictme
+                                let status = {
+                                    "connected": true,
+                                    "ip": ipString.match(regexp)
+                                }
+                                try {
+                                    mainWindow.webContents.send('connection', status)
+                                } catch(e) {
+                                    log.error(`Main: Couldn't send OpenVPN status to renderer. Error: ${e}`)
+                                }
+                            }
+                        }
+                        if (data.includes(`All TAP-Windows adapters on this system are currently in use.`)) {
+                            //Couldn't connect, some other VPN (maybe us) is already connected
+                            let status = {
+                                "tapError": true
+                            }
+                            try {
+                                mainWindow.webContents.send('error', status)
+                            } catch(e) {
+                                log.error(`Main: Couldn't send OpenVPN status to renderer. Error: ${e}`)
+                            }
+                            return;
+                        }
+                        if (data.includes('Closing TUN/TAP interface')) {
+                            if (datalog.includes(`Initialization Sequence Completed`)) {
+                                //OpenVPN has disconnected on its own. Activate kill switch.
+                                log.info(`Main: OpenVPN has disconnected on its own. Enabling kill switch.`)
+                                killSwitchStatus = true
+                                handleOpenVPNClose()
+                                return;
+                            }
+                        }
+                        if (data.includes('SIGTERM[soft,tls-error] received, process exiting') || data.includes('Exiting due to fatal error')) {
+                            //OpenVPN failed to connect, check if had already connected.
+                            if (!datalog.includes(`Initialization Sequence Completed`)) {
+                                log.info(`Main: OpenVPN failed to connect.`)
+                                intentionalDisconnect = true
+                                let status = {
+                                    "connectError": true
+                                }
+                                try {
+                                    mainWindow.webContents.send('error', status)
+                                } catch(e) {
+                                    log.error(`Main: Couldn't send OpenVPN status to renderer. Error: ${e}`)
+                                }
+                                handleOpenVPNClose()
+                                return;
+                            }
+                        }
+                        if (data.includes(`Inactivity timeout (--ping-restart), restarting`)) {
+                            //Something has caused the VPN to restart. Alert the user that there are issues.
+                            let error = {
+                                "inactivityTimeout": true
+                            }
+                            mainWindow.webContents.send("error", error)
+                        }
+                        setTimeout(() => {monitorOpenVPNLog()}, 100)
+                    })
+                }
+                function handleOpenVPNClose() {
+                    try {
+                        if (killSwitchStatus || !intentionalDisconnect) {
+                            log.info(`Main: Activating failsafe.`)
+                            killSwitch(true)
+                        }
+                    } catch(e) {
+                        log.error(`Main: Couldn't send OpenVPN status to renderer. Error: ${e}`)
+                    }
+                    fs.unlink(path.join(app.getPath('userData'), "current.ovpn"), (error) => {
+                        if (error) {
+                            log.error(`Main: Error deleting previous config file. This shouldn't matter as it will be overwritten.`)
+                        }
+                    })
+                }
+            })
+/*             ovpnProc.stdout.on('data', (data) => {
+                log.info(`OpenVPN: ${data}`)
+                datalog = datalog + data 
+                if (data.includes(`Initialization Sequence Completed`)) {
+                    let initializeCount = (datalog.match(/Initialization Sequence Completed/g) || []).length;
+                    if (initializeCount <= 1) {
+                        //Send required information to main window.
+                        var ipString = datalog.search("Peer Connection Initiated with")
+                        ipString = datalog.substring(ipString, ipString + 70)
+                        var regexp = /([0-9]{1,3}(\.[0-9]{1,3}){3}|[a-f0-9]{1,4}(:[a-f0-9]{1,4}){7})/g
+                        log.info(`Main: IP list: ${ipString.match(regexp)}`)
+                        //Connected to unrestrictme
+                        let status = {
+                            "connected": true,
+                            "ip": ipString.match(regexp)
+                        }
+                        try {
+                            mainWindow.webContents.send('connection', status)
+                        } catch(e) {
+                            log.error(`Main: Couldn't send OpenVPN status to renderer. Error: ${e}`)
+                        }
+                    }
+                }
+                if (data.includes(`All TAP-Windows adapters on this system are currently in use.`)) {
+                    //Couldn't connect, some other VPN (maybe us) is already connected
+                    let status = {
+                        "tapError": true
+                    }
+                    try {
+                        mainWindow.webContents.send('error', status)
+                    } catch(e) {
+                        log.error(`Main: Couldn't send OpenVPN status to renderer. Error: ${e}`)
+                    }
+                }
+                if (data.includes('Closing TUN/TAP interface')) {
+                    //OpenVPN has disconnected on its own. Activate kill switch.
+                    log.info(`Main: OpenVPN has disconnected on its own. Enabling kill switch.`)
+                    killSwitchStatus = true
+                }
+                if (data.includes('SIGTERM[soft,tls-error] received, process exiting')) {
+                    //OpenVPN failed to connect, check if had already connected.
+                    if (!datalog.includes(`Initialization Sequence Completed`)) {
+                        log.info(`Main: OpenVPN failed to connect.`)
+                        intentionalDisconnect = true
+                        let status = {
+                            "connectError": true
+                        }
+                        try {
+                            mainWindow.webContents.send('error', status)
+                        } catch(e) {
+                            log.error(`Main: Couldn't send OpenVPN status to renderer. Error: ${e}`)
+                        }
+                    }
+                }
+                if (data.includes(`Inactivity timeout (--ping-restart), restarting`)) {
+                    //Something has caused the VPN to restart. Alert the user that there are issues.
+                    let error = {
+                        "inactivityTimeout": true
+                    }
+                    mainWindow.webContents.send("error", error)
+                }
+            })
+            ovpnProc.on('close', (data) => {
+                //OpenVPN has closed!
+                try {
+                    if (killSwitchStatus || !intentionalDisconnect) {
+                        log.info(`Main: Activating failsafe.`)
+                        killSwitch(true)
+                    }
+                } catch(e) {
+                    log.error(`Main: Couldn't send OpenVPN status to renderer. Error: ${e}`)
+                }
+                fs.unlink(path.join(app.getPath('userData'), "current.ovpn"), (error) => {
+                    if (error) {
+                        log.error(`Main: Error deleting previous config file. This shouldn't matter as it will be overwritten.`)
+                    }
+                })
+            }) */
         }
     }) 
 }
@@ -773,29 +947,22 @@ exports.connect = (config) => {
 exports.disconnect = (preconnect) => {
     intentionalDisconnect = true
     log.info(`Main: We're about to kill OpenVPN. If OpenVPN is not running, you will see no confirmation it wasn't killed.`)
-    exec(`taskkill /F /IM openvpn.exe`, (error, stdout, stderr) => {
-        if (error) {
-            log.error(`Main: Error killing OpenVPN. Error: ${error}`)
-            let status = {
-                "disconnectError": true
+    if (os.platform() === "win32") {
+        exec(`taskkill /IM openvpn.exe /F`, (error, stdout, stderr) => {
+            if (error) {
+                log.error(`Main: An error occurred killing OpenVPN. Error: ${error}`)
+                mainWindow.show()
+                let status = {
+                    "disconnectError": true
+                }
+                try {
+                    mainWindow.webContents.send('error', status)
+                } catch(e) {
+                    log.error(`Main: Couldn't send OpenVPN status to renderer. Error: ${e}`)
+                }
+                return;
             }
-            try {
-                mainWindow.webContents.send('error', status)
-            } catch(e) {
-                log.error(`Main: Couldn't send OpenVPN status to renderer. Error: ${e}`)
-            }
-            return
-        }
-        if (preconnect) {
-            let status = {
-                "connectionCancelled": true
-            }
-            try {
-                mainWindow.webContents.send('connection', status)
-            } catch(e) {
-                log.error(`Main: Couldn't send OpenVPN status to renderer. Error: ${e}`)
-            }
-        } else {
+            log.error(`Main: OpenVPN should have been killed.`)
             let status = {
                 "connected": false
             }
@@ -804,10 +971,51 @@ exports.disconnect = (preconnect) => {
             } catch(e) {
                 log.error(`Main: Couldn't send OpenVPN status to renderer. Error: ${e}`)
             }
+            log.info(`Main: OpenVPN was killed`)
+        })
+    } else if (os.platform() === "linux") {
+        let options = {
+            name: "unrestrictme"
         }
-
-        log.info(`Main: OpenVPN was killed.`)
-    })
+        sudo.exec(`pkill openvpn`, options, (error, stdout, stderr) => {
+            if (error) {
+                if (String(error).includes("User did not grant permission")) {
+                    log.error("Main: User did not grant permission to disconnect.")
+                    mainWindow.show()
+                    let status = {
+                        "disconnectError": "permission"
+                    }
+                    try {
+                        mainWindow.webContents.send('error', status)
+                    } catch(e) {
+                        log.error(`Main: Couldn't send OpenVPN status to renderer. Error: ${e}`)
+                    }
+                    return;
+                }
+                log.error(`Main: An error occurred killing OpenVPN. Error: ${error}`)
+                mainWindow.show()
+                let status = {
+                    "disconnectError": true
+                }
+                try {
+                    mainWindow.webContents.send('error', status)
+                } catch(e) {
+                    log.error(`Main: Couldn't send OpenVPN status to renderer. Error: ${e}`)
+                }
+                return;
+            }
+            log.error(`Main: OpenVPN should have been killed.`)
+            let status = {
+                "connected": false
+            }
+            try {
+                mainWindow.webContents.send('connection', status)
+            } catch(e) {
+                log.error(`Main: Couldn't send OpenVPN status to renderer. Error: ${e}`)
+            }
+            log.info(`Main: OpenVPN was killed`)
+        })
+    }
 }
 
 exports.disableKillSwitch = () => {
@@ -817,7 +1025,7 @@ exports.disableKillSwitch = () => {
 exports.clearSettings = () => {
     log.info(`Main: Clearing settings file and restarting application.`)
     let settings = {}
-    fs.writeFile(path.join(configDir, 'settings.conf'), JSON.stringify(settings), (error) => {
+    fs.writeFile(path.join(app.getPath('userData'), 'settings.conf'), JSON.stringify(settings), (error) => {
         if (error) {
             log.error(`Main: Error occurred writing settings file. Permissions error perhaps?`)
             let error = {
@@ -833,8 +1041,9 @@ exports.clearSettings = () => {
 }
 
 function killSwitch(enable) {
+    //All platform specific options are to be handled in killSwitchEnable
     if (enable) {
-        fs.readFile(path.join(configDir, 'settings.conf'), 'utf8', (error, data) => {
+        fs.readFile(path.join(app.getPath('userData'), 'settings.conf'), 'utf8', (error, data) => {
             if (error) {
                 log.error(`Main: Couldn't read settings file to enter kill switch NIC. Will not proceed. Error: ${error}`)
                 let status = {
@@ -848,7 +1057,7 @@ function killSwitch(enable) {
                 return;
             }
             let settings = JSON.parse(data)
-            if (!settings["selectedNic"] ||settings["selectedNic"] == -1) {
+            if (!settings["selectedNic"] || settings["selectedNic"] == -1) {
                 //Automatically determine nic.
                 killSwitchEnable("auto")
             } else {
@@ -858,7 +1067,7 @@ function killSwitch(enable) {
 
         })
     } else {
-        fs.readFile(path.join(configDir, 'settings.conf'), 'utf8', (error, data) => {
+        fs.readFile(path.join(app.getPath('userData'), 'settings.conf'), 'utf8', (error, data) => {
             if (error) {
                 log.error(`Main: Couldn't read settings file to retrieve kill switch NIC. Will not proceed. Error: ${error}`)
                 return;
@@ -903,7 +1112,7 @@ function killSwitchEnable(nic) {
                         return element
                     }
                 })
-                fs.readFile(path.join(configDir, 'settings.conf'), 'utf8', (error, data) => {
+                fs.readFile(path.join(app.getPath('userData'), 'settings.conf'), 'utf8', (error, data) => {
                     if (error) {
                         log.error(`Main: Couldn't read settings file to enter kill switch NIC. Will not proceed. Error: ${error}`)
                         let status = {
@@ -918,7 +1127,7 @@ function killSwitchEnable(nic) {
                     }
                     let settings = JSON.parse(data)
                     settings["nic"] = autoInterface["name"]
-                    fs.writeFile(path.join(configDir, 'settings.conf'), JSON.stringify(settings), (error) => {
+                    fs.writeFile(path.join(app.getPath('userData'), 'settings.conf'), JSON.stringify(settings), (error) => {
                         if (error) {
                             log.error(`Main: Couldn't write settings file to enter kill switch NIC. Will not proceed. Error: ${error}`)
                             let status = {
@@ -999,5 +1208,83 @@ function killSwitchEnable(nic) {
                 })
             })
         }
+    } else if (os.platform() === "linux") {
+        isElevated((elevated) => {
+            if (elevated) {
+                
+            }
+        })
+    }
+}
+
+function installDependenciesLinux(error) {
+    if (String(error).includes("openvpn: not found")) {
+        //OpenVPN not installed. Get from package repository.
+        log.info(`Main: Installing OpenVPN from package repository.`)
+        getos((error, ops) => {
+            if (error) {
+                log.error(`Main: Error checking operating system environment. Error: ${error}`)
+                let ipcUpdate = {
+                    "error": "operatingSystemCheck"
+                }
+                welcomeWindow.webContents.send(`statusUpdate`, ipcUpdate)
+                return;
+            }
+            if (String(ops["dist"]).includes("Ubuntu") || String(ops["dist"]).includes("Debian")) {
+                log.info(`Main: Will install OpenVPN for Debian/Ubuntu.`)
+                let ipcUpdate = {
+                    "update": "installingOpenVPN"
+                }
+                welcomeWindow.webContents.send(`statusUpdate`, ipcUpdate)
+                let options = {
+                    name: "unrestrictme"
+                }
+                sudo.exec(`apt -y install openvpn`, options, (error, stdout, stderr) => {
+                    if (error) {
+                        //Couldn't run the install command.
+                        log.error(`Main: Failed to run command to install OpenVPN. Error: ${error}`)
+                        let ipcUpdate = {
+                            "error": "sudoFail"
+                        }
+                        welcomeWindow.webContents.send(`statusUpdate`, ipcUpdate)
+                        return;
+                    }
+                    if (String(stdout).includes("E:")) {
+                        //An error occurred installing OpenVPN
+                        log.error(`Main: Failed to install OpenVPN. Stdout: ${stdout}`)
+                        let ipcUpdate = {
+                            "error": "OpenVPNInstallFail",
+                            "errorText": stdout
+                        }
+                        welcomeWindow.webContents.send(`statusUpdate`, ipcUpdate)
+                    } else {
+                        let settings = {}
+                        fs.writeFile(path.join(app.getPath('userData'), 'settings.conf'), JSON.stringify(settings), (error) => {
+                            if (error) {
+                                log.error(`Main: Error occurred writing settings file. Permissions error perhaps? Error: ${error}`)
+                                let ipcUpdate = {
+                                    "error":"writingSettingsFile",
+                                    "errorText": error
+                                }
+                                welcomeWindow.webContents.send(`statusUpdate`, ipcUpdate)
+                            } else {
+                                log.info(`Main: Settings file created!`)
+                                //Show alert to user and have them run quit()
+                                let ipcUpdate = {
+                                    "update": "InstallComplete"
+                                }
+                                welcomeWindow.webContents.send(`statusUpdate`, ipcUpdate)
+                            }
+                        }) 
+                    }
+                })
+            }
+        })
+    } else if (!String(stdout).includes('built on')) {
+        log.error(`Main: Couldn't detect whether OpenVPN is installed. Error: ${error}`)
+        let ipcUpdate = {
+            "error": "builtOnMissing"
+        }
+        welcomeWindow.webContents.send(`statusUpdate`, ipcUpdate)
     }
 }

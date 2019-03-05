@@ -19,6 +19,9 @@
         <div id="connectButtons">
             <button type="button" class="btn btn-primary btn-lg" id="connect">Connect to unrestrict.me</button>
             <button type="button" class="btn btn-secondary btn-lg" data-toggle="modal" data-target="#settings">Settings</button>
+            <div id="limitedFunctionalityDisclaimer" style="display: none;" class="alert alert-dismissible alert-secondary">
+                <b>Warning: </b><p style="display: inline">We're running in limited functionality mode (<a href="#" data-toggle="modal" data-target="#limitedFunctionality">What does this mean?</a>).</p>
+            </div>
         </div>
         <div id="loading1" style="display:none;">
             <div class="alert alert-dismissible alert-secondary">
@@ -38,7 +41,6 @@
                         </div>
                     </div>
                 </div>
-
             </div>
         </div>
         <div id="loading3" style="display:none;">
@@ -78,15 +80,18 @@
             <div class="modal-body">
                 <p>unrestrict.me should work 'out of the box', and modifying these settings isn't necessary for the average user. If anything breaks, click "Reset Config".</p>
                 <h5>Kill Switch NIC</h5>
-                <p>Select the adapter from the list below you wish to have disabled when connection is lost to unrestrict.me. By default we try to determine this automatically.</p>
-                <div id="adapterWait">
-                    <p>Please wait. We're getting a list of available adapters.</p>
+                <div id="killSwitchLimitedFunctionality">
+                    <p>Select the adapter from the list below you wish to have disabled when connection is lost to unrestrict.me. By default we try to determine this automatically.</p>
+                    <div id="adapterWait">
+                        <p>Please wait. We're getting a list of available adapters.</p>
+                    </div>
+                    <div class="form-group" id="adapterDiv" style="display:none;">
+                        <select class="form-control" id="adapterSelect">
+                            <option value="-1">Detect Automatically</option>
+                        </select>
+                    </div>
                 </div>
-                <div class="form-group" id="adapterDiv" style="display:none;">
-                    <select class="form-control" id="adapterSelect">
-                        <option value="-1">Detect Automatically</option>
-                    </select>
-                </div>
+                <p id="killSwitchLimitedFunctionalityNote" style="display: none;">Your client is currently running in limited functionality mode, and as such this feature is disabled.</p>
                 <h5>Custom API Server</h5>
                 <p>Input a custom API server for unrestrict.me to send requests.</p>
                 <div class="input-group mb-3">
@@ -153,6 +158,27 @@
             </div>
             <div class="modal-body">
                 <p>unrestrict.me is an Electron application built using open source NodeJS modules. OpenVPN is a registered trademark of OpenVPN Inc.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+            </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal fade" id="limitedFunctionality" tabindex="-1" role="dialog" aria-labelledby="limitedFunctionality" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Limited Functionality Mode</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <p>Your client is running in limited functionality mode. This means that whilst it will still function as a VPN the kill switch feature is disabled.</p>
+                <p>This is due to the client requiring user authorisation to modify network settings, which is unrealistic as a kill switch needs to be triggered immediately on an unintentional disconnect from unrestrict.me.</p>
+                <p>Other aspects which are usually seemless such as connecting to unrestrict.me may require user authorisation.</p>
+                <u>To disable limited functionality mode:</u> <p style="display: inline;"> Run the AppImage as root/sudo.</p>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>

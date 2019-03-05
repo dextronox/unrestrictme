@@ -45,7 +45,7 @@ $("#rescueMode").on('click', () => {
     log.info(`Renderer: User wishes to engage rescue mode.`)
     swal({
         title: "Rescue Mode",
-        text: "Rescue mode will activate a VPN which only allows connections to our servers. We should then be able to ping the API and then start the client.",
+        text: "Rescue mode will activate a VPN which only allows connections to our servers. We should then be able to ping the API and start the client.",
         buttons: true,
         dangerMode: true,
     }).then((bool) => {

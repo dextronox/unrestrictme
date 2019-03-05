@@ -44,8 +44,8 @@ $(document).ready(() => {
                 //LINUX
                 swal({
                     title: "Whoops!",
-                    text: "OpenVPN is installed, but we didn't get the output we expected. Check the log file for more information.",
-                    icon: "success",
+                    text: "OpenVPN is installed, but we didn't get the output we expected. Check the log file for more information. unrestrict.me will now close.",
+                    icon: "error",
                     button: "Close"
                 }).then((restart) => {
                     log.info(`Renderer: unrestrict.me will now close because OpenVPN installation is broken.`)
