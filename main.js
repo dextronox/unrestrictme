@@ -18,6 +18,11 @@ const network = require("network")
 const getos = require("getos")
 const sudo = require('sudo-prompt');
 const appLock = app.requestSingleInstanceLock()
+const { autoUpdater } = require("electron-updater")
+
+//AutoUpdate settings.
+autoUpdater.logger = require("electron-log")
+autoUpdater.logger.transports.file.level = "verbose"
 
 if (!appLock) {
     app.quit()
@@ -208,34 +213,33 @@ function createKeys() {
     })
 }
 
-function evaluateErrors() {
-    if (Object.keys(loadErrors).length === 0) {
-        log.info(`Main: Normal install. Ready to continue.`)
-        createMainWindow()
+function checkForUpdates(install) {
+    if (install) {
+        appUpdater.downloadUpdate()
+        autoUpdater.on("update-downloaded", (info) => {
+            autoUpdater.quitAndInstall()
+        })
     } else {
-        log.info(`Main: Abnormal installation.`)
-        log.info(`Main: ${JSON.stringify(loadErrors)}`)
-        if (loadErrors["elevated"] === false) {
-            log.info(`Main: Process wasn't elevated!`)
-            createErrorWindow(`elevation`)
-        } else if (loadErrors["update"] === 'error') {
-            log.info(`Main: Error checking for update.`)
-            createErrorWindow(`update`)
-        } else if (loadErrors["publicKey"] === 0|| loadErrors["privateKey"] === 0) {
-            createErrorWindow('key')
-        } else if (loadErrors["settings"]) {
-            if (loadErrors["settings"]=== 'new_install') {
-                //New installation
-                createWelcomeWindow()
-            } else if (loadErrors["settings"] === 'parse') {
-                //Unknown error, alert user
-                createErrorWindow('parse')
-            } else {
-                //Unknown error, alert user
-                createErrorWindow('settings')
+        autoUpdater.checkForUpdates()
+        autoUpdater.autoDownload = false
+        autoUpdater.autoInstallOnAppQuit = false
+        autoUpdater.on("error", (error) => {
+            log.error(`Main: An error occurred during the update procedure. This does not necessarily mean the client was updating. Error: ${error}`)
+            let updater = {
+                "updateError": true,
+                "error": error
             }
-        }
+            mainWindow.webContents.send('updaterError', updater)
+        })
+        autoUpdater.on("update-available", (info) => {
+            let updater = {
+                "updateAvailable": true,
+                "info": info
+            }
+            mainWindow.webContents.send('updater', updater)
+        })
     }
+
 }
 
 function createLoadingWindow() {
@@ -311,6 +315,7 @@ function createMainWindow() {
     }))
     mainWindow.webContents.on('did-finish-load', () => {
         mainWindow.show()
+        checkForUpdates()
     })
     //mainWindow.webContents.openDevTools({mode: "undocked"})
     mainWindow.setAlwaysOnTop(false)
@@ -468,11 +473,10 @@ function update(version) {
     })
 }
 
-function quit() {
-    tray.destroy()
-    log.info(`Main: We're about to kill OpenVPN.`)
+function quit(hard) {
+    log.info(`Main: We're about to kill OpenVPN. Hard kill?: ${hard}`)
     intentionalDisconnect = true
-    if (os.platform() === "win32") {
+    if (os.platform() === "win32" && !hard) {
         exec(`taskkill /IM openvpn.exe /F`, (error, stdout, stderr) => {
             if (error) {
                 log.error(`Main: An error occurred killing OpenVPN. Error: ${error}`)
@@ -485,6 +489,7 @@ function quit() {
                 } catch(e) {
                     log.error(`Main: Couldn't send OpenVPN status to renderer. Error: ${e}`)
                 }
+                tray.destroy()
                 app.quit()
                 return;
             }
@@ -498,52 +503,81 @@ function quit() {
                 log.error(`Main: Couldn't send OpenVPN status to renderer. Error: ${e}`)
             }
             log.info(`Main: OpenVPN was killed`)
+            tray.destroy()
             app.quit()
         })
-    } else if (os.platform() === "linux") {
-        //This needs to be expanded to check if the process is running first, otherwise we're prompting the user unnecessarily.
-        let options = {
-            name: "unrestrictme"
-        }
-        sudo.exec(`pkill openvpn`, options, (error, stdout, stderr) => {
-            if (error) {
-                if (String(error).includes("User did not grant permission")) {
-                    log.error("Main: User did not grant permission to disconnect.")
-                    mainWindow.show()
-                    let status = {
-                        "disconnectError": "permission"
-                    }
-                    try {
-                        mainWindow.webContents.send('error', status)
-                    } catch(e) {
-                        log.error(`Main: Couldn't send OpenVPN status to renderer. Error: ${e}`)
-                    }
-                    return;
-                }
-                log.error(`Main: An error occurred killing OpenVPN. Error: ${error}`)
+    } else if (os.platform() === "linux" && !hard) {
+        exec(`pgrep openvpn`, (error, stdout, stderr) => {
+            if (error && !error.code === 1) {
+                //Error occurred checking if OpenVPN is running.
+                log.error(`Main: We couldn't check if OpenVPN is running. Error: ${error}. stdout: ${stdout}. stderr: ${stderr}`)
                 mainWindow.show()
                 let status = {
-                    "disconnectError": true
+                    "pgrep": true
                 }
                 try {
                     mainWindow.webContents.send('error', status)
                 } catch(e) {
                     log.error(`Main: Couldn't send OpenVPN status to renderer. Error: ${e}`)
                 }
-                app.quit()
                 return;
             }
-            let status = {
-                "connected": false
+            if (String(stdout) != "") {
+                let options = {
+                    name: "unrestrictme"
+                }
+                intentionalDisconnect = true
+                sudo.exec(`pkill openvpn`, options, (error, stdout, stderr) => {
+                    if (error) {
+                        intentionalDisconnect = false
+                        if (String(error).includes("User did not grant permission")) {
+                            log.error(`Main: User did not grant permission to disconnect. Error: ${error}`)
+                            mainWindow.show()
+                            let status = {
+                                "disconnectError": "permission"
+                            }
+                            try {
+                                mainWindow.webContents.send('error', status)
+                            } catch(e) {
+                                log.error(`Main: Couldn't send OpenVPN status to renderer. Error: ${e}`)
+                            }
+                            return;
+                        }
+                        log.error(`Main: An error occurred killing OpenVPN. Error: ${error}`)
+                        mainWindow.show()
+                        let status = {
+                            "disconnectError": true
+                        }
+                        try {
+                            mainWindow.webContents.send('error', status)
+                        } catch(e) {
+                            log.error(`Main: Couldn't send OpenVPN status to renderer. Error: ${e}`)
+                        }
+                        tray.destroy()
+                        app.quit()
+                        return;
+                    }
+                    let status = {
+                        "connected": false
+                    }
+                    try {
+                        mainWindow.webContents.send('connection', status)
+                    } catch(e) {
+                        log.error(`Main: Couldn't send OpenVPN status to renderer. Error: ${e}`)
+                    }
+                    log.info(`Main: OpenVPN was killed`)
+                    tray.destroy()
+                    app.quit()
+                })
+            } else {
+                log.info(`Main: No OpenVPN found in stdout, we're ready to quit! Stdout: ${stdout}`)
+                tray.destroy()
+                app.quit()
             }
-            try {
-                mainWindow.webContents.send('connection', status)
-            } catch(e) {
-                log.error(`Main: Couldn't send OpenVPN status to renderer. Error: ${e}`)
-            }
-            log.info(`Main: OpenVPN was killed`)
-            app.quit()
         })
+    } else if (hard) {
+        tray.destroy()
+        app.quit()
     }
 
 }
@@ -697,7 +731,7 @@ exports.connect = (config) => {
                     log.info(`Main: OpenVPN has disconnected on its own. Enabling kill switch.`)
                     killSwitchStatus = true
                 }
-                if (data.includes('SIGTERM[soft,tls-error] received, process exiting')) {
+                if (data.includes('SIGTERM[soft,tls-error] received, process exiting') || data.includes('Exiting due to fatal error')) {
                     //OpenVPN failed to connect, check if had already connected.
                     if (!datalog.includes(`Initialization Sequence Completed`)) {
                         log.info(`Main: OpenVPN failed to connect.`)
@@ -847,13 +881,9 @@ exports.connect = (config) => {
                     })
                 }
                 function handleOpenVPNClose() {
-                    try {
-                        if (killSwitchStatus || !intentionalDisconnect) {
-                            log.info(`Main: Activating failsafe.`)
-                            killSwitch(true)
-                        }
-                    } catch(e) {
-                        log.error(`Main: Couldn't send OpenVPN status to renderer. Error: ${e}`)
+                    if (killSwitchStatus || !intentionalDisconnect) {
+                        log.info(`Main: Activating failsafe.`)
+                        killSwitch(true)
                     }
                     fs.unlink(path.join(app.getPath('userData'), "current.ovpn"), (error) => {
                         if (error) {
@@ -978,7 +1008,9 @@ exports.disconnect = (preconnect) => {
             name: "unrestrictme"
         }
         sudo.exec(`pkill openvpn`, options, (error, stdout, stderr) => {
+            intentionalDisconnect = true
             if (error) {
+                intentionalDisconnect = false
                 if (String(error).includes("User did not grant permission")) {
                     log.error("Main: User did not grant permission to disconnect.")
                     mainWindow.show()
@@ -1040,6 +1072,10 @@ exports.clearSettings = () => {
     })
 }
 
+exports.hardQuit = () => {
+    quit(true)
+}
+
 function killSwitch(enable) {
     //All platform specific options are to be handled in killSwitchEnable
     if (enable) {
@@ -1059,9 +1095,11 @@ function killSwitch(enable) {
             let settings = JSON.parse(data)
             if (!settings["selectedNic"] || settings["selectedNic"] == -1) {
                 //Automatically determine nic.
+                log.info(`Main: Will enable the kill switch with automatic configuration.`)
                 killSwitchEnable("auto")
             } else {
                 //Use preset nic.
+                log.info(`Main: Will enable the kill switch with preset configuration.`)
                 killSwitchEnable(settings["selectedNic"])
             }
 
@@ -1209,9 +1247,21 @@ function killSwitchEnable(nic) {
             })
         }
     } else if (os.platform() === "linux") {
-        isElevated((elevated) => {
+        isElevated().then(elevated => {
             if (elevated) {
-                
+                log.info(`Main: unrestrict.me is elevated. Enabling kill switch.`)
+            } else {
+                //Because unrestrict.me is not elevated (linux) we can't activate the kill switch without user auth (unrealistic)
+                log.info(`Main: unrestrict.me is not elevated, therefore we cannot activate the kill switch.`)
+                let status = {
+                    "error": "elevated"
+                }
+                try {
+                    mainWindow.webContents.send('killSwitch', status)
+                } catch(e) {
+                    log.error(`Main: Couldn't send kill switch error to renderer. Error: ${e}`)
+                }
+                return;
             }
         })
     }
