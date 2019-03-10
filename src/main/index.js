@@ -24,8 +24,10 @@ $(document).ready(() => {
             //Hide the disconnected view, show the connected view
             $("#disconnected").css('display', 'none')
             $("#connected").css('display', 'block')
-            //Clear the counter and the tag.
+            //Clear the counter and all tags in information div.
             clearInterval(interval);
+            $("#placeholderIP").html(``)
+            $("#placeholderConnectionID").html(``)
             $("#placeholderTimeRemaining").html("")
             fs.readFile(path.join(app.getPath('userData'), 'settings.conf'), 'utf8', (error, data) => {
                 if (error) {
@@ -117,6 +119,11 @@ $(document).ready(() => {
             $("#connectButtons").css("display", "block")
         } else if (args["inactivityTimeout"]) {
             
+        } else if (args["pgrep"]) {
+            //We couldn't check if OpenVPN is running.
+            swal("Whoops!", "We couldn't check if OpenVPN is running, and subsequently the application may quit leaving the VPN connected. Check the log file for more information.", "error").then((value) => {
+                main.hardQuit()
+            })
         }
     })
     ipcRenderer.on(`killSwitch`, (event, args) => {
@@ -134,11 +141,42 @@ $(document).ready(() => {
             swal("Whoops!", "We were unable to enable the kill switch.", "error")
             $("#connected").css('display', 'none')
             $("#disconnected").css('display', 'block')
+        } else if (args["error"] === "elevated") {
+            swal("Whoops!", "unrestrict.me has unexpectedly disconnected and we were unable to recover the connection.", "error")
+            $("#connected").css('display', 'none')
+            $("#disconnected").css('display', 'block')
         }
     })
     ipcRenderer.on(`trayError`, (event, args) => {
         swal("Whoops!", "We were unable to get your IP address from our API server.", "error")
     })
+    ipcRenderer.on(`updater`, (event, args) => {
+        if (args["updateAvailable"] === true) {
+            swal({
+                title: "Update Available",
+                text: "An update is available. Whilst it's not mandatory to update, older versions of our client may develop issues communicating with our API and remain vulnerable to potential security flaws. You will be disconnected from unrestrict.me if connected.",
+                icon: "info",
+                buttons: ["Cancel", "Update"]
+            }).then((willUpdate) => {
+                if (willUpdate) {
+                    $("#connected").css("display", "none")
+                    $("#disconnected").css("display", "none")
+                    $("#updating").css("display", "block")
+                    log.info(`Renderer: User has indicated they wish to update their client.`)
+                    ipcRenderer.once('updaterError', (event, args) => {
+                        swal({
+                            title: "Updater Error",
+                            text: "Something went wrong and we were unable to download the update. Please check the log file and try again later. The client will now close to preserve the log.",
+                            icon: "error"
+                        }).then(() => {
+                            main.hardQuit()
+                        })
+                    })
+                }
+            })
+        }
+    })
+    $("#clientVersion").html(`You're currently running unrestrict.me v${app.getVersion()}`)
     network.get_interfaces_list(function(error, obj) {
         for (i = 0; Object.keys(obj).length >= i; i++) {
             //This populates the settings list with current adapters.
@@ -629,6 +667,9 @@ $("#adapterSelect").on('change', () => {
     })
 })
 
+$("#openLegalExternal").on('click', () => {
+    require('electron').shell.openExternal('https://unrestrict.me/legal')
+})
 function populateConnected (localIp, publicIp, connectionId) {
     if (interval) {
         clearInterval(interval);
