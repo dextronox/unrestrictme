@@ -63,6 +63,10 @@
             <b>Time Remaining: </b><p id="placeholderTimeRemaining" style="display: inline"></p>
         </div>
     </div>
+    <div id="updating" class="container prompt" style="display: none">
+        <h1>Your client is updating.</h1>
+        <p>Please wait. This should only take a moment. Your client may restart.</p>
+    </div>
     <div id="killSwitch" class="container prompt" style="display: none">
         <h1>Kill Switch Failsafe Active</h1>
         <p>Due to an unknown reason connection to unrestrict.me has been dropped. To prevent possible snooping and IP leaks we've disabled your connection to the internet.</p>
@@ -79,6 +83,8 @@
             </div>
             <div class="modal-body">
                 <p>unrestrict.me should work 'out of the box', and modifying these settings isn't necessary for the average user. If anything breaks, click "Reset Config".</p>
+                <h5>Client Version</h5>
+                <p id="clientVersion"></p>
                 <h5>Kill Switch NIC</h5>
                 <div id="killSwitchLimitedFunctionality">
                     <p>Select the adapter from the list below you wish to have disabled when connection is lost to unrestrict.me. By default we try to determine this automatically.</p>
@@ -157,7 +163,8 @@
                 </button>
             </div>
             <div class="modal-body">
-                <p>unrestrict.me is an Electron application built using open source NodeJS modules. OpenVPN is a registered trademark of OpenVPN Inc.</p>
+                <p>unrestrict.me is an Electron application built using open source Node.js modules. Electron is a trademark of Github, Inc. Node.js is a registered trademark of Joyent, Inc. The unrestrict.me application is licensed under the GNU AGPLv3 template. unrestrict.me uses technology developed by OpenVPN Inc., and any associated "OpenVPN" trademarks are the property of OpenVPN Inc.</p>
+                <p>By using this application you agree to the Terms and Conditions of the unrestrict.me service located <a id="openLegalExternal" href="#">here</a>.</p>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
