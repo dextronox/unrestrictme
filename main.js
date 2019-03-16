@@ -20,10 +20,6 @@ const sudo = require('sudo-prompt');
 const appLock = app.requestSingleInstanceLock()
 const { autoUpdater } = require("electron-updater")
 
-//AutoUpdate settings.
-autoUpdater.logger = require("electron-log")
-autoUpdater.logger.transports.file.level = "verbose"
-
 if (!appLock) {
     app.quit()
 } else {
