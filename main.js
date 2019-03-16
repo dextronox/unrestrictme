@@ -39,13 +39,27 @@ if (!appLock) {
 }
 
 //Definition of global variables
-let loadErrors = {}, loadingWindow, errorWindow, welcomeWindow, mainWindow, tray, killSwitchStatus, intentionalDisconnect
+let loadingWindow, errorWindow, welcomeWindow, mainWindow, tray, killSwitchStatus, intentionalDisconnect
 
 function setLogValues() {
-    //This has to be done in a function because if the file does not exist the application will terminate with an exception.
+    //Create log file with a date naming schema.
+    var date = new Date();
+    var hour = date.getHours();
+    hour = (hour < 10 ? "0" : "") + hour;
+    var min  = date.getMinutes();
+    min = (min < 10 ? "0" : "") + min;
+    var sec  = date.getSeconds();
+    sec = (sec < 10 ? "0" : "") + sec;
+    var year = date.getFullYear();
+    var month = date.getMonth() + 1;
+    month = (month < 10 ? "0" : "") + month;
+    var day  = date.getDate();
+    day = (day < 10 ? "0" : "") + day;
+    let logDate = year + "-" + month + "-" + day + "-" + hour + "-" + min + "-" + sec;
     log.transports.file.level = 'info';
     log.transports.file.format = '{h}:{i}:{s}:{ms} {text}';
     log.transports.file.maxSize = 5 * 1024 * 1024;
+    log.transports.file.stream = fs.createWriteStream(path.join(app.getPath('userData'), `logs/log-${logDate}.txt`));
     log.transports.file.streamConfig = { flags: 'w' };
 }
 
@@ -215,10 +229,14 @@ function createKeys() {
 
 function checkForUpdates(install) {
     if (install) {
-        appUpdater.downloadUpdate()
-        autoUpdater.on("update-downloaded", (info) => {
-            autoUpdater.quitAndInstall()
-        })
+        if (disconnect() === true) {
+            appUpdater.downloadUpdate()
+            autoUpdater.on("update-downloaded", (info) => {
+                autoUpdater.quitAndInstall()
+            })
+        } else {
+            log.error("Main: We can't update because we're still connected to unrestrict.me.")
+        }
     } else {
         autoUpdater.checkForUpdates()
         autoUpdater.autoDownload = false
@@ -237,6 +255,16 @@ function checkForUpdates(install) {
                 "info": info
             }
             mainWindow.webContents.send('updater', updater)
+        })
+        autoUpdater.on("download-progress", (progress, bytesPerSecond, percent, total, transferred) => {
+            let updateProgress = {
+                "progress": progress,
+                "bytesPerSecond": bytesPerSecond,
+                "percent": percent,
+                "total": total,
+                "transferred": transferred
+            }
+            mainWindow.webContents.send('updaterProgress', updateProgress)
         })
     }
 
@@ -974,7 +1002,7 @@ exports.connect = (config) => {
     }) 
 }
 
-exports.disconnect = (preconnect) => {
+function disconnect() {
     intentionalDisconnect = true
     log.info(`Main: We're about to kill OpenVPN. If OpenVPN is not running, you will see no confirmation it wasn't killed.`)
     if (os.platform() === "win32") {
@@ -990,7 +1018,7 @@ exports.disconnect = (preconnect) => {
                 } catch(e) {
                     log.error(`Main: Couldn't send OpenVPN status to renderer. Error: ${e}`)
                 }
-                return;
+                return false;
             }
             log.error(`Main: OpenVPN should have been killed.`)
             let status = {
@@ -1002,6 +1030,7 @@ exports.disconnect = (preconnect) => {
                 log.error(`Main: Couldn't send OpenVPN status to renderer. Error: ${e}`)
             }
             log.info(`Main: OpenVPN was killed`)
+            return true;
         })
     } else if (os.platform() === "linux") {
         let options = {
@@ -1022,7 +1051,7 @@ exports.disconnect = (preconnect) => {
                     } catch(e) {
                         log.error(`Main: Couldn't send OpenVPN status to renderer. Error: ${e}`)
                     }
-                    return;
+                    return false;
                 }
                 log.error(`Main: An error occurred killing OpenVPN. Error: ${error}`)
                 mainWindow.show()
@@ -1034,7 +1063,7 @@ exports.disconnect = (preconnect) => {
                 } catch(e) {
                     log.error(`Main: Couldn't send OpenVPN status to renderer. Error: ${e}`)
                 }
-                return;
+                return false;
             }
             log.error(`Main: OpenVPN should have been killed.`)
             let status = {
@@ -1046,10 +1075,14 @@ exports.disconnect = (preconnect) => {
                 log.error(`Main: Couldn't send OpenVPN status to renderer. Error: ${e}`)
             }
             log.info(`Main: OpenVPN was killed`)
+            return true;
         })
     }
 }
 
+exports.disconnect = () => {
+    disconnect()
+}
 exports.disableKillSwitch = () => {
     killSwitch(false)
 }
@@ -1076,6 +1109,9 @@ exports.hardQuit = () => {
     quit(true)
 }
 
+exports.installUpdates = () => {
+    checkForUpdates(true)
+}
 function killSwitch(enable) {
     //All platform specific options are to be handled in killSwitchEnable
     if (enable) {

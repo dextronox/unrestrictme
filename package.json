@@ -7,7 +7,8 @@
     "start": "electron .",
     "pack": "electron-builder --dir",
     "dist": "electron-builder",
-    "publish": "build -p always"
+    "publish": "build -p always",
+    "release": "yarn compile && electron-builder."
   },
   "repository": "https://github.com/dextronox/unrestrictme",
   "keywords": [

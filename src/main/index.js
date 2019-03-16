@@ -159,21 +159,28 @@ $(document).ready(() => {
                 buttons: ["Cancel", "Update"]
             }).then((willUpdate) => {
                 if (willUpdate) {
-                    $("#connected").css("display", "none")
-                    $("#disconnected").css("display", "none")
-                    $("#updating").css("display", "block")
+                    //Tell we wish to update. They will take care of disconnection.
                     log.info(`Renderer: User has indicated they wish to update their client.`)
+                    main.installUpdates()
                     ipcRenderer.once('updaterError', (event, args) => {
                         swal({
                             title: "Updater Error",
-                            text: "Something went wrong and we were unable to download the update. Please check the log file and try again later. The client will now close to preserve the log.",
+                            text: "Something went wrong and we were unable to download the update. Please check the log file and try again later. The client will now restart.",
                             icon: "error"
                         }).then(() => {
-                            main.hardQuit()
+                            main.app.relaunch()
+                            main.app.quit()
                         })
+                    })
+                    ipcRenderer.on('updaterProgress', (event, args) => {
+                        log.info(`Renderer: Updater Progress: ${JSON.stringify(args)}`)
                     })
                 }
             })
+        }
+        if (args["installingUpdate"] === true) {
+            $("#disconnected").css('display', 'none')
+            $("#updating").css('display', 'block')
         }
     })
     $("#clientVersion").html(`You're currently running unrestrict.me v${app.getVersion()}`)
