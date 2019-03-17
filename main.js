@@ -55,7 +55,13 @@ function setLogValues() {
     log.transports.file.level = 'info';
     log.transports.file.format = '{h}:{i}:{s}:{ms} {text}';
     log.transports.file.maxSize = 5 * 1024 * 1024;
-    log.transports.file.stream = fs.createWriteStream(path.join(app.getPath('userData'), `logs/log-${logDate}.txt`));
+    fs.mkdir(`${app.getPath('userData')}/logs/`, { recursive: true }, (error) => {
+        if (error) {
+            log.error(`Main: Couldn't create log directory. Error: ${error}`)
+        } else {
+            log.transports.file.stream = fs.createWriteStream(path.join(app.getPath('userData'), `logs/log-${logDate}.txt`));
+        }
+    });
     log.transports.file.streamConfig = { flags: 'w' };
 }
 
