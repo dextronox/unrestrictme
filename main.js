@@ -56,7 +56,7 @@ function setLogValues() {
     log.transports.file.format = '{h}:{i}:{s}:{ms} {text}';
     log.transports.file.maxSize = 5 * 1024 * 1024;
     fs.mkdir(`${app.getPath('userData')}/logs/`, { recursive: true }, (error) => {
-        if (error) {
+        if (!String(error).includes("EEXIST")) {
             log.error(`Main: Couldn't create log directory. Error: ${error}`)
         } else {
             log.transports.file.stream = fs.createWriteStream(path.join(app.getPath('userData'), `logs/log-${logDate}.txt`));
@@ -437,70 +437,6 @@ function createMainWindow() {
         welcomeWindow.close()
         welcomeWindow = null
     }
-}
-
-//Handles application updates
-function update(version) {
-    let settingsFile, requestConfig
-    fs.unlink(path.join(__dirname, 'update.exe'), (error) => {
-        if (error) {
-            log.error(`Main: Error deleting past update file. This is probably fine because it doesn't exist. Should write over anyway. Error: ${error}`)
-        }
-    })
-    fs.readFile(path.join(app.getPath('userData'), 'settings.conf'), 'utf8', (error, data) => {
-        if (error) {
-            log.error(`Main: Error reading config file whilst attempting to update. Error: ${error}`)
-            createErrorWindow("settings")
-            return;
-        }
-        settingsFile = JSON.parse(data)
-        if (settingsFile["customAPI"]) {
-            log.info(`Main: Using custom API.`)
-            requestConfig = {
-                url: `${settingsFile["customAPI"]}/client/builds/${version}/${os.platform()}/${os.arch()}.exe`,
-                timeout: 5000,
-                method: "GET"
-            } 
-        } else {
-            log.info(`Main: Using normal API.`)
-            requestConfig = {
-                url: `https://api.unrestrict.me/client/builds/${version}/${os.platform()}/${os.arch()}.exe`,
-                timeout: 5000,
-                method: "GET"
-            }
-        }
-        progress(request(requestConfig), {
-            throttle: 100
-        })
-        .on('progress', function (state) {
-            log.info(`${state.percent}`)
-            let send = {
-                percent: state.percent,
-                speed: state.speed,
-                remaining: state.time.remaining
-            }
-            if (loadingWindow) {
-                loadingWindow.webContents.send('update', send)
-            }
-        })
-        .on('error', function (error) {
-            if (error) {
-                log.error(`Main: An error occurred downloading the update. Error: ${error}`)
-            }
-        })
-        .on('end', function () {
-            // Run update file
-            exec(`${path.join(__dirname, "update.exe")}`, (error, stdout, stderr) => {
-                if (error) {
-                    log.error(`Main: Could not run update package. Error window will be opened. Error: ${error}`)
-                    createErrorWindow("updateRun")
-                } else {
-                    app.quit()
-                }
-            })
-        })
-        .pipe(fs.createWriteStream('update.exe'));
-    })
 }
 
 function quit(hard) {
