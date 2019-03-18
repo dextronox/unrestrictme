@@ -490,7 +490,7 @@ $("#cancelConnection").on("click", () => {
 })
 
 $("#startBackgroundProcess").on("click", () => {
-    main.startBackgroundProcess()
+    main.startBackgroundService()
     $("#startBackgroundProcessDiv").css("display", "none")
 })
 //Settings listeners

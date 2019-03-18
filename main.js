@@ -21,6 +21,8 @@ const appLock = app.requestSingleInstanceLock()
 const { autoUpdater } = require("electron-updater")
 const net = require("net")
 
+autoUpdater.logger = null
+
 if (!appLock) {
     app.quit()
 } else {
@@ -275,7 +277,7 @@ function checkForUpdates(install) {
 
 function startBackgroundServer() {
     backgroundServer = net.createServer((client) => {
-        //This runs the first time a client connects.
+        //This runs the time a client connects.
         log.info(`Main: Background process has started successfully.`)
         //Tell the renderer
         try {
@@ -295,10 +297,10 @@ function startBackgroundServer() {
             backgroundProcessDataHandler(data.toString())
         })
     })
-    server.listen(4964, () => {
+    backgroundServer.listen(4964, () => {
         log.info(`Main: Background server has started successfully.`)
     })
-    server.on("error", (error) => {
+    backgroundServer.on("error", (error) => {
         log.error(`Main: An error has occurred with the background server. Error: ${error}`)
     })
 }
@@ -307,10 +309,11 @@ function startBackgroundService() {
     let options = {
         name: "unrestrictme"
     }
-    sudo.exec(`${process.env._}/${path.join(__dirname, 'service.js')}`, options, (error, stdout, stderr) => {
+    log.info(`Going to execute sh -c "${process.env._} ${path.join(__dirname, 'service.js')} > /dev/null &"`)
+    sudo.exec(`sh -c "${path.join(__dirname, "assets", "node", "node")} ${path.join(__dirname, 'service.js')}" > /dev/null &`, options, (error, stdout, stderr) => {
         if (error) {
             if (String(error).includes(`User did not grant permission`)) {
-                log.error(`Main: User did not grant permission to start background service.`)
+                log.error(`Main: User did not grant permission to start background service. Error: ${error}`)
                 try {
                     mainWindow.webContents.send("backgroundService", "startingPermission")
                 } catch (e) {
@@ -325,6 +328,7 @@ function startBackgroundService() {
                 }
             }
         }
+        log.info(`Stdout: ${stdout}, Stderr: ${stderr}`)
     })
 }
 
@@ -405,7 +409,8 @@ function createMainWindow() {
     mainWindow.webContents.on('did-finish-load', () => {
         mainWindow.show()
         checkForUpdates()
-        if (!os.platform() === "win32") {
+        if (os.platform() != "win32") {
+            log.info(`Main: This is not a win32 installation. Starting background service/server.`)
             startBackgroundServer()
             startBackgroundService()
         }
