@@ -19,8 +19,16 @@
         <div id="connectButtons">
             <button type="button" class="btn btn-primary btn-lg" id="connect">Connect to unrestrict.me</button>
             <button type="button" class="btn btn-secondary btn-lg" data-toggle="modal" data-target="#settings">Settings</button>
-            <div id="limitedFunctionalityDisclaimer" style="display: none;" class="alert alert-dismissible alert-secondary">
-                <b>Warning: </b><p style="display: inline">We're running in limited functionality mode (<a href="#" data-toggle="modal" data-target="#limitedFunctionality">What does this mean?</a>).</p>
+            <div id="backgroundProcessStart" style="display: none;" class="alert alert-dismissible alert-secondary">
+                <div class="row">
+                    <div class="col-sm-6">
+                        <b>Warning: </b><p stlye="display: inline">We need your permission to start the background process. Without it, we'll be running in <a href="#" data-toggle="modal" data-target="#limitedFunctionality">limited functionality mode.</a></p>
+                    </div>
+                    <div class="col-sm" id="startBackgroundProcessDiv">
+                        <button type="button" class="btn btn-success" id="startBackgroundProcess">Start Background Process</button>
+                    </div>
+                </div>
+                <b></b>
             </div>
         </div>
         <div id="loading1" style="display:none;">

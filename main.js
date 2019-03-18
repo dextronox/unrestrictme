@@ -19,6 +19,7 @@ const getos = require("getos")
 const sudo = require('sudo-prompt');
 const appLock = app.requestSingleInstanceLock()
 const { autoUpdater } = require("electron-updater")
+const net = require("net")
 
 if (!appLock) {
     app.quit()
@@ -35,7 +36,7 @@ if (!appLock) {
 }
 
 //Definition of global variables
-let loadingWindow, errorWindow, welcomeWindow, mainWindow, tray, killSwitchStatus, intentionalDisconnect
+let loadingWindow, errorWindow, welcomeWindow, mainWindow, tray, killSwitchStatus, intentionalDisconnect, backgroundServer
 
 function setLogValues() {
     //Create log file with a date naming schema.
@@ -56,7 +57,7 @@ function setLogValues() {
     log.transports.file.format = '{h}:{i}:{s}:{ms} {text}';
     log.transports.file.maxSize = 5 * 1024 * 1024;
     fs.mkdir(`${app.getPath('userData')}/logs/`, { recursive: true }, (error) => {
-        if (error) {
+        if (!String(error).includes("EEXIST:")) {
             log.error(`Main: Couldn't create log directory. Error: ${error}`)
         } else {
             log.transports.file.stream = fs.createWriteStream(path.join(app.getPath('userData'), `logs/log-${logDate}.txt`));
@@ -89,7 +90,7 @@ function appStart() {
     if (os.platform() === "win32") {
         isElevated().then(elevated => {
             if (!elevated) {
-                log.error("Main: Application not run without elevated privileges. OpenVPN will not be able to change routing table.")
+                log.error("Main: Application run without elevated privileges. OpenVPN will not be able to change routing table.")
                 createErrorWindow(`elevation`)
             } else {
                 log.info("Main: Application is elevated.")
@@ -272,6 +273,64 @@ function checkForUpdates(install) {
 
 }
 
+function startBackgroundServer() {
+    backgroundServer = net.createServer((client) => {
+        //This runs the first time a client connects.
+        log.info(`Main: Background process has started successfully.`)
+        //Tell the renderer
+        try {
+            mainWindow.webContents.send("backgroundService", "processStarted")
+        } catch (e) {
+            log.error(`Main: Couldn't send backgroundService processStarted to renderer.`)
+        }
+        client.on("error", (error) => {
+            if (error.errno === "ECONNRESET") {
+                log.info(`Main: Background process has disconnected.`)
+            } else {
+                log.error(`Main: An unknown error has occurred. Error: ${error}`)
+            }
+        })
+        client.on("data", (data) => {
+            //We've got data from the background process. Send it to the function that handles that stuff.
+            backgroundProcessDataHandler(data.toString())
+        })
+    })
+    server.listen(4964, () => {
+        log.info(`Main: Background server has started successfully.`)
+    })
+    server.on("error", (error) => {
+        log.error(`Main: An error has occurred with the background server. Error: ${error}`)
+    })
+}
+
+function startBackgroundService() {
+    let options = {
+        name: "unrestrictme"
+    }
+    sudo.exec(`${process.env._}/${path.join(__dirname, 'service.js')}`, options, (error, stdout, stderr) => {
+        if (error) {
+            if (String(error).includes(`User did not grant permission`)) {
+                log.error(`Main: User did not grant permission to start background service.`)
+                try {
+                    mainWindow.webContents.send("backgroundService", "startingPermission")
+                } catch (e) {
+                    log.error(`Main: Couldn't send backgroundService startingPermission to renderer.`)
+                }
+            } else {
+                log.error(`Main: An error occurred running the command to start the background service.`)
+                try {
+                    mainWindow.webContents.send("backgroundService", "startingError")
+                } catch (e) {
+                    log.error(`Main: Couldn't send backgroundService startingError to renderer.`)
+                }
+            }
+        }
+    })
+}
+
+function backgroundProcessDataHandler(data) {
+
+}
 function createLoadingWindow() {
     loadingWindow = new BrowserWindow({show: false, frame: false, width: 300, height: 300, icon: path.resolve(__dirname, 'assets', 'icons', 'icon.png'), 'minWidth': 300, 'minHeight': 300, transparent: false, title: "unrestrict.me Client", resizable: false})
     loadingWindow.setMenu(null)
@@ -346,6 +405,10 @@ function createMainWindow() {
     mainWindow.webContents.on('did-finish-load', () => {
         mainWindow.show()
         checkForUpdates()
+        if (!os.platform() === "win32") {
+            startBackgroundServer()
+            startBackgroundService()
+        }
     })
     //mainWindow.webContents.openDevTools({mode: "undocked"})
     mainWindow.setAlwaysOnTop(false)
@@ -1087,6 +1150,10 @@ exports.disconnect = () => {
 }
 exports.disableKillSwitch = () => {
     killSwitch(false)
+}
+
+exports.startBackgroundService = () => {
+    startBackgroundService()
 }
 
 exports.clearSettings = () => {

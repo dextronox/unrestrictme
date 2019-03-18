@@ -9,7 +9,6 @@ const log = require('electron-log')
 const swal = require('sweetalert')
 const nodersa = require('node-rsa')
 const network = require("network")
-const isElevated = require("is-elevated")
 
 let currentRequestId, interval
 $(document).ready(() => {
@@ -183,6 +182,29 @@ $(document).ready(() => {
             $("#updating").css('display', 'block')
         }
     })
+    ipcRenderer.on(`backgroundService`, (event, args) => {
+        if (args === "startingPermission") {
+            //The user didn't grant us permission to start the background process.
+            $("#backgroundProcessStart").css("display", "block")
+            $("#killSwitchLimitedFunctionality").css("display", "none")
+            $("#killSwitchLimitedFunctionalityNote").css("display", "block")
+            $("#startBackgroundProcessDiv").css("display", "block")
+        }
+        if (args === "startingError") {
+            //An error occurred starting the background process
+            $("#backgroundProcessStart").css("display", "block")
+            $("#killSwitchLimitedFunctionality").css("display", "none")
+            $("#killSwitchLimitedFunctionalityNote").css("display", "block")
+            $("#startBackgroundProcessDiv").css("display", "block")
+        }
+        if (args === "processStarted") {
+            //The process has started successfully. This is the default state but needs to be here for cleanup
+            $("#backgroundProcessStart").css("display", "none")
+            $("#killSwitchLimitedFunctionality").css("display", "block")
+            $("#killSwitchLimitedFunctionalityNote").css("display", "none")
+            $("#startBackgroundProcessDiv").css("display", "none")
+        }
+    })
     $("#clientVersion").html(`You're currently running unrestrict.me v${app.getVersion()}`)
     network.get_interfaces_list(function(error, obj) {
         for (i = 0; Object.keys(obj).length >= i; i++) {
@@ -210,14 +232,6 @@ $(document).ready(() => {
                     }
                 })
             }
-        }
-    })
-    //Determine if limited functionality mode.
-    isElevated().then(elevated => {
-        if (!elevated) {
-            $("#limitedFunctionalityDisclaimer").css("display", "block")
-            $("#killSwitchLimitedFunctionality").css("display", "none")
-            $("#killSwitchLimitedFunctionalityNote").css("display", "block")
         }
     })
 })
@@ -475,6 +489,10 @@ $("#cancelConnection").on("click", () => {
     main.disconnect(true)
 })
 
+$("#startBackgroundProcess").on("click", () => {
+    main.startBackgroundProcess()
+    $("#startBackgroundProcessDiv").css("display", "none")
+})
 //Settings listeners
 $("#customAPISubmit").on("click", () => {
     log.info(`Renderer: Setting custom API`)
