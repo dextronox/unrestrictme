@@ -68,16 +68,20 @@ $(document).ready(() => {
             $("#loading3").css("display", "none")
             $("#connectButtons").css("display", "block")
         } else if (!args["connected"]) {
-            if ($("#connected").css('display') === 'none') {
+            if ($("#disconnected").css('display') === 'block') {
                 //We have failed to connect to unrestrict.me
                 $("#loading3").css("display", "none")
                 $("#connectButtons").css("display", "block")
                 swal("Whoops!", "We were unable to connect you to unrestrict.me.", "error")
-            } else {
+            } else if ($("#connected").css('display') === "block") {
                 $("#connected").css("display", "none")
                 $("#connectButtons").css("display", "block")
                 $("#disconnected").css("display", "block")
                 swal("Success!", "You have been disconnected from unrestrict.me.", "success")
+            } else if ($("#openVPNRunning").css("display") === "block") {
+                //This was triggered because OpenVPN was already running.
+                $("#openVPNRunning").css("display", "none")
+                $("#disconnected").css("display", "block")
             }
 
         }
@@ -105,6 +109,7 @@ $(document).ready(() => {
             $("#disconnected").css('display', 'block')
             $("#loading3").css("display", "none")
             $("#connectButtons").css("display", "block")
+            $("#openVPNRunning").css("display", "none")
         } else if (args["disconnectError"] === "permission") {
             //Linux no root.
             swal("Whoops!", "We need your root password to disconnect from unrestrict.me. Leave limited functionality mode to remove this hindrance.", "error")
@@ -203,6 +208,16 @@ $(document).ready(() => {
             $("#killSwitchLimitedFunctionality").css("display", "block")
             $("#killSwitchLimitedFunctionalityNote").css("display", "none")
             $("#startBackgroundProcessDiv").css("display", "none")
+        }
+        if (args === "processClosed") {
+            swal(`Whoops!`, `The background process has quit. This process is vital to ensure consistency throughout the application life cycle. See the log for more information.`, `error`)
+        }
+    })
+    ipcRenderer.on(`openvpnStatus`, (event, args) => {
+        if (args === "processRunning") {
+            //OpenVPN was already running.
+            $("#openVPNRunning").css('display', 'block')
+            $("#disconnected").css('display', "none")
         }
     })
     $("#clientVersion").html(`You're currently running unrestrict.me v${app.getVersion()}`)
@@ -694,6 +709,15 @@ $("#adapterSelect").on('change', () => {
 
 $("#openLegalExternal").on('click', () => {
     require('electron').shell.openExternal('https://unrestrict.me/legal')
+})
+
+$("#backgroundProcessCrashRestart").on('click', () => {
+    main.app.relaunch()
+    main.app.quit()
+})
+
+$("#killOpenVPN").on("click", () => {
+    main.disconnect()
 })
 function populateConnected (localIp, publicIp, connectionId) {
     if (interval) {

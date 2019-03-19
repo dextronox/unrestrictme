@@ -38,7 +38,7 @@ if (!appLock) {
 }
 
 //Definition of global variables
-let loadingWindow, errorWindow, welcomeWindow, mainWindow, tray, killSwitchStatus, intentionalDisconnect, backgroundServer
+let loadingWindow, errorWindow, welcomeWindow, mainWindow, tray, killSwitchStatus, intentionalDisconnect, backgroundServer, backgroundConnection
 
 function setLogValues() {
     //Create log file with a date naming schema.
@@ -279,6 +279,7 @@ function startBackgroundServer() {
     backgroundServer = net.createServer((client) => {
         //This runs the time a client connects.
         log.info(`Main: Background process has started successfully.`)
+        backgroundConnection = true
         //Tell the renderer
         try {
             mainWindow.webContents.send("backgroundService", "processStarted")
@@ -295,6 +296,16 @@ function startBackgroundServer() {
         client.on("data", (data) => {
             //We've got data from the background process. Send it to the function that handles that stuff.
             backgroundProcessDataHandler(data.toString())
+        })
+        client.on("end", () => {
+            //Background process has disconnected.
+            log.info(`Main: Background process has disconnected.`)
+            backgroundConnection = false
+            try {
+                mainWindow.webContents.send("backgroundService", "processClosed")
+            } catch (e) {
+                log.error(`Main: Couldn't send backgroundService processClosed to renderer.`)
+            }
         })
     })
     backgroundServer.listen(4964, () => {
@@ -409,6 +420,7 @@ function createMainWindow() {
     mainWindow.webContents.on('did-finish-load', () => {
         mainWindow.show()
         checkForUpdates()
+        checkIfConnected()
         if (os.platform() != "win32") {
             log.info(`Main: This is not a win32 installation. Starting background service/server.`)
             startBackgroundServer()
@@ -1446,5 +1458,40 @@ function installDependenciesLinux(error) {
             "error": "builtOnMissing"
         }
         welcomeWindow.webContents.send(`statusUpdate`, ipcUpdate)
+    }
+}
+
+function checkIfConnected() {
+    //This function runs on start to check if openvpn is already running.
+    if (os.platform() === "win32") {
+        exec("tasklist", (error, stdout, stderr) => {
+            if (error) {
+                log.error(`Main: Couldn't check whether OpenVPN is running.`)
+                return;
+            }
+            if (String(stdout).includes(`openvpn.exe`)) {
+                try {
+                    mainWindow.webContents.send("openvpnStatus", "processRunning")
+                } catch (e) {
+                    log.error(`Main: Couldn't send openvpnStatus processRunning to renderer.`)
+                }
+            }
+        })
+    } else if (os.platform() === "linux") {
+        exec(`pgrep openvpn`, (error, stdout, stderr) => {
+            if (error && !error.code === 1) {
+                //Error occurred checking if OpenVPN is running.
+                log.error(`Main: We couldn't check if OpenVPN is running.`)
+                return;
+            }
+            if (String(stdout) != "") {
+                //OpenVPN is running.
+                try {
+                    mainWindow.webContents.send("openvpnStatus", "processRunning")
+                } catch (e) {
+                    log.error(`Main: Couldn't send openvpnStatus processRunning to renderer.`)
+                }
+            }
+        })
     }
 }

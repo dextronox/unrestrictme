@@ -20,7 +20,7 @@
             <button type="button" class="btn btn-primary btn-lg" id="connect">Connect to unrestrict.me</button>
             <button type="button" class="btn btn-secondary btn-lg" data-toggle="modal" data-target="#settings">Settings</button>
             <div id="backgroundProcessStart" style="display: none;" class="alert alert-dismissible alert-secondary">
-                <b>Warning: </b><p stlye="display: inline">We need your permission to start the background process. Without it, we'll be running in <a href="#" data-toggle="modal" data-target="#limitedFunctionality">limited functionality mode.</a></p>
+                <b>Warning: </b><p style="display: inline">We need your permission to start the background process. Without it, we'll be running in <a href="#" data-toggle="modal" data-target="#limitedFunctionality">limited functionality mode.</a></p>
                 <button type="button" class="btn btn-success" id="startBackgroundProcess">Start Background Process</button>
             </div>
         </div>
@@ -72,6 +72,16 @@
         <h1>Kill Switch Failsafe Active</h1>
         <p>Due to an unknown reason connection to unrestrict.me has been dropped. To prevent possible snooping and IP leaks we've disabled your connection to the internet.</p>
         <button type="button" class="btn btn-danger btn-lg" id="disableKillSwitch">Disable Kill Switch</button>
+    </div>
+    <div id="backgroundProcessCrash" class="container prompt" style="display: none">
+        <h1>Application error.</h1>
+        <p>The background process we rely on for unrestrict.me to function has quit unexpectedly. See the log file for more information.</p>
+        <button type="button" class="btn btn-primary" id="backgroundProcessCrashRestart">Restart unrestrict.me</button>
+    </div>
+    <div id="openVPNRunning" class="container prompt" style="display: none">
+        <h1>Hmm, that's not right.</h1>
+        <p>We detected that you may already be connected to a VPN. To proceed, we need to kill OpenVPN.</p>
+        <button type="button" class="btn btn-danger" id="killOpenVPN">Proceed and Kill OpenVPN</button>
     </div>
     <div class="modal fade" id="settings" tabindex="-1" role="dialog" aria-labelledby="settings" aria-hidden="true">
         <div class="modal-dialog" role="document">
@@ -186,7 +196,7 @@
                 <p>Your client is running in limited functionality mode. This means that whilst it will still function as a VPN the kill switch feature is disabled.</p>
                 <p>This is due to the client requiring user authorisation to modify network settings, which is unrealistic as a kill switch needs to be triggered immediately on an unintentional disconnect from unrestrict.me.</p>
                 <p>Other aspects which are usually seemless such as connecting to unrestrict.me may require user authorisation.</p>
-                <u>To disable limited functionality mode:</u> <p style="display: inline;"> Run the AppImage as root/sudo.</p>
+                <u>To disable limited functionality mode:</u> <p style="display: inline;"> Click "Start Background Process" and enter your root password.</p>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>

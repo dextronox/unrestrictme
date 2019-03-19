@@ -10,7 +10,7 @@ function setLogValues() {
 setLogValues()
 const client = net.createConnection({ port: 4964 }, () => {
     //Runs once connected to the server.
-    log.info(`Background: Connected to client server. Ready to receive instructions.`)
+    console.log(`Background: Connected to client server. Ready to receive instructions.`)
 });
 client.on('data', (data) => {
     //We have received some data from the server.
@@ -23,7 +23,7 @@ client.on('end', () => {
     process.exit()
 });
 client.on('error', (error) => {
-    log.error(`Background: An error occurred. Error: ${error}`)
+    console.log(`Background: An error occurred. Error: ${error}`)
 })
 
 function foregroundProcessDataHandler(data) {
