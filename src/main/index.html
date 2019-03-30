@@ -14,40 +14,43 @@
         <img src="../../assets/icons/logo.svg">
     </nav>
     <div id="disconnected" class="container prompt">
-        <h1>Welcome.</h1>
-        <p>We're ready to connect. Click the button below to begin.</p>
-        <div id="connectButtons">
-            <button type="button" class="btn btn-primary btn-lg" id="connect">Connect to unrestrict.me</button>
-            <button type="button" class="btn btn-secondary btn-lg" data-toggle="modal" data-target="#settings">Settings</button>
-            <div id="backgroundProcessStart" style="display: none;" class="alert alert-dismissible alert-secondary">
-                <b>Warning: </b><p style="display: inline">We need your permission to start the background process. Without it, we'll be running in <a href="#" data-toggle="modal" data-target="#limitedFunctionality">limited functionality mode.</a></p>
-                <button type="button" class="btn btn-success" id="startBackgroundProcess">Start Background Process</button>
-            </div>
+        <div id="disconnected-OpenVPNRunning" style="display: none">
+            <h1>Hmm, that's not right.</h1>
+            <p>We detected that you may already be connected to a VPN. To proceed, we need to kill OpenVPN.</p>
+            <button type="button" class="btn btn-danger btn-lg" id="killOpenVPN">Proceed and Kill OpenVPN</button>
         </div>
-        <div id="loading1" style="display:none;">
-            <div class="alert alert-dismissible alert-secondary">
-                <strong>(1) Creating request.</strong> <p>We're generating a unique request ID for you now. Please wait. You'll be redirected to a webpage for you to choose your preferred location.</p>
+        <div id="disconnected-normal">
+            <h1>Welcome.</h1>
+            <p>We're ready to connect. Click the button below to begin.</p>
+            <div id="connectButtons">
+                <button type="button" class="btn btn-primary btn-lg" id="connect">Connect to unrestrict.me</button>
+                <button type="button" class="btn btn-secondary btn-lg" data-toggle="modal" data-target="#settings">Settings</button>
             </div>
-        </div>
-        <div id="loading2" style="display:none;">
-            <div class="alert alert-dismissible alert-success">
-                <strong>(2) Request created.</strong> <p>Please complete the connection in your browser. Once you've selected a location, we'll automatically connect.</p>
-                <div class="container">
-                    <div class="row">
-                        <div class="col-sm">
-                            <button id="reopenBrowser" type="button" class="btn btn-primary btn-lg btn-block">Open locations</button>
-                        </div>
-                        <div class="col-sm">
-                            <button id="cancelRequest" type="button" class="btn btn-danger btn-lg btn-block">Cancel request</button>
+            <div id="loading1" style="display:none;">
+                <div class="alert alert-dismissible alert-secondary">
+                    <strong>(1) Creating request.</strong> <p>We're generating a unique request ID for you now. Please wait. You'll be redirected to a webpage for you to choose your preferred location.</p>
+                </div>
+            </div>
+            <div id="loading2" style="display:none;">
+                <div class="alert alert-dismissible alert-success">
+                    <strong>(2) Request created.</strong> <p>Please complete the connection in your browser. Once you've selected a location, we'll automatically connect.</p>
+                    <div class="container">
+                        <div class="row">
+                            <div class="col-sm">
+                                <button id="reopenBrowser" type="button" class="btn btn-primary btn-lg btn-block">Open locations</button>
+                            </div>
+                            <div class="col-sm">
+                                <button id="cancelRequest" type="button" class="btn btn-danger btn-lg btn-block">Cancel request</button>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
-        <div id="loading3" style="display:none;">
-            <div class="alert alert-dismissible alert-success">
-                <strong>(3) Location selected.</strong> <p>We're now connecting you to unrestrict.me. The connection should complete momentarily.</p>
-                <button id="cancelConnection" type="button" class="btn btn-danger btn-lg btn-block">Cancel connection</button>
+            <div id="loading3" style="display:none;">
+                <div class="alert alert-dismissible alert-success">
+                    <strong>(3) Location selected.</strong> <p>We're now connecting you to unrestrict.me. The connection should complete momentarily.</p>
+                    <button id="cancelConnection" type="button" class="btn btn-danger btn-lg btn-block">Cancel connection</button>
+                </div>
             </div>
         </div>
     </div>
@@ -74,14 +77,15 @@
         <button type="button" class="btn btn-danger btn-lg" id="disableKillSwitch">Disable Kill Switch</button>
     </div>
     <div id="backgroundProcessCrash" class="container prompt" style="display: none">
-        <h1>Application error.</h1>
-        <p>The background process we rely on for unrestrict.me to function has quit unexpectedly. See the log file for more information.</p>
+        <h1>Something went wrong.</h1>
+        <p>The background process we rely on for unrestrict.me to function has quit unexpectedly. Unfortunately, due to the design of the application this is an unrecoverable error. Check the log.txt for more information.</p>
+        <p>If you're seeing this page frequently check if your antivirus is killing our service.js process.</p>
         <button type="button" class="btn btn-primary" id="backgroundProcessCrashRestart">Restart unrestrict.me</button>
     </div>
-    <div id="openVPNRunning" class="container prompt" style="display: none">
-        <h1>Hmm, that's not right.</h1>
-        <p>We detected that you may already be connected to a VPN. To proceed, we need to kill OpenVPN.</p>
-        <button type="button" class="btn btn-danger" id="killOpenVPN">Proceed and Kill OpenVPN</button>
+    <div id="startBackgroundProcessDiv" class="container prompt" style="display: none">
+        <h1>Oops, something's wrong.</h1>
+        <p>We need your sudo password to start the background process (<a data-toggle="modal" href="#backgroundProcessExplanation">why?</a>).</p>
+        <button type="button" class="btn btn-primary btn-lg" id="startBackgroundProcess">Start Background Process</button>
     </div>
     <div class="modal fade" id="settings" tabindex="-1" role="dialog" aria-labelledby="settings" aria-hidden="true">
         <div class="modal-dialog" role="document">
@@ -97,18 +101,15 @@
                 <h5>Client Version</h5>
                 <p id="clientVersion"></p>
                 <h5>Kill Switch NIC</h5>
-                <div id="killSwitchLimitedFunctionality">
-                    <p>Select the adapter from the list below you wish to have disabled when connection is lost to unrestrict.me. By default we try to determine this automatically.</p>
-                    <div id="adapterWait">
-                        <p>Please wait. We're getting a list of available adapters.</p>
-                    </div>
-                    <div class="form-group" id="adapterDiv" style="display:none;">
-                        <select class="form-control" id="adapterSelect">
-                            <option value="-1">Detect Automatically</option>
-                        </select>
-                    </div>
+                <p>Select the adapter from the list below you wish to have disabled when connection is lost to unrestrict.me. By default we try to determine this automatically.</p>
+                <div id="adapterWait">
+                    <p>Please wait. We're getting a list of available adapters.</p>
                 </div>
-                <p id="killSwitchLimitedFunctionalityNote" style="display: none;">Your client is currently running in limited functionality mode, and as such this feature is disabled.</p>
+                <div class="form-group" id="adapterDiv" style="display:none;">
+                    <select class="form-control" id="adapterSelect">
+                        <option value="-1">Detect Automatically</option>
+                    </select>
+                </div>
                 <h5>Custom API Server</h5>
                 <p>Input a custom API server for unrestrict.me to send requests.</p>
                 <div class="input-group mb-3">
@@ -183,20 +184,21 @@
             </div>
         </div>
     </div>
-    <div class="modal fade" id="limitedFunctionality" tabindex="-1" role="dialog" aria-labelledby="limitedFunctionality" aria-hidden="true">
+    <div class="modal fade" id="backgroundProcessExplanation" tabindex="-1" role="dialog" aria-labelledby="backgroundProcessExplanation" aria-hidden="true">
         <div class="modal-dialog" role="document">
             <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">Limited Functionality Mode</h5>
+                <h5 class="modal-title">What is the "Background Process"?</h5>
                 <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                 <span aria-hidden="true">&times;</span>
                 </button>
             </div>
             <div class="modal-body">
-                <p>Your client is running in limited functionality mode. This means that whilst it will still function as a VPN the kill switch feature is disabled.</p>
-                <p>This is due to the client requiring user authorisation to modify network settings, which is unrealistic as a kill switch needs to be triggered immediately on an unintentional disconnect from unrestrict.me.</p>
-                <p>Other aspects which are usually seemless such as connecting to unrestrict.me may require user authorisation.</p>
-                <u>To disable limited functionality mode:</u> <p style="display: inline;"> Click "Start Background Process" and enter your root password.</p>
+                <p>The background process is the heart of the unrestrict.me application on Linux.</p>
+                <p>A VPN by nature requires a high level of system control to modify routing information, add network adapters etc. On Windows we simply prompt a user for administrative privileges when they launch the application. On Linux, it isn't that simple.</p>
+                <p>Running a graphical program as root creates a whole heap of issues when the user themselves isn't actually the root user. Subsequently, all commands run by the client that require elevation are performed in a background process that is elevated.</p>
+                <p>Whilst it is possible for us to prompt you everytime we're about to run a command that requires sudo this is unrealistic with features like the kill switch, which need commands to be run as soon as possible.</p>
+                <p>If you're cautious about giving us this level of control you're free to inspect the client source code.</p>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>

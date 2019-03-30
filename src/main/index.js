@@ -68,7 +68,7 @@ $(document).ready(() => {
             $("#loading3").css("display", "none")
             $("#connectButtons").css("display", "block")
         } else if (!args["connected"]) {
-            if ($("#disconnected").css('display') === 'block') {
+            if ($("#disconnected").css('display') === 'block' && $("#disconnected-OpenVPNRunning").css("display") === "none") {
                 //We have failed to connect to unrestrict.me
                 $("#loading3").css("display", "none")
                 $("#connectButtons").css("display", "block")
@@ -78,10 +78,10 @@ $(document).ready(() => {
                 $("#connectButtons").css("display", "block")
                 $("#disconnected").css("display", "block")
                 swal("Success!", "You have been disconnected from unrestrict.me.", "success")
-            } else if ($("#openVPNRunning").css("display") === "block") {
+            } else if ($("#disconnected-OpenVPNRunning").css("display") === "block") {
                 //This was triggered because OpenVPN was already running.
-                $("#openVPNRunning").css("display", "none")
-                $("#disconnected").css("display", "block")
+                $("#disconnected-OpenVPNRunning").css("display", "none")
+                $("#disconnected-normal").css("display", "block")
             }
 
         }
@@ -172,8 +172,8 @@ $(document).ready(() => {
                             text: "Something went wrong and we were unable to download the update. Please check the log file and try again later. The client will now restart.",
                             icon: "error"
                         }).then(() => {
-                            main.app.relaunch()
-                            main.app.quit()
+                            app.relaunch()
+                            app.quit()
                         })
                     })
                     ipcRenderer.on('updaterProgress', (event, args) => {
@@ -190,34 +190,33 @@ $(document).ready(() => {
     ipcRenderer.on(`backgroundService`, (event, args) => {
         if (args === "startingPermission") {
             //The user didn't grant us permission to start the background process.
-            $("#backgroundProcessStart").css("display", "block")
-            $("#killSwitchLimitedFunctionality").css("display", "none")
-            $("#killSwitchLimitedFunctionalityNote").css("display", "block")
+            $("#disconnected").css("display", "none")
             $("#startBackgroundProcessDiv").css("display", "block")
         }
         if (args === "startingError") {
             //An error occurred starting the background process
-            $("#backgroundProcessStart").css("display", "block")
-            $("#killSwitchLimitedFunctionality").css("display", "none")
-            $("#killSwitchLimitedFunctionalityNote").css("display", "block")
+            $("#disconnected").css("display", "none")
             $("#startBackgroundProcessDiv").css("display", "block")
         }
         if (args === "processStarted") {
             //The process has started successfully. This is the default state but needs to be here for cleanup
-            $("#backgroundProcessStart").css("display", "none")
-            $("#killSwitchLimitedFunctionality").css("display", "block")
-            $("#killSwitchLimitedFunctionalityNote").css("display", "none")
             $("#startBackgroundProcessDiv").css("display", "none")
+            $("#disconnected").css("display", "block")
         }
         if (args === "processClosed") {
-            swal(`Whoops!`, `The background process has quit. This process is vital to ensure consistency throughout the application life cycle. See the log for more information.`, `error`)
+            //The process started, reported so and closed later. Assume the worst.
+            $("#disconnected").css("display", "none")
+            $("#connected").css("display", "none")
+            $("#killSwitch").css("display", "none")
+            $("#backgroundProcessCrash").css("display", "block")
         }
     })
     ipcRenderer.on(`openvpnStatus`, (event, args) => {
         if (args === "processRunning") {
             //OpenVPN was already running.
-            $("#openVPNRunning").css('display', 'block')
-            $("#disconnected").css('display', "none")
+            $("#disconnected-normal").css('display', 'none')
+            $("#disconnected-OpenVPNRunning").css('display', 'block')
+
         }
     })
     $("#clientVersion").html(`You're currently running unrestrict.me v${app.getVersion()}`)
@@ -506,7 +505,6 @@ $("#cancelConnection").on("click", () => {
 
 $("#startBackgroundProcess").on("click", () => {
     main.startBackgroundService()
-    $("#startBackgroundProcessDiv").css("display", "none")
 })
 //Settings listeners
 $("#customAPISubmit").on("click", () => {
@@ -712,8 +710,8 @@ $("#openLegalExternal").on('click', () => {
 })
 
 $("#backgroundProcessCrashRestart").on('click', () => {
-    main.app.relaunch()
-    main.app.quit()
+    app.relaunch()
+    app.exit()
 })
 
 $("#killOpenVPN").on("click", () => {
