@@ -9,7 +9,6 @@ const log = require('electron-log')
 const swal = require('sweetalert')
 const nodersa = require('node-rsa')
 const network = require("network")
-const isElevated = require("is-elevated")
 
 let currentRequestId, interval
 $(document).ready(() => {
@@ -69,16 +68,20 @@ $(document).ready(() => {
             $("#loading3").css("display", "none")
             $("#connectButtons").css("display", "block")
         } else if (!args["connected"]) {
-            if ($("#connected").css('display') === 'none') {
+            if ($("#disconnected").css('display') === 'block' && $("#disconnected-OpenVPNRunning").css("display") === "none") {
                 //We have failed to connect to unrestrict.me
                 $("#loading3").css("display", "none")
                 $("#connectButtons").css("display", "block")
                 swal("Whoops!", "We were unable to connect you to unrestrict.me.", "error")
-            } else {
+            } else if ($("#connected").css('display') === "block") {
                 $("#connected").css("display", "none")
                 $("#connectButtons").css("display", "block")
                 $("#disconnected").css("display", "block")
                 swal("Success!", "You have been disconnected from unrestrict.me.", "success")
+            } else if ($("#disconnected-OpenVPNRunning").css("display") === "block") {
+                //This was triggered because OpenVPN was already running.
+                $("#disconnected-OpenVPNRunning").css("display", "none")
+                $("#disconnected-normal").css("display", "block")
             }
 
         }
@@ -106,6 +109,7 @@ $(document).ready(() => {
             $("#disconnected").css('display', 'block')
             $("#loading3").css("display", "none")
             $("#connectButtons").css("display", "block")
+            $("#openVPNRunning").css("display", "none")
         } else if (args["disconnectError"] === "permission") {
             //Linux no root.
             swal("Whoops!", "We need your root password to disconnect from unrestrict.me. Leave limited functionality mode to remove this hindrance.", "error")
@@ -168,8 +172,8 @@ $(document).ready(() => {
                             text: "Something went wrong and we were unable to download the update. Please check the log file and try again later. The client will now restart.",
                             icon: "error"
                         }).then(() => {
-                            main.app.relaunch()
-                            main.app.quit()
+                            app.relaunch()
+                            app.quit()
                         })
                     })
                     ipcRenderer.on('updaterProgress', (event, args) => {
@@ -181,6 +185,38 @@ $(document).ready(() => {
         if (args["installingUpdate"] === true) {
             $("#disconnected").css('display', 'none')
             $("#updating").css('display', 'block')
+        }
+    })
+    ipcRenderer.on(`backgroundService`, (event, args) => {
+        if (args === "startingPermission") {
+            //The user didn't grant us permission to start the background process.
+            $("#disconnected").css("display", "none")
+            $("#startBackgroundProcessDiv").css("display", "block")
+        }
+        if (args === "startingError") {
+            //An error occurred starting the background process
+            $("#disconnected").css("display", "none")
+            $("#startBackgroundProcessDiv").css("display", "block")
+        }
+        if (args === "processStarted") {
+            //The process has started successfully. This is the default state but needs to be here for cleanup
+            $("#startBackgroundProcessDiv").css("display", "none")
+            $("#disconnected").css("display", "block")
+        }
+        if (args === "processClosed") {
+            //The process started, reported so and closed later. Assume the worst.
+            $("#disconnected").css("display", "none")
+            $("#connected").css("display", "none")
+            $("#killSwitch").css("display", "none")
+            $("#backgroundProcessCrash").css("display", "block")
+        }
+    })
+    ipcRenderer.on(`openvpnStatus`, (event, args) => {
+        if (args === "processRunning") {
+            //OpenVPN was already running.
+            $("#disconnected-normal").css('display', 'none')
+            $("#disconnected-OpenVPNRunning").css('display', 'block')
+
         }
     })
     $("#clientVersion").html(`You're currently running unrestrict.me v${app.getVersion()}`)
@@ -210,14 +246,6 @@ $(document).ready(() => {
                     }
                 })
             }
-        }
-    })
-    //Determine if limited functionality mode.
-    isElevated().then(elevated => {
-        if (!elevated) {
-            $("#limitedFunctionalityDisclaimer").css("display", "block")
-            $("#killSwitchLimitedFunctionality").css("display", "none")
-            $("#killSwitchLimitedFunctionalityNote").css("display", "block")
         }
     })
 })
@@ -475,6 +503,9 @@ $("#cancelConnection").on("click", () => {
     main.disconnect(true)
 })
 
+$("#startBackgroundProcess").on("click", () => {
+    main.startBackgroundService()
+})
 //Settings listeners
 $("#customAPISubmit").on("click", () => {
     log.info(`Renderer: Setting custom API`)
@@ -676,6 +707,15 @@ $("#adapterSelect").on('change', () => {
 
 $("#openLegalExternal").on('click', () => {
     require('electron').shell.openExternal('https://unrestrict.me/legal')
+})
+
+$("#backgroundProcessCrashRestart").on('click', () => {
+    app.relaunch()
+    app.exit()
+})
+
+$("#killOpenVPN").on("click", () => {
+    main.disconnect()
 })
 function populateConnected (localIp, publicIp, connectionId) {
     if (interval) {
