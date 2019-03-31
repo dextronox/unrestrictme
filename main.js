@@ -581,7 +581,6 @@ function quit(hard) {
                 app.quit()
                 return;
             }
-            log.error(`Main: OpenVPN should have been killed.`)
             let status = {
                 "connected": false
             }
@@ -725,6 +724,7 @@ exports.connect = (config) => {
                 log.info(`OpenVPN: ${data}`)
                 datalog = datalog + data 
                 if (data.includes(`Initialization Sequence Completed`)) {
+                    killSwitchStatus = false
                     let initializeCount = (datalog.match(/Initialization Sequence Completed/g) || []).length;
                     if (initializeCount <= 1) {
                         //Send required information to main window.
@@ -787,13 +787,9 @@ exports.connect = (config) => {
             })
             ovpnProc.on('close', (data) => {
                 //OpenVPN has closed!
-                try {
-                    if (killSwitchStatus || !intentionalDisconnect) {
-                        log.info(`Main: Activating failsafe.`)
-                        killSwitch(true)
-                    }
-                } catch(e) {
-                    log.error(`Main: Couldn't send OpenVPN status to renderer. Error: ${e}`)
+                if (killSwitchStatus === true || !intentionalDisconnect) {
+                    log.info(`Main: Activating failsafe.`)
+                    killSwitch(true)
                 }
                 fs.unlink(path.join(app.getPath('userData'), "current.ovpn"), (error) => {
                     if (error) {
@@ -829,7 +825,6 @@ function disconnect() {
                 }
                 return false;
             }
-            log.error(`Main: OpenVPN should have been killed.`)
             let status = {
                 "connected": false
             }

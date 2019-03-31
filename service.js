@@ -62,6 +62,7 @@ function ovpnFunction(configPath) {
             console.log(data)
             datalog = datalog + data 
             if (data.includes(`Initialization Sequence Completed`)) {
+                killSwitchStatus = false
                 let initializeCount = (datalog.match(/Initialization Sequence Completed/g) || []).length;
                 if (initializeCount <= 1) {
                     //Send required information to main window.
@@ -128,7 +129,7 @@ function ovpnFunction(configPath) {
         })
         ovpnProc.on('close', (data) => {
             //OpenVPN has closed!
-            if (killSwitchStatus || !intentionalDisconnect) {
+            if (killSwitchStatus === true || !intentionalDisconnect) {
                 console.log(`Main: Activating failsafe.`)
                 let writeData = {
                     "command":"execute",
