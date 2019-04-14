@@ -493,6 +493,9 @@ $("#cancelRequest").on("click", () => {
                 $("#loading2").css("display", "none")
                 $("#connectButtons").css("display", "block")
                 swal("Whoops!", "We couldn't cancel your connection request. This is probably because it's already been deleted.", "error")
+            } else if (body["error"] === "internal") {
+                log.info(`Renderer: Error cancelling request. An internal error occurred on the API end.`)
+                swal("Whoops!", "We couldn't cancel your request because the API server encountered an error.", "error")
             }
         })
     })

@@ -322,8 +322,8 @@ function startBackgroundService() {
     let options = {
         name: "unrestrictme"
     }
-    log.info(`Going to execute sh -c "${path.join(__dirname, "assets", "node", "node")} --inspect ${path.join(__dirname, 'service.js')}" > /dev/null &`)
-    sudo.exec(`sh -c "${path.join(__dirname, "assets", "node", "node")} --inspect=192.168.149.129:9229 ${path.join(__dirname, 'service.js')}" > /home/vm/nohup.log &`, options, (error, stdout, stderr) => {
+    log.info(`Going to execute sh -c "${path.join(__dirname, "assets", "node", "node")} ${path.join(__dirname, 'service.js')}" > /home/vm/nohup.log &`)
+    sudo.exec(`sh -c "${path.join(__dirname, "assets", "node", "node")} ${path.join(__dirname, 'service.js')}" > /home/vm/nohup.log &`, options, (error, stdout, stderr) => {
         if (error) {
             if (String(error).includes(`User did not grant permission`)) {
                 log.error(`Main: User did not grant permission to start background service. Error: ${error}`)
@@ -351,7 +351,6 @@ function startBackgroundService() {
                     log.error(`Main: Couldn't send backgroundService startingPermission to renderer.`)
                 }
             } else {
-                log.error(`Main: An error occurred running the command to start the background service.`)
                 if (!clientObj || clientObj != "killed") {
                     log.error(`Main: An error occurred running the command to start the background service.`)
                     try {
