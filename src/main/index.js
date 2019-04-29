@@ -25,6 +25,8 @@ $(document).ready(() => {
             $("#connected").css('display', 'block')
             //Clear the counter and all tags in information div.
             clearInterval(interval);
+            $("#connectedDividerLoading").css("display", "block")
+            $("#connectedDividerLoaded").css("display", "none")
             $("#placeholderIP").html(``)
             $("#placeholderConnectionID").html(``)
             $("#placeholderTimeRemaining").html("")
@@ -54,12 +56,12 @@ $(document).ready(() => {
                 request(requestConfig, (error, response, body) => {
                     if (error) {
                         log.error(`Renderer: Error getting public IP. Error: ${error}`)
-                        populateConnected(args["ip"], "API Failure", currentRequestId)
+                        populateConnected("API Failure", currentRequestId)
                     } else {
                         if (/^(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/.test(body) || body === "::ffff:127.0.0.1") {
-                            populateConnected(args["ip"], body, currentRequestId)
+                            populateConnected(body, currentRequestId)
                         } else {
-                            populateConnected(args["ip"], "API Failure", currentRequestId)
+                            populateConnected("API Failure", currentRequestId)
                         }
                     }
                 })
@@ -197,6 +199,13 @@ $(document).ready(() => {
             //An error occurred starting the background process
             $("#disconnected").css("display", "none")
             $("#startBackgroundProcessDiv").css("display", "block")
+            swal("Whoops!", "An error occurred starting the background service.", "error")
+        }
+        if (args === "portInUse") {
+            //An error occurred starting the background process
+            $("#disconnected").css("display", "none")
+            $("#startBackgroundProcessDiv").css("display", "block")
+            swal("Whoops!", "A service is using our communication port 4964.", "error")
         }
         if (args === "processStarted") {
             //The process has started successfully. This is the default state but needs to be here for cleanup
@@ -720,13 +729,15 @@ $("#backgroundProcessCrashRestart").on('click', () => {
 $("#killOpenVPN").on("click", () => {
     main.disconnect()
 })
-function populateConnected (localIp, publicIp, connectionId) {
+function populateConnected (publicIp, connectionId) {
     if (interval) {
         clearInterval(interval);
     }
     log.info(`Renderer: Populating connected divider.`)
     //This populates the connected div info panel
-    $("#placeholderIP").html(`${localIp} / ${publicIp}`)
+    $("#connectedDividerLoaded").css("display", "block")
+    $("#connectedDividerLoading").css("display", "none")
+    $("#placeholderIP").html(`${publicIp}`)
     $("#placeholderConnectionID").html(`${connectionId}`)
     $("#placeholderTimeRemaining").css("display", "inline")
     var countdownTo = new Date()

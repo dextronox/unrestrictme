@@ -20,14 +20,14 @@
     </div>
     <div id="api" class="container prompt" style="display:none">
         <h1>Uh oh, something's wrong.</h1>
-        <p>We're unable to ping our API server.</p>
+        <p>We're unable to ping our API server (<a href="#" data-toggle="collapse" data-target="#viewError" aria-expanded="false" aria-controls="viewError">view error</a>).</a></p>
         <p>This error is probably due to a firewall blocking your connection to our servers. Try running in rescue mode.</p>
         <div class="row">
             <div class="col-sm">
                 <button type="button" id="rescueMode" class="btn btn-danger btn-lg btn-block">Start Rescue Mode</button>
             </div>
             <div class="col-sm">
-                <button type="button" data-toggle="collapse" data-target="#viewError" aria-expanded="false" aria-controls="viewError" class="btn btn-secondary btn-lg btn-block">View Error</button>
+                <button type="button" id="retryAPI" class="btn btn-secondary btn-lg btn-block">Retry</button>
             </div>
         </div>
         <div class="collapse" id="viewError" style="margin-top: 0.5em;margin-bottom: 0.5em">

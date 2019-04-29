@@ -315,15 +315,98 @@ function startBackgroundServer() {
     })
     backgroundServer.on("error", (error) => {
         log.error(`Main: An error has occurred with the background server. Error: ${error}`)
+        if (String(error).includes('EADDRINUSE')) {
+            //Something is using our port
+            try {
+                mainWindow.webContents.send("backgroundService", "portInUse")
+            } catch (e) {
+                log.error(`Main: Couldn't send backgroundService startingError to renderer.`)
+            }
+        }
     })
 }
 
+function createBackgroundService() {
+    if (!fs.existsSync(path.join(app.getPath('userData'), "node"))) {
+        fs.copyFile(path.join(__dirname, "assets/node/node"), path.join(app.getPath('userData'), "node"), (error) => {
+            if (error) {
+                log.error(`Main: An error occurred copying the node executable to the userData folder.`)
+                try {
+                    mainWindow.webContents.send("backgroundService", "startingError")
+                } catch (e) {
+                    log.error(`Main: Couldn't send backgroundService startingError to renderer.`)
+                }
+                return
+            }
+
+        })
+    }
+    let template = `[Unit]
+    Description=unrestrictme Service
+    
+    [Service]
+    ExecStart=${path.join(app.getPath('userData'), 'service.js')}
+    Restart=no
+    User=root
+    Group=root
+    Environment=PATH=/usr/bin:/usr/sbin:/usr/local/bin:/sbin
+    Environment=NODE_ENV=production
+    WorkingDirectory=${app.getPath('userData')}
+    
+    [Install]
+    WantedBy=multi-user.target`
+    fs.readFile(path.join(__dirname, 'service.js'), (error, templateData) => {
+        if (error) {
+            log.error(`Main: An error occurred reading the template service file. Error: ${error}`)
+            try {
+                mainWindow.webContents.send("backgroundService", "startingError")
+            } catch (e) {
+                log.error(`Main: Couldn't send backgroundService startingError to renderer.`)
+            }
+            return
+        }
+        let shebang = new Buffer(`#!${app.getPath('userData')}/node\n`)
+        fs.writeFile(path.join(app.getPath('userData'), 'service.js'), shebang, (error) => {
+            if (error) {
+                log.error(`Main: An error occurred writing the shebang to the service file. Error: ${error}`)
+                try {
+                    mainWindow.webContents.send("backgroundService", "startingError")
+                } catch (e) {
+                    log.error(`Main: Couldn't send backgroundService startingError to renderer.`)
+                }
+                return
+            }
+            fs.appendFile(path.join(app.getPath('userData'), 'service.js'), templateData, (error) => {
+                if (error) {
+                    log.error(`Main: An error occurred appending the service file. Error: ${error}`)
+                    try {
+                        mainWindow.webContents.send("backgroundService", "startingError")
+                    } catch (e) {
+                        log.error(`Main: Couldn't send backgroundService startingError to renderer.`)
+                    }
+                    return
+                }
+            })
+        })
+    })
+    fs.writeFile(path.join(app.getPath('userData'), 'serviceTemplate'), template, (error) => {
+        if (error) {
+            log.error(`Main: An error occurred writing the service file. Error: ${error}`)
+            try {
+                mainWindow.webContents.send("backgroundService", "startingError")
+            } catch (e) {
+                log.error(`Main: Couldn't send backgroundService startingError to renderer.`)
+            }
+            return
+        }
+        startBackgroundService()
+    })
+}
 function startBackgroundService() {
     let options = {
         name: "unrestrictme"
     }
-    log.info(`Going to execute sh -c "${path.join(__dirname, "assets", "node", "node")} ${path.join(__dirname, 'service.js')}" > /home/vm/nohup.log &`)
-    sudo.exec(`sh -c "${path.join(__dirname, "assets", "node", "node")} ${path.join(__dirname, 'service.js')}" > /home/vm/nohup.log &`, options, (error, stdout, stderr) => {
+    sudo.exec(`sh -c "cp ${path.join(app.getPath('userData'), 'serviceTemplate')} /etc/systemd/system/unrestrictme.service && systemctl daemon-reload && systemctl start unrestrictme"`, options, (error, stdout, stderr) => {
         if (error) {
             if (String(error).includes(`User did not grant permission`)) {
                 log.error(`Main: User did not grant permission to start background service. Error: ${error}`)
@@ -464,7 +547,7 @@ function createMainWindow() {
         if (os.platform() != "win32") {
             log.info(`Main: This is not a win32 installation. Starting background service/server.`)
             startBackgroundServer()
-            startBackgroundService()
+            createBackgroundService()
         }
     })
     //mainWindow.webContents.openDevTools({mode: "undocked"})
@@ -726,15 +809,9 @@ exports.connect = (config) => {
                     killSwitchStatus = false
                     let initializeCount = (datalog.match(/Initialization Sequence Completed/g) || []).length;
                     if (initializeCount <= 1) {
-                        //Send required information to main window.
-                        var ipString = datalog.search("Notified TAP-Windows driver to set a DHCP IP/netmask of")
-                        ipString = datalog.substring(ipString, ipString + 70)
-                        var regexp = /([0-9]{1,3}(\.[0-9]{1,3}){3}|[a-f0-9]{1,4}(:[a-f0-9]{1,4}){7})/g
-                        log.info(`Main: IP list: ${ipString.match(regexp)}`)
                         //Connected to unrestrictme
                         let status = {
-                            "connected": true,
-                            "ip": ipString.match(regexp)
+                            "connected": true
                         }
                         try {
                             mainWindow.webContents.send('connection', status)
@@ -852,7 +929,7 @@ exports.disableKillSwitch = () => {
 }
 
 exports.startBackgroundService = () => {
-    startBackgroundService()
+    createBackgroundService()
 }
 
 exports.clearSettings = () => {
@@ -1155,7 +1232,7 @@ function installDependenciesLinux(error) {
                 let options = {
                     name: "unrestrictme"
                 }
-                sudo.exec(`apt -y install openvpn`, options, (error, stdout, stderr) => {
+                sudo.exec(`apt-get -y install openvpn node`, options, (error, stdout, stderr) => {
                     if (error) {
                         //Couldn't run the install command.
                         log.error(`Main: Failed to run command to install OpenVPN. Error: ${error}`)

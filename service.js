@@ -38,6 +38,7 @@ function testMessage() {
 }
 function foregroundProcessDataHandler(data) {
     let dataInterpreted = JSON.parse(data)
+    console.log(JSON.stringify(dataInterpreted))
     if (dataInterpreted["command"] === "connectToOpenVPN") {
         ovpnFunction(dataInterpreted["configPath"])
     }
@@ -65,18 +66,12 @@ function ovpnFunction(configPath) {
                 killSwitchStatus = false
                 let initializeCount = (datalog.match(/Initialization Sequence Completed/g) || []).length;
                 if (initializeCount <= 1) {
-                    //Send required information to main window.
-                    var ipString = datalog.search("Peer Connection Initiated with")
-                    ipString = datalog.substring(ipString, ipString + 70)
-                    var regexp = /([0-9]{1,3}(\.[0-9]{1,3}){3}|[a-f0-9]{1,4}(:[a-f0-9]{1,4}){7})/g
-                    console.log(`Main: IP list: ${ipString.match(regexp)}`)
                     //Connected to unrestrictme
                     let writeData = {
                         "command":"sendToRenderer",
                         "channel": "connection",
                         "status": {
-                            "connected": true,
-                            "ip": ipString.match(regexp)
+                            "connected": true
                         }
                     }
                     client.write(JSON.stringify(writeData))
@@ -183,18 +178,20 @@ function disconnectFromVPN(quit) {
                         "connected": false
                     }
                 }
-                client.write(JSON.stringify(writeData))
-                if (quit) {
-                    console.log(`Background: Sending command to quit unrestrict.me`)
-                    let writeData = {
-                        "command":"execute",
-                        "methods": [
-                            "tray.destroy()",
-                            "app.quit()"
-                        ]
+                client.write(JSON.stringify(writeData), () => {
+                    if (quit) {
+                        console.log(`Background: Sending command to quit unrestrict.me`)
+                        let writeData = {
+                            "command":"execute",
+                            "methods": [
+                                "tray.destroy()",
+                                "app.quit()"
+                            ]
+                        }
+                        client.write(JSON.stringify(writeData))
                     }
-                    client.write(JSON.stringify(writeData))
-                }
+                })
+
             })
         } else {
             if (quit) {

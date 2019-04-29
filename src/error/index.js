@@ -25,6 +25,11 @@ $("#clearSettings").on('click', () => {
     main.clearSettings()
 })
 
+$("#retryAPI").on("click", () => {
+    app.relaunch()
+    app.quit()
+})
+
 function loadPage(type) {
     if (type === "settings") {
         $("#settings").css('display', 'block')

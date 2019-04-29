@@ -61,7 +61,14 @@
             <button type="button" class="btn btn-danger btn-lg" id="disconnect">Disconnect from unrestrict.me</button>
             <button type="button" class="btn btn-secondary btn-lg" data-toggle="modal" data-target="#settings">Settings</button>
         </div>
-        <div class="alert alert-dismissible alert-secondary">
+        <div class="alert alert-dismissible alert-secondary" id="connectedDividerLoading">
+            <div class="text-center">
+                <div class="spinner-border" role="status">
+                    <span class="sr-only">Loading...</span>
+                </div>
+            </div>
+        </div>
+        <div class="alert alert-dismissible alert-secondary" id="connectedDividerLoaded">
             <b>Your IP: </b><p id="placeholderIP" style="display: inline"></p><br>
             <b>Your Connection ID: </b><p id="placeholderConnectionID" style="display: inline"></p><br>
             <b>Time Remaining: </b><p id="placeholderTimeRemaining" style="display: inline"></p>
@@ -113,7 +120,7 @@
                 <h5>Custom API Server</h5>
                 <p>Input a custom API server for unrestrict.me to send requests.</p>
                 <div class="input-group mb-3">
-                    <input id="customAPI" type="text" class="form-control" placeholder="https://...">
+                    <input id="customAPI" type="text" class="form-control" placeholder="https://..." required>
                     <div class="input-group-append">
                         <button id="customAPISubmit" class="btn btn-outline-secondary" type="button">Save</button>
                     </div>
@@ -124,7 +131,7 @@
                 <h5>Custom Webpage</h5>
                 <p>Input a custom webpage for unrestrict.me to navigate you to complete the connection.</p>
                 <div class="input-group mb-3">
-                    <input id="customWebpage" type="text" class="form-control" placeholder="https://...">
+                    <input id="customWebpage" type="text" class="form-control" placeholder="https://..." required>
                     <div class="input-group-append">
                         <button id="customWebpageSubmit" class="btn btn-outline-secondary" type="button">Save</button>
                     </div>
