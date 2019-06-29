@@ -12,11 +12,13 @@
 <body>
     <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
         <img src="../../assets/icons/logo.svg">
+        <div style="text-align: right;">
+            <button type="button" id="openLog" class="btn btn-secondary btn-sm" style="pointer-events: all !important">Open Log</button>
+        </div>
     </nav>
     <div id="settings" class="container prompt" style="display:none">
         <h1>Uh oh, something's wrong.</h1>
-        <p>We're unable to read your settings file.</p>
-        <p>Please refer to the log.txt file for more information. This is located in the installation directory.</p>
+        <p>We're unable to read your settings file. Click "Open Log" for more information.</p>
     </div>
     <div id="api" class="container prompt" style="display:none">
         <h1>Uh oh, something's wrong.</h1>
@@ -47,16 +49,16 @@
     <div id="key" class="container prompt" style="display:none">
         <h1>Uh oh, something's wrong.</h1>
         <p>unrestrict.me couldn't generate a RSA keypair, used to securely receive information from the API server. </p>
-        <p>Check to make sure unrestrict.me has directory permissions. Refer to log.txt for more information.</p>
+        <p>Check to make sure unrestrict.me has directory permissions. Click "Open Log" for more information.</p>
     </div>
     <div id="updateRun" class="container prompt" style="display:none">
         <h1>Uh oh, something's wrong.</h1>
         <p>We couldn't run the update file. It's mandatory that all installations of unrestrict.me run the latest client version to ensure they remain compatible with our network, and to make sure everyone is protected from possible security vulnerabilities.</p>
-        <p>Refer to the log.txt file for more information.</p>
+        <p>Click "Open Log" for more information.</p>
     </div>
     <div id="parse" class="container prompt" style="display:none">
         <h1>Uh oh, something's wrong.</h1>
-        <p>Your JSON settings file is not formatted correctly, and as such we were unable to parse it. If you've modified this file, make sure it is in valid JSON notation, and try again.</p>
+        <p>Your JSON settings file is not formatted correctly and as such we were unable to parse it. If you've modified this file make sure it is in valid JSON notation, and try again.</p>
         <button type="button" class="btn btn-danger" id="clearSettings">Clear Settings File</button>
     </div>
     <div id="rescueModeConnecting" class="container prompt" style="display:none">

@@ -1,10 +1,11 @@
-const {remote, ipcRenderer} = require("electron")
+const {remote, ipcRenderer, shell} = require("electron")
 const {app} = remote
 const $ = jQuery = require('jquery')
 const log = require('electron-log')
 const swal = require('sweetalert')
 const path = require("path")
 const main = remote.require(path.resolve(__dirname, '../..', 'main.js'))
+let logPath
 
 $(document).ready(() => {
     ipcRenderer.once(`error`, (event, args) => {
@@ -19,8 +20,11 @@ $(document).ready(() => {
     ipcRenderer.on(`apiError`, (event, args) => {
         $("#apiError").html(JSON.stringify(args).split(',').join(', '))
     })
-})
+    ipcRenderer.on(`logPath`, (event, args) => {
+        logPath = args
+    })
 
+})
 $("#clearSettings").on('click', () => {
     main.clearSettings()
 })
@@ -63,4 +67,7 @@ $("#rescueMode").on('click', () => {
             log.info(`Renderer: User chose not to enable rescue mode.`)
         }
     })
+})
+$("#openLog").on("click", () => {
+    shell.openItem(logPath)
 })
