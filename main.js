@@ -495,6 +495,7 @@ function createErrorWindow(error, sendError) {
     errorWindow.webContents.on('did-finish-load', () => {
         errorWindow.show()
         errorWindow.webContents.send('error', error)
+        errorWindow.webContents.send('logPath', log.transports.file.stream["path"])
         if (sendError) {
             if (sendError["type"] === "apiError") {
                 try {
