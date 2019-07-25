@@ -1274,7 +1274,7 @@ function installDependenciesLinux(error) {
                 })
             }
         })
-    } else if (!String(stdout).includes('built on')) {
+    } else if (!String(error).includes('built on')) {
         log.error(`Main: Couldn't detect whether OpenVPN is installed. Error: ${error}`)
         let ipcUpdate = {
             "error": "builtOnMissing"
