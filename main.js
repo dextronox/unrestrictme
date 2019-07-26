@@ -234,14 +234,11 @@ function createKeys() {
 
 function checkForUpdates(install) {
     if (install) {
-        if (disconnect() === true) {
-            appUpdater.downloadUpdate()
-            autoUpdater.on("update-downloaded", (info) => {
-                autoUpdater.quitAndInstall()
-            })
-        } else {
-            log.error("Main: We can't update because we're still connected to unrestrict.me.")
-        }
+        log.info(`Main: The client will now attempt to download the update.`)
+        autoUpdater.downloadUpdate()
+        autoUpdater.on("update-downloaded", (info) => {
+            autoUpdater.quitAndInstall()
+        })
     } else {
         autoUpdater.checkForUpdates()
         autoUpdater.autoDownload = false

@@ -166,21 +166,8 @@ $(document).ready(() => {
             }).then((willUpdate) => {
                 if (willUpdate) {
                     //Tell we wish to update. They will take care of disconnection.
-                    log.info(`Renderer: User has indicated they wish to update their client.`)
-                    main.installUpdates()
-                    ipcRenderer.once('updaterError', (event, args) => {
-                        swal({
-                            title: "Updater Error",
-                            text: "Something went wrong and we were unable to download the update. Please check the log file and try again later. The client will now restart.",
-                            icon: "error"
-                        }).then(() => {
-                            app.relaunch()
-                            app.quit()
-                        })
-                    })
-                    ipcRenderer.on('updaterProgress', (event, args) => {
-                        log.info(`Renderer: Updater Progress: ${JSON.stringify(args)}`)
-                    })
+                    log.info(`Renderer: User has indicated they wish to update their client....`)
+                    installUpdates()
                 }
             })
         }
@@ -763,4 +750,22 @@ function populateConnected (publicIp, connectionId) {
             $("#placeholderTimeRemaining").html("Connection has expired. Expect to disconnect shortly. Fail safe will engage.")
         }
     }, 1000); 
+}
+
+function installUpdates() {
+    log.info(`Renderer: Attempting to update.`)
+    ipcRenderer.once('updaterError', (event, args) => {
+        swal({
+            title: "Updater Error",
+            text: "Something went wrong and we were unable to download the update. Please check the log file and try again later. The client will now restart.",
+            icon: "error"
+        }).then(() => {
+            app.relaunch()
+            app.quit()
+        })
+    })
+    ipcRenderer.on('updaterProgress', (event, args) => {
+        log.info(`Renderer: Updater Progress: ${JSON.stringify(args)}`)
+    })
+    main.installUpdates()
 }
