@@ -228,6 +228,15 @@ $(document).ready(() => {
 
         }
     })
+    ipcRenderer.on(`authentication`, (event, args) => {
+        if (args === "waiting") {
+            $("#initialLoad").css("display", "block")
+            $("#disconnected-normal").css("display", "none")
+        } else if (args === "passed") {
+            $("#initialLoad").css("display", "none")
+            $("#disconnected-normal").css("display", "block")
+        }
+    })
     $("#clientVersion").html(`You're currently running unrestrict.me v${app.getVersion()}`)
     network.get_interfaces_list(function(error, obj) {
         for (i = 0; Object.keys(obj).length >= i; i++) {

@@ -403,10 +403,15 @@ function createBackgroundService() {
     })
 }
 function startBackgroundService() {
+    try {
+        mainWindow.webContents.send("authentication", "waiting")
+    } catch (e) {
+        log.error(`Main: Couldn't send authentication waiting to renderer.`)
+    }
     let options = {
         name: "unrestrictme"
     }
-    sudo.exec(`sh -c "cp ${path.join(app.getPath('userData'), 'serviceTemplate')} /etc/systemd/system/unrestrictme.service && systemctl daemon-reload && systemctl start unrestrictme"`, options, (error, stdout, stderr) => {
+    sudo.exec(`sh -c "cp ${path.join(app.getPath('userData'), 'serviceTemplate')} /etc/systemd/system/unrestrictme.service && systemctl daemon-reload && chmod +x /etc/systemd/system/unrestrictme.service && systemctl start unrestrictme"`, options, (error, stdout, stderr) => {
         if (error) {
             if (String(error).includes(`User did not grant permission`)) {
                 log.error(`Main: User did not grant permission to start background service. Error: ${error}`)
@@ -467,6 +472,11 @@ function backgroundProcessDataHandler(data) {
     }
     if (dataInterpreted["command"] === "testMessage") {
         log.info(`Main: We can communicate with the service.js.`)
+        try {
+            mainWindow.webContents.send("authentication", "passed")
+        } catch (e) {
+            log.error(`Main: Couldn't send authentication waiting to renderer.`)
+        }
     }
 }
 function createLoadingWindow() {
@@ -750,9 +760,9 @@ exports.dependenciesCheck = (verifyTap) => {
     } else if (os.platform() === "linux") {
         exec(`openvpn`, (error, stdout, stderr) => {
             if (error) {
+                log.info('error', +error)
                 installDependenciesLinux(error)
-            }
-            if (String(stdout).includes(`built on`)) {
+            } else if (String(stdout).includes(`built on`)) {
                 let settings = {}
                 fs.writeFile(path.join(app.getPath('userData'), 'settings.conf'), JSON.stringify(settings), (error) => {
                     if (error) {
@@ -1211,8 +1221,8 @@ function killSwitchDisable(nic) {
         clientObj.write(JSON.stringify(writeData))
     }
 }
-function installDependenciesLinux(error) {
-    if (String(error).includes("openvpn: not found")) {
+function installDependenciesLinux(checkError) {
+    if (String(checkError).includes("openvpn: not found")) {
         //OpenVPN not installed. Get from package repository.
         log.info(`Main: Installing OpenVPN from package repository.`)
         getos((error, ops) => {
@@ -1233,7 +1243,7 @@ function installDependenciesLinux(error) {
                 let options = {
                     name: "unrestrictme"
                 }
-                sudo.exec(`apt-get -y install openvpn node`, options, (error, stdout, stderr) => {
+                sudo.exec(`apt-get -y install openvpn`, options, (error, stdout, stderr) => {
                     if (error) {
                         //Couldn't run the install command.
                         log.error(`Main: Failed to run command to install OpenVPN. Error: ${error}`)
@@ -1274,8 +1284,8 @@ function installDependenciesLinux(error) {
                 })
             }
         })
-    } else if (!String(error).includes('built on')) {
-        log.error(`Main: Couldn't detect whether OpenVPN is installed. Error: ${error}`)
+    } else if (!String(checkError).includes('built on')) {
+        log.error(`Main: Couldn't detect whether OpenVPN is installed. Error: ${checkError}`)
         let ipcUpdate = {
             "error": "builtOnMissing"
         }
