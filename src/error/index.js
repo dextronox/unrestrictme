@@ -30,8 +30,7 @@ $("#clearSettings").on('click', () => {
 })
 
 $("#retryAPI").on("click", () => {
-    app.relaunch()
-    app.quit()
+    main.restartApp()
 })
 
 function loadPage(type) {

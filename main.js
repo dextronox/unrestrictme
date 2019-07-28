@@ -965,6 +965,10 @@ exports.hardQuit = () => {
 exports.installUpdates = () => {
     checkForUpdates(true)
 }
+exports.restartApp = () => {
+    app.relaunch()
+    app.quit()
+}
 function killSwitch(enable) {
     //All platform specific options are to be handled in killSwitchEnable
     if (enable) {

@@ -760,8 +760,7 @@ function installUpdates() {
             text: "Something went wrong and we were unable to download the update. Please check the log file and try again later. The client will now restart.",
             icon: "error"
         }).then(() => {
-            app.relaunch()
-            app.quit()
+            main.restartApp()
         })
     })
     ipcRenderer.on('updaterProgress', (event, args) => {
