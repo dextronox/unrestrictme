@@ -116,7 +116,7 @@ $(document).ready(() => {
             //Linux no root.
             swal("Whoops!", "We need your root password to disconnect from unrestrict.me. Leave limited functionality mode to remove this hindrance.", "error")
         } else if (args["connectError"]) {
-            swal("Whoops!", "We couldn't connect you to OpenVPN. Feel free to try a different location.", "error")
+            swal("Whoops!", "We couldn't connect you to unrestrict.me. Feel free to try a different location.", "error")
             $("#loading3").css("display", "none")
             $("#connectButtons").css("display", "block")
         } else if (args["requireSudo"]) {
@@ -130,6 +130,10 @@ $(document).ready(() => {
             swal("Whoops!", "We couldn't check if OpenVPN is running, and subsequently the application may quit leaving the VPN connected. Check the log file for more information.", "error").then((value) => {
                 main.hardQuit()
             })
+        } else if (args["platformSupport"]) {
+            swal("Whoops!", "Stealth mode isn't supported on this system configuration.", "error")
+            $("#loading3").css("display", "none")
+            $("#connectButtons").css("display", "block")
         }
     })
     ipcRenderer.on(`killSwitch`, (event, args) => {
@@ -447,7 +451,14 @@ function monitorRequest(id) {
                     let decryptedResponse = JSON.parse(key.decrypt(body, 'utf8'))
                     $("#loading2").css("display", "none")
                     $("#loading3").css("display", "block")
-                    main.connect(decryptedResponse["config"])
+                    log.info(decryptedResponse)
+                    if (decryptedResponse["mode"] === "normal") {
+                        log.info(`Main: Normal connection.`)
+                        main.connect(decryptedResponse["config"])
+                    } else {
+                        log.info(`Main: Stealth connection.`)
+                        main.stealthConnect(decryptedResponse)
+                    }
                 }) 
             }
         })
@@ -754,6 +765,9 @@ function populateConnected (publicIp, connectionId) {
 
 function installUpdates() {
     log.info(`Renderer: Attempting to update.`)
+    $("#updating").css("display", "block")
+    $("#disconnected").css("display", "none")
+    $("#connected").css('display', 'none')
     ipcRenderer.once('updaterError', (event, args) => {
         swal({
             title: "Updater Error",
@@ -765,6 +779,7 @@ function installUpdates() {
     })
     ipcRenderer.on('updaterProgress', (event, args) => {
         log.info(`Renderer: Updater Progress: ${JSON.stringify(args)}`)
+        $("#updateProgressBar").css("width", `${args["progress"]["percent"]}%`)
     })
     main.installUpdates()
 }

@@ -655,7 +655,7 @@ function quit(hard) {
     log.info(`Main: We're about to kill OpenVPN. Hard kill?: ${hard}`)
     intentionalDisconnect = true
     if (os.platform() === "win32" && !hard) {
-        exec(`taskkill /IM openvpn.exe /F`, (error, stdout, stderr) => {
+        exec(`taskkill /IM openvpn.exe /F & taskkill /IM tstunnel.exe /F`, (error, stdout, stderr) => {
             if (error) {
                 log.error(`Main: An error occurred killing OpenVPN. Error: ${error}`)
                 mainWindow.show()
@@ -700,17 +700,47 @@ function quit(hard) {
 
 }
 
-function openTapInstaller () {
-    exec(`"${path.join(__dirname, 'assets', 'openvpn', 'tap-windows.exe')}"`, (error, stdout, stderr) => {
+function runTapInstaller () {
+    exec(`"${path.join(__dirname, `assets`, `openvpn`, `tap-${os.arch()}`, `tapinstall.exe`)}" install "${path.join(__dirname, `assets`, `openvpn`, `tap-${os.arch()}`, `OemVista.inf`)}" tap0901`, (error, stdout, stderr) => {
         if (error) {
-            log.error(`Main: Could not run TAP installer. Error: ${error}`)
+            log.error(`Main: Could not install the TAP driver. Error: ${error}`)
+            //Alert renderer.
+            let ipcUpdate = {
+                "error":"TAPInstallationFailure",
+                "errorText":`Error: ${error}`
+            }
+            welcomeWindow.webContents.send(`statusUpdate`, ipcUpdate)
+        } else if (String(stdout).includes(`Drivers installed successfully.`)) {
+            //The driver install successfully.
+            createSettingsFile()
         } else {
-            log.info("Main: TAP installation complete.")
+            //Something went wrong with the installation.
+            let ipcUpdate = {
+                "error":"TAPInstallationFailure",
+                "errorText":`Stdout: ${stdout}, Stderr: ${stderr}`
+            }
+            welcomeWindow.webContents.send(`statusUpdate`, ipcUpdate)
         }
     })
 }
-
-exports.dependenciesCheck = (verifyTap) => {
+function createSettingsFile() {
+    let settings = {}
+    fs.writeFile(path.join(app.getPath('userData'), 'settings.conf'), JSON.stringify(settings), (error) => {
+        if (error) {
+            log.error(`Main: Error occurred writing settings file. Permissions error perhaps? Error: ${error}`)
+            let ipcUpdate = {
+                "error":"writingSettingsFile",
+                "errorText": error
+            }
+            welcomeWindow.webContents.send(`statusUpdate`, ipcUpdate)
+        } else {
+            log.info(`Main: Settings file created!`)
+            app.relaunch()
+            app.quit()
+        }
+    })
+}
+exports.dependenciesCheck = () => {
     if (os.platform() === "win32") {
         exec(`"${path.join(__dirname, 'assets', 'openvpn', `${os.arch()}`, 'openvpn.exe')}" --show-adapters`, (error, stdout, stderr) => {
             if (error) {
@@ -721,37 +751,14 @@ exports.dependenciesCheck = (verifyTap) => {
                 }
                 welcomeWindow.webContents.send(`statusUpdate`, ipcUpdate)
             } else if ((stdout.replace('Available TAP-WIN32 adapters [name, GUID]:', '')).replace(/\s/g, '') === "") {
-                if (verifyTap) {
-                    log.error(`Main: TAP installation was a failure. Alert the user.`)
-                    let ipcUpdate = {
-                        "error": "TAPInstallationFailure"
-                    }
-                    welcomeWindow.webContents.send(`statusUpdate`, ipcUpdate)
-                } else {
-                    log.error(`Main: There is no TAP adapter on the system. Log: ${stdout}`)
-                    openTapInstaller()
-                    let ipcUpdate = {
-                        "update":"installingTAPAdapter"
-                    }
-                    welcomeWindow.webContents.send(`statusUpdate`, ipcUpdate)
+                log.error(`Main: There is no TAP adapter on the system. Log: ${stdout}`)
+                runTapInstaller()
+/*                     let ipcUpdate = {
+                    "update":"installingTAPAdapter"
                 }
+                welcomeWindow.webContents.send(`statusUpdate`, ipcUpdate) */
             } else {
-                log.info(`Main: ${stdout}`)
-                let settings = {}
-                fs.writeFile(path.join(app.getPath('userData'), 'settings.conf'), JSON.stringify(settings), (error) => {
-                    if (error) {
-                        log.error(`Main: Error occurred writing settings file. Permissions error perhaps? Error: ${error}`)
-                        let ipcUpdate = {
-                            "error":"writingSettingsFile",
-                            "errorText": error
-                        }
-                        welcomeWindow.webContents.send(`statusUpdate`, ipcUpdate)
-                    } else {
-                        log.info(`Main: Settings file created!`)
-                        app.relaunch()
-                        app.quit()
-                    }
-                })
+                createSettingsFile()
             }
         })
     } else if (os.platform() === "linux") {
@@ -790,6 +797,10 @@ exports.dependenciesCheck = (verifyTap) => {
 }
 
 exports.connect = (config) => {
+    connect(config)
+}
+
+function connect(config) {
     intentionalDisconnect = false
     killSwitchStatus = false
     log.info(`Main: Received command to connect OpenVPN.`)
@@ -891,11 +902,49 @@ exports.connect = (config) => {
     }) 
 }
 
+exports.stealthConnect = (decryptedResponse) => {
+    //Fire up stunnel and send off the config
+    if (os.platform() === "win32" && os.arch() === "x64") {
+        fs.writeFile(path.join(app.getPath("userData"), 'stunnel.conf'), decryptedResponse["stunnel"], (error) => {
+            if (error) {
+                log.error(`Main: Couldn't write the stunnel configuartion to disk.`)
+            }
+        })
+        fs.writeFile(path.join(app.getPath("userData"), 'stunnel.pem'), decryptedResponse["cert"], (error) => {
+            if (error) {
+                log.error(`Main: Couldn't write the stunnel configuartion to disk.`)
+            }
+        })
+        log.info(`"${path.join(__dirname, "assets", "stunnel", "bin", "tstunnel.exe")}" "${path.join(app.getPath("userData"), 'stunnel.conf')}" -p "${path.join(app.getPath("userData"), 'stunnel.pem')}"`)
+        let stunnelProc = exec(`"${path.join(__dirname, "assets", "stunnel", "bin", "tstunnel.exe")}" "${path.join(app.getPath("userData"), 'stunnel.conf')}" -p "${path.join(app.getPath("userData"), 'stunnel.pem')}"`)
+        let dataLog
+        stunnelProc.stderr.on('data', (data) => {
+            log.info(`Stunnel: ${data}`)
+            dataLog = dataLog + data
+            if (String(data).includes("Configuration successful")) {
+                //Stunnel has loaded successfully.
+                connect(decryptedResponse["config"])
+            }
+        })
+    } else if (os.platform() === "linux") {
+
+    } else {
+        let status = {
+            "platformSupport": true
+        }
+        try {
+            mainWindow.webContents.send('error', status)
+        } catch(e) {
+            log.error(`Main: Couldn't send OpenVPN status to renderer. Error: ${e}`)
+        }
+    }
+}
+
 function disconnect() {
     intentionalDisconnect = true
     log.info(`Main: We're about to kill OpenVPN. If OpenVPN is not running, you will see no confirmation it wasn't killed.`)
     if (os.platform() === "win32") {
-        exec(`taskkill /IM openvpn.exe /F`, (error, stdout, stderr) => {
+        exec(`taskkill /IM openvpn.exe /F & taskkill /IM tstunnel.exe /F`, (error, stdout, stderr) => {
             if (error) {
                 log.error(`Main: An error occurred killing OpenVPN. Error: ${error}`)
                 mainWindow.show()
@@ -967,7 +1016,7 @@ exports.installUpdates = () => {
 }
 exports.restartApp = () => {
     app.relaunch()
-    app.quit()
+    app.exit()
 }
 function killSwitch(enable) {
     //All platform specific options are to be handled in killSwitchEnable
@@ -1244,7 +1293,7 @@ function installDependenciesLinux(checkError) {
                 let options = {
                     name: "unrestrictme"
                 }
-                sudo.exec(`apt-get -y install openvpn`, options, (error, stdout, stderr) => {
+                sudo.exec(`apt-get -y install openvpn stunnel4`, options, (error, stdout, stderr) => {
                     if (error) {
                         //Couldn't run the install command.
                         log.error(`Main: Failed to run command to install OpenVPN. Error: ${error}`)

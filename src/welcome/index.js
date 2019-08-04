@@ -21,7 +21,7 @@ $(document).ready(() => {
                 //WINDOWS
                 swal("Whoops!", "The TAP adapter installation was a failure.", "error")
                 $("#errorExcerpt").css("display", "block")
-                $("#errorExcerptText").html("Check the log.txt file for more information.")
+                $("#errorExcerptText").html(args["errorText"])
             } else if (args["error"] === "operatingSystemCheck") {
                 swal("Whoops!", "A programmatic error occurred getting operating system information.", "error")
                 $("#errorExcerpt").css("display", "block")
@@ -61,8 +61,7 @@ $(document).ready(() => {
             }
         } else if (args["update"]) {
             if (args["update"] === "installingTAPAdapter") {
-                //The TAP installer dialogue will be opened.
-                $("#step3_button_div2").css("display", "block")
+                //The TAP driver is being installed in the background.
 
             } else if (args["update"] === "installingOpenVPN") {
                 $("#step3_repository_installing").css("display", "block")
@@ -117,11 +116,6 @@ $("#step2_button").on("click", () => {
 $("#step3_button1").on("click", () => {
     main.dependenciesCheck()
     $("#step3_button_div1").css("display", "none")
-})
-
-$("#step3_button2").on("click", () => {
-    $("#step3_button_div2").css("display", "none")
-    main.dependenciesCheck(true)
 })
 
 

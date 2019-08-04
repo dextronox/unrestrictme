@@ -79,8 +79,11 @@
         </div>
     </div>
     <div id="updating" class="container prompt" style="display: none">
-        <h1>Your client is updating.</h1>
-        <p>Please wait. This should only take a moment. Your client may restart.</p>
+        <h1>Downloading update.</h1>
+        <p>Please wait, this should only take a moment.</p>
+        <div class="progress">
+            <div class="progress-bar" role="progressbar" style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" id="updateProgressBar"></div>
+        </div>
     </div>
     <div id="killSwitch" class="container prompt" style="display: none">
         <h1>Kill Switch Failsafe Active</h1>
@@ -186,7 +189,7 @@
                 </button>
             </div>
             <div class="modal-body">
-                <p>unrestrict.me is an Electron application built using open source Node.js modules. Electron is a trademark of Github, Inc. Node.js is a registered trademark of Joyent, Inc. The unrestrict.me application is licensed under the GNU AGPLv3 template. unrestrict.me uses technology developed by OpenVPN Inc., and any associated "OpenVPN" trademarks are the property of OpenVPN Inc.</p>
+                <p>unrestrict.me is an Electron application built using open source Node.js modules. Electron is a trademark of Github, Inc. Node.js is a registered trademark of Joyent, Inc. The unrestrict.me application is licensed under the GNU AGPLv3 template. unrestrict.me uses technology developed by OpenVPN Inc., and any associated "OpenVPN" trademarks are the property of OpenVPN Inc. unrestrict.me uses stunnel, technology developed by Michal Trojnara licensed under the GNU General Public License. This product includes software developed by the OpenSSL Project for use in the OpenSSL Toolkit (http://www.openssl.org/).</p>
                 <p>By using this application you agree to the Terms and Conditions of the unrestrict.me service located <a id="openLegalExternal" href="#">here</a>.</p>
             </div>
             <div class="modal-footer">

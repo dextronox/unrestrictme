@@ -1,6 +1,6 @@
 {
   "name": "unrestrictme",
-  "version": "1.0.1",
+  "version": "1.0.0",
   "description": "Desktop application for connecting to the unrestrict.me VPN network.",
   "main": "./main.js",
   "scripts": {
@@ -29,7 +29,7 @@
     "win": {
       "target": "nsis",
       "icon": "build/icon.ico",
-      "verifyUpdateCodeSignature": true,
+      "verifyUpdateCodeSignature": false,
       "asar": false,
       "requestedExecutionLevel": "requireAdministrator"
     },
