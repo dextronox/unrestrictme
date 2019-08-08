@@ -1405,7 +1405,7 @@ function installDependenciesMac(checkError) {
             if (error) {
                 log.error(`Main: Error downloading brew. Error: ${error}`)
                 let ipcUpdate = {
-                    "error": "OpenVPNInstallFail",
+                    "error": "downloadingBrew",
                     "errorText": error
                 }
                 welcomeWindow.webContents.send(`statusUpdate`, ipcUpdate)
