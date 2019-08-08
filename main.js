@@ -1410,6 +1410,7 @@ function installDependenciesMac(checkError) {
                 }
                 welcomeWindow.webContents.send(`statusUpdate`, ipcUpdate)
             }
+            log.info(path.join(app.getPath('userData')))
             log.info(stdout)
         })
     }
