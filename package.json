@@ -56,7 +56,13 @@
       "desktop": "unrestrictme"
     },
     "mac": {
-      "category": "public.app-category.utilities"
+      "category": "public.app-category.utilities",
+      "target":"dmg",
+      "icon": "icon.icns",
+      "type":"development"
+    },
+    "dmg": {
+      "icon": "build/icon.icns"
     },
     "publish": {
       "provider": "github",

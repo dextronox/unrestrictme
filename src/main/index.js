@@ -99,7 +99,7 @@ $(document).ready(() => {
             $("#connectButtons").css("display", "block")
         } else if (args["writeError"]) {
             //Issue should never occur because up until this point writing has been successful. Maybe if we run out of storage?
-            swal("Whoops!", "We couldn't write the OpenVPN config file to disk.", "error")
+            swal("Whoops!", "There was an issue writing a file to disk.", "error")
             $("#connected").css('display', 'none')
             $("#disconnected").css('display', 'block')
             $("#loading3").css("display", "none")
@@ -453,10 +453,10 @@ function monitorRequest(id) {
                     $("#loading3").css("display", "block")
                     log.info(decryptedResponse)
                     if (decryptedResponse["mode"] === "normal") {
-                        log.info(`Main: Normal connection.`)
+                        log.info(`Renderer: Normal connection.`)
                         main.connect(decryptedResponse["config"])
                     } else {
-                        log.info(`Main: Stealth connection.`)
+                        log.info(`Renderer: Stealth connection.`)
                         main.stealthConnect(decryptedResponse)
                     }
                 }) 

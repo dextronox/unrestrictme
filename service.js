@@ -51,6 +51,9 @@ function foregroundProcessDataHandler(data) {
     if (dataInterpreted["command"] === "killSwitchDisable") {
         killSwitchDisable(dataInterpreted["nic"])
     }
+    if (dataInterpreted["command"] === "connectToStealth") {
+        stealthFunction(dataInterpreted["stunnelPath"]["config"], dataInterpreted["stunnelPath"]["pem"], dataInterpreted["configPath"])
+    }
 }
 
 function ovpnFunction(configPath) {
@@ -139,62 +142,32 @@ function ovpnFunction(configPath) {
 }
 
 function disconnectFromVPN(quit) {
-    exec(`pgrep openvpn`, (error, stdout, stderr) => {
-        if (error && !error.code === 1) {
-            //Error occurred checking if OpenVPN is running.
-            console.log(`Background: We couldn't check if OpenVPN is running. Error: ${error}. stdout: ${stdout}. stderr: ${stderr}`)
+    intentionalDisconnect = true
+    exec(`pkill openvpn && pkill stunnel4`, (error, stdout, stderr) => {
+        if (error) {
+            console.log(`Background: An error occurred running pkill for OpenVPN and stunnel4. Error: ${error}`)
             let writeData = {
                 "command":"sendToRenderer",
                 "channel": "error",
                 "status": {
-                    "pgrep": true
+                    "disconnectError": true
                 },
                 "showWindow": true
             }
             client.write(JSON.stringify(writeData))
             return;
         }
-        if (String(stdout) != "") {
-            intentionalDisconnect = true
-            exec(`pkill openvpn`, (error, stdout, stderr) => {
-                if (error) {
-                    console.log(`Background: An error occurred running pkill for OpenVPN.`)
-                    let writeData = {
-                        "command":"sendToRenderer",
-                        "channel": "error",
-                        "status": {
-                            "disconnectError": true
-                        },
-                        "showWindow": true
-                    }
-                    client.write(JSON.stringify(writeData))
-                    return;
-                }
-                console.log(`Background: pkill has run successfully.`)
-                let writeData = {
-                    "command":"sendToRenderer",
-                    "channel": "connection",
-                    "status": {
-                        "connected": false
-                    }
-                }
-                client.write(JSON.stringify(writeData), () => {
-                    if (quit) {
-                        console.log(`Background: Sending command to quit unrestrict.me`)
-                        let writeData = {
-                            "command":"execute",
-                            "methods": [
-                                "tray.destroy()",
-                                "app.quit()"
-                            ]
-                        }
-                        client.write(JSON.stringify(writeData))
-                    }
-                })
-
-            })
-        } else {
+        console.log(`Background: pkill has run successfully.`)
+        let writeData = {
+            "command":"sendToRenderer",
+            "channel": "connection",
+            "status": {
+                "connected": false
+            }
+        }
+        client.write(JSON.stringify(writeData), () => {
             if (quit) {
+                console.log(`Background: Sending command to quit unrestrict.me`)
                 let writeData = {
                     "command":"execute",
                     "methods": [
@@ -204,7 +177,8 @@ function disconnectFromVPN(quit) {
                 }
                 client.write(JSON.stringify(writeData))
             }
-        }
+        })
+
     })
 }
 
@@ -260,4 +234,9 @@ function killSwitchDisable(nic) {
         client.write(JSON.stringify(writeData))
         console.log(`Main: Kill switch disabled.`)
     })
+}
+
+function stealthFunction(stunnelConfig, stunnelPem, openvpnConfig) {
+    let stunnelProc = exec(`stunnel4 "${stunnelConfig}" -p "${stunnelPem}"`)
+    ovpnFunction(openvpnConfig)
 }

@@ -903,18 +903,18 @@ function connect(config) {
 }
 
 exports.stealthConnect = (decryptedResponse) => {
+    fs.writeFile(path.join(app.getPath("userData"), 'stunnel.conf'), decryptedResponse["stunnel"], (error) => {
+        if (error) {
+            log.error(`Main: Couldn't write the stunnel configuartion to disk.`)
+        }
+    })
+    fs.writeFile(path.join(app.getPath("userData"), 'stunnel.pem'), decryptedResponse["cert"], (error) => {
+        if (error) {
+            log.error(`Main: Couldn't write the stunnel configuartion to disk.`)
+        }
+    })
     //Fire up stunnel and send off the config
     if (os.platform() === "win32" && os.arch() === "x64") {
-        fs.writeFile(path.join(app.getPath("userData"), 'stunnel.conf'), decryptedResponse["stunnel"], (error) => {
-            if (error) {
-                log.error(`Main: Couldn't write the stunnel configuartion to disk.`)
-            }
-        })
-        fs.writeFile(path.join(app.getPath("userData"), 'stunnel.pem'), decryptedResponse["cert"], (error) => {
-            if (error) {
-                log.error(`Main: Couldn't write the stunnel configuartion to disk.`)
-            }
-        })
         log.info(`"${path.join(__dirname, "assets", "stunnel", "bin", "tstunnel.exe")}" "${path.join(app.getPath("userData"), 'stunnel.conf')}" -p "${path.join(app.getPath("userData"), 'stunnel.pem')}"`)
         let stunnelProc = exec(`"${path.join(__dirname, "assets", "stunnel", "bin", "tstunnel.exe")}" "${path.join(app.getPath("userData"), 'stunnel.conf')}" -p "${path.join(app.getPath("userData"), 'stunnel.pem')}"`)
         let dataLog
@@ -927,6 +927,28 @@ exports.stealthConnect = (decryptedResponse) => {
             }
         })
     } else if (os.platform() === "linux") {
+        fs.writeFile(path.join(app.getPath('userData'), "current.ovpn"), decryptedResponse["config"], (error) => {
+            if (error) {
+                let status = {
+                    "writeError": true
+                }
+                try {
+                    mainWindow.webContents.send('error', status)
+                } catch(e) {
+                    log.error(`Main: Couldn't send OpenVPN status to renderer. Error: ${e}`)
+                }
+            } else {
+                let writeData = {
+                    "command": "connectToStealth",
+                    "stunnelPath": {
+                        "config": path.join(app.getPath("userData"), 'stunnel.conf'),
+                        "pem": path.join(app.getPath("userData"), 'stunnel.pem')
+                    },
+                    "configPath": path.join(app.getPath('userData'), "current.ovpn")
+                }
+                clientObj.write(JSON.stringify(writeData))
+            }
+        })
 
     } else {
         let status = {
@@ -1365,8 +1387,7 @@ function checkIfConnected() {
                 //Error occurred checking if OpenVPN is running.
                 log.error(`Main: We couldn't check if OpenVPN is running.`)
                 return;
-            }
-            if (String(stdout) != "") {
+            } else if (String(stdout) != "") {
                 //OpenVPN is running.
                 try {
                     mainWindow.webContents.send("openvpnStatus", "processRunning")
