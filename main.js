@@ -1401,7 +1401,7 @@ function installDependenciesMac(checkError) {
             "update": "installingOpenVPN"
         }
         welcomeWindow.webContents.send(`statusUpdate`, ipcUpdate)
-        exec(`mkdir ${app.getPath('userData').replace(/ \//g,"\n")}/homebrew && curl -L https://github.com/Homebrew/brew/tarball/master | tar xz --strip 1 -C ${app.getPath('userData').replace(/ \//g,"\n")}/homebrew`, (error, stdout, stderr) => {
+        exec(`mkdir "${app.getPath('userData')}/homebrew" && curl -L https://github.com/Homebrew/brew/tarball/master | tar xz --strip 1 -C "${app.getPath('userData')}/homebrew"`, (error, stdout, stderr) => {
             if (error) {
                 log.error(`Main: Error downloading brew. Error: ${error}`)
                 let ipcUpdate = {
