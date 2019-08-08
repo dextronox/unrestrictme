@@ -764,7 +764,7 @@ exports.dependenciesCheck = () => {
     } else if (os.platform() === "linux") {
         exec(`openvpn`, (error, stdout, stderr) => {
             if (error) {
-                log.info('error', +error)
+                log.error(`Main: Error checking whether OpenVPN is installed. Error: ${error}`)
                 installDependenciesLinux(error)
             } else if (String(stdout).includes(`built on`)) {
                 let settings = {}
@@ -787,6 +787,34 @@ exports.dependenciesCheck = () => {
                 })
             } else {
                 installDependenciesLinux(stdout)
+            }
+        })
+    } else if (os.platform() === "macos") {
+        exec(`openvpn`, (error, stdout, stderr) => {
+            if (error) {
+                log.error(`Main: Error checking whether OpenVPN is installed. Error: ${error}`)
+                installDependenciesMac(error)
+            } else if (String(stdout).includes(`built on`)) {
+                let settings = {}
+                fs.writeFile(path.join(app.getPath('userData'), 'settings.conf'), JSON.stringify(settings), (error) => {
+                    if (error) {
+                        log.error(`Main: Error occurred writing settings file. Permissions error perhaps? Error: ${error}`)
+                        let ipcUpdate = {
+                            "error":"writingSettingsFile",
+                            "errorText": error
+                        }
+                        welcomeWindow.webContents.send(`statusUpdate`, ipcUpdate)
+                    } else {
+                        log.info(`Main: Settings file created!`)
+                        //Show alert to user and have them run quit()
+                        let ipcUpdate = {
+                            "update": "InstallComplete"
+                        }
+                        welcomeWindow.webContents.send(`statusUpdate`, ipcUpdate)
+                    }
+                })
+            } else {
+                installDependenciesMac(stdout)
             }
         })
     } else {
@@ -1362,6 +1390,26 @@ function installDependenciesLinux(checkError) {
             "error": "builtOnMissing"
         }
         welcomeWindow.webContents.send(`statusUpdate`, ipcUpdate)
+    }
+}
+
+function installDependenciesMac(checkError) {
+    if (String(checkError).includes(`command not found`)) {
+        let ipcUpdate = {
+            "update": "installingOpenVPN"
+        }
+        welcomeWindow.webContents.send(`statusUpdate`, ipcUpdate)
+        exec(`./${path.join(__dirname, "assets", "brew", "bin", "brew")} install openvpn stunnel`, (error, stdout, stderr) => {
+            if (error) {
+                log.error(`Main: Error installing dependencies for Mac from brew. Error: ${error}`)
+                let ipcUpdate = {
+                    "error": "OpenVPNInstallFail",
+                    "errorText": stdout
+                }
+                welcomeWindow.webContents.send(`statusUpdate`, ipcUpdate)
+            }
+            log.info(stdout)
+        })
     }
 }
 
