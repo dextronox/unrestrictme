@@ -1401,12 +1401,12 @@ function installDependenciesMac(checkError) {
             "update": "installingOpenVPN"
         }
         welcomeWindow.webContents.send(`statusUpdate`, ipcUpdate)
-        exec(`./${path.join(__dirname, "assets", "brew", "bin", "brew")} install openvpn stunnel`, (error, stdout, stderr) => {
+        exec(`mkdir ${path.join(app.getPath('userData'))}/homebrew && curl -L https://github.com/Homebrew/brew/tarball/master | tar xz --strip 1 -C ${path.join(app.getPath('userData'))}/homebrew`, (error, stdout, stderr) => {
             if (error) {
-                log.error(`Main: Error installing dependencies for Mac from brew. Error: ${error}`)
+                log.error(`Main: Error downloading brew. Error: ${error}`)
                 let ipcUpdate = {
                     "error": "OpenVPNInstallFail",
-                    "errorText": stdout
+                    "errorText": error
                 }
                 welcomeWindow.webContents.send(`statusUpdate`, ipcUpdate)
             }

@@ -58,6 +58,12 @@ $(document).ready(() => {
                 $("#errorExcerpt").css("display", "block")
                 $("#errorExcerptText").html(args["errorText"])
                 swal("Whoops!", "We were unable to create a settings.conf file.", "error")
+            } else if (args["error"] === "downloadingBrew") {
+                //MACOS
+                $("#step3_repository_installing").css("display", "none")
+                $("#errorExcerpt").css("display", "block")
+                $("#errorExcerptText").html(args["errorText"])
+                swal("Whoops!", "An error occurred downloading and unpacking brew, the package repository we use to download dependencies.", "error")
             }
         } else if (args["update"]) {
             if (args["update"] === "installingTAPAdapter") {
