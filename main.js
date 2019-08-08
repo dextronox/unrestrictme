@@ -109,6 +109,8 @@ function appStart() {
                 checkSettings()
             }
         })
+    } else if (os.platform() === "darwin") {
+        checkSettings()
     }
 
 }
@@ -789,7 +791,7 @@ exports.dependenciesCheck = () => {
                 installDependenciesLinux(stdout)
             }
         })
-    } else if (os.platform() === "macos") {
+    } else if (os.platform() === "darwin") {
         exec(`openvpn`, (error, stdout, stderr) => {
             if (error) {
                 log.error(`Main: Error checking whether OpenVPN is installed. Error: ${error}`)
