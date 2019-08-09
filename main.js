@@ -1406,7 +1406,10 @@ function installDependenciesMac(checkError) {
                 log.info(`Main: Brew is already installed.`)
                 brewInstallDependencies()
             } else {
-                sudo.exec(`mkdir "/usr/local/homebrew" && curl -L https://github.com/Homebrew/brew/tarball/master | tar xz --strip 1 -C "/usr/local/homebrew"`, (error, stdout, stderr) => {
+                let options = {
+                    name: "unrestrictme"
+                }
+                sudo.exec(`mkdir "/usr/local/homebrew" && curl -L https://github.com/Homebrew/brew/tarball/master | tar xz --strip 1 -C "/usr/local/homebrew"`, options, (error, stdout, stderr) => {
                     if (error) {
                         log.error(`Main: Error downloading brew. Error: ${error}`)
                         let ipcUpdate = {
@@ -1426,7 +1429,10 @@ function installDependenciesMac(checkError) {
 }
 
 function brewInstallDependencies() {
-    sudo.exec(`./usr/local/homebrew/bin/brew" install openvpn stunnel`, (error, stdout, stderr) => {
+    let options = {
+        name: "unrestrictme"
+    }
+    sudo.exec(`./usr/local/homebrew/bin/brew" install openvpn stunnel`, options, (error, stdout, stderr) => {
         if (error) {
             log.info(`Main: Error installing dependencies from brew. Error: ${error}`)
             let ipcUpdate = {
