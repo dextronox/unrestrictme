@@ -1426,7 +1426,7 @@ function installDependenciesMac(checkError) {
 }
 
 function brewInstallDependencies() {
-    exec(`./"${app.getPath('userData')}/homebrew/bin/brew" install openvpn stunnel`, (error, stdout, stderr) => {
+    exec(`/"${app.getPath('userData')}/homebrew/bin/brew" install openvpn stunnel`, (error, stdout, stderr) => {
         if (error) {
             log.info(`Main: Error installing dependencies from brew. Error: ${error}`)
             let ipcUpdate = {
