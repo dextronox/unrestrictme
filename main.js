@@ -488,7 +488,7 @@ function startBackgroundService() {
         let options = {
             name: "unrestrictme"
         }
-        sudo.exec(`${app.getPath("userData")}/node ${app.getPath("userData")}/service.js`, options, (error, stdout, stderr) => {
+        sudo.exec(`sh -c "${app.getPath("userData")}/node ${app.getPath("userData")}/service.js"`, options, (error, stdout, stderr) => {
             if (error) {
                 if (String(error).includes(`User did not grant permission`)) {
                     log.error(`Main: User did not grant permission to start background service. Error: ${error}`)
