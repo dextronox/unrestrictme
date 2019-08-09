@@ -1364,24 +1364,7 @@ function installDependenciesLinux(checkError) {
                         }
                         welcomeWindow.webContents.send(`statusUpdate`, ipcUpdate)
                     } else {
-                        let settings = {}
-                        fs.writeFile(path.join(app.getPath('userData'), 'settings.conf'), JSON.stringify(settings), (error) => {
-                            if (error) {
-                                log.error(`Main: Error occurred writing settings file. Permissions error perhaps? Error: ${error}`)
-                                let ipcUpdate = {
-                                    "error":"writingSettingsFile",
-                                    "errorText": error
-                                }
-                                welcomeWindow.webContents.send(`statusUpdate`, ipcUpdate)
-                            } else {
-                                log.info(`Main: Settings file created!`)
-                                //Show alert to user and have them run quit()
-                                let ipcUpdate = {
-                                    "update": "InstallComplete"
-                                }
-                                welcomeWindow.webContents.send(`statusUpdate`, ipcUpdate)
-                            }
-                        }) 
+                        writeBlankSettingsFile()
                     }
                 })
             }
@@ -1440,8 +1423,30 @@ function brewInstallDependencies() {
             }
             welcomeWindow.webContents.send(`statusUpdate`, ipcUpdate)
             log.info(stdout)
+            writeBlankSettingsFile()
         }
     })
+}
+
+function writeBlankSettingsFile() {
+    let settings = {}
+    fs.writeFile(path.join(app.getPath('userData'), 'settings.conf'), JSON.stringify(settings), (error) => {
+        if (error) {
+            log.error(`Main: Error occurred writing settings file. Permissions error perhaps? Error: ${error}`)
+            let ipcUpdate = {
+                "error":"writingSettingsFile",
+                "errorText": error
+            }
+            welcomeWindow.webContents.send(`statusUpdate`, ipcUpdate)
+        } else {
+            log.info(`Main: Settings file created!`)
+            //Show alert to user and have them run quit()
+            let ipcUpdate = {
+                "update": "InstallComplete"
+            }
+            welcomeWindow.webContents.send(`statusUpdate`, ipcUpdate)
+        }
+    }) 
 }
 function checkIfConnected() {
     //This function runs on start to check if openvpn is already running.
