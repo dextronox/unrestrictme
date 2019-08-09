@@ -1401,12 +1401,12 @@ function installDependenciesMac(checkError) {
             "update": "installingOpenVPN"
         }
         welcomeWindow.webContents.send(`statusUpdate`, ipcUpdate)
-        fs.exists(`${app.getPath('userData')}/homebrew/bin/brew`, (exists) => {
+        fs.exists(`/usr/local/homebrew/bin/brew`, (exists) => {
             if (exists) {
                 log.info(`Main: Brew is already installed.`)
                 brewInstallDependencies()
             } else {
-                exec(`mkdir "${app.getPath('userData')}/homebrew" && curl -L https://github.com/Homebrew/brew/tarball/master | tar xz --strip 1 -C "${app.getPath('userData')}/homebrew"`, (error, stdout, stderr) => {
+                exec(`mkdir "/usr/local/homebrew" && curl -L https://github.com/Homebrew/brew/tarball/master | tar xz --strip 1 -C "/usr/local/homebrew"`, (error, stdout, stderr) => {
                     if (error) {
                         log.error(`Main: Error downloading brew. Error: ${error}`)
                         let ipcUpdate = {
@@ -1426,7 +1426,7 @@ function installDependenciesMac(checkError) {
 }
 
 function brewInstallDependencies() {
-    exec(`/"${app.getPath('userData')}/homebrew/bin/brew" install openvpn stunnel`, (error, stdout, stderr) => {
+    exec(`./usr/local/homebrew/bin/brew" install openvpn stunnel`, (error, stdout, stderr) => {
         if (error) {
             log.info(`Main: Error installing dependencies from brew. Error: ${error}`)
             let ipcUpdate = {
