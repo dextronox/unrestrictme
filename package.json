@@ -57,9 +57,9 @@
     },
     "mac": {
       "category": "public.app-category.utilities",
-      "target":"dmg",
+      "target": "dmg",
       "icon": "icon.icns",
-      "type":"development"
+      "type": "development"
     },
     "dmg": {
       "icon": "build/icon.icns"
