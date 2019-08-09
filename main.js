@@ -1409,20 +1409,17 @@ function installDependenciesMac(checkError) {
                 let options = {
                     name: "unrestrictme"
                 }
-                sudo.exec(`mkdir "/usr/local/homebrew" && curl -L https://github.com/Homebrew/brew/tarball/master | tar xz --strip 1 -C "/usr/local/homebrew" && /usr/local/homebrew/bin/brew install openvpn stunnel`, options, (error, stdout, stderr) => {
+                sudo.exec(`mkdir "/usr/local/homebrew" && curl -L https://github.com/Homebrew/brew/tarball/master | tar xz --strip 1 -C "/usr/local/homebrew"`, options, (error, stdout, stderr) => {
                     if (error) {
-                        log.error(`Main: Error downloading brew and installing dependencies. Error: ${error}`)
+                        log.error(`Main: Error downloading brew. Error: ${error}`)
                         let ipcUpdate = {
                             "error": "downloadingBrew",
                             "errorText": JSON.stringify(error)
                         }
                         welcomeWindow.webContents.send(`statusUpdate`, ipcUpdate)
                     } else {
-                        //Everything's been installed!
-                        let ipcUpdate = {
-                            "update": "InstallComplete"
-                        }
-                        welcomeWindow.webContents.send(`statusUpdate`, ipcUpdate)
+                        //Install openvpn and stunnel
+                        brewInstallDependencies()
                     }
                 })
             }
@@ -1432,10 +1429,7 @@ function installDependenciesMac(checkError) {
 }
 
 function brewInstallDependencies() {
-    let options = {
-        name: "unrestrictme"
-    }
-    sudo.exec(`/usr/local/homebrew/bin/brew install openvpn stunnel`, options, (error, stdout, stderr) => {
+    exec(`/usr/local/homebrew/bin/brew install openvpn stunnel`, (error, stdout, stderr) => {
         if (error) {
             log.info(`Main: Error installing dependencies from brew. Error: ${error}`)
             let ipcUpdate = {
@@ -1448,6 +1442,7 @@ function brewInstallDependencies() {
                 "update": "InstallComplete"
             }
             welcomeWindow.webContents.send(`statusUpdate`, ipcUpdate)
+            log.info(stdout)
         }
     })
 }
