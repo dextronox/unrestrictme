@@ -63,7 +63,7 @@ $(document).ready(() => {
                 $("#step3_repository_installing").css("display", "none")
                 $("#errorExcerpt").css("display", "block")
                 $("#errorExcerptText").html(args["errorText"])
-                swal("Whoops!", "An error occurred downloading and unpacking brew, the package repository we use to download dependencies.", "error")
+                swal("Whoops!", "An error occurred either downloading and unpacking brew, or installing our dependencies.", "error")
             }
         } else if (args["update"]) {
             if (args["update"] === "installingTAPAdapter") {
