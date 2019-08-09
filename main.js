@@ -402,21 +402,35 @@ function createBackgroundService() {
             startBackgroundService()
         })
     } else if (os.platform() === "darwin") {
-        if (!fs.existsSync(path.join(app.getPath('userData'), "node"))) {
-            fs.copyFile(path.join(__dirname, "assets/node/node"), path.join(app.getPath('userData'), "node"), (error) => {
-                if (error) {
-                    log.error(`Main: An error occurred copying the node executable to the userData folder.`)
-                    try {
-                        mainWindow.webContents.send("backgroundService", "startingError")
-                    } catch (e) {
-                        log.error(`Main: Couldn't send backgroundService startingError to renderer.`)
-                    }
-                    return
+        fs.copyFile(path.join(__dirname, "service.js"), path.join(app.getPath("userData"), "service.js"), (error) => {
+            if (error) {
+                log.error(`Main: An error occurred copying the service.js to the userData folder.`)
+                try {
+                    mainWindow.webContents.send("backgroundService", "startingError")
+                } catch (e) {
+                    log.error(`Main: Couldn't send backgroundService startingError to renderer.`)
+                }
+                return
+            } else {
+                if (!fs.existsSync(path.join(app.getPath('userData'), "node"))) {
+                    fs.copyFile(path.join(__dirname, "assets/node/node"), path.join(app.getPath('userData'), "node"), (error) => {
+                        if (error) {
+                            log.error(`Main: An error occurred copying the node executable to the userData folder.`)
+                            try {
+                                mainWindow.webContents.send("backgroundService", "startingError")
+                            } catch (e) {
+                                log.error(`Main: Couldn't send backgroundService startingError to renderer.`)
+                            }
+                            return
+                        } else {
+                            startBackgroundService()
+                        }
+                    })
                 } else {
                     startBackgroundService()
                 }
-            })
-        }
+            }
+        })
     }
 
 }
