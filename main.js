@@ -1409,9 +1409,20 @@ function installDependenciesMac(checkError) {
                     "errorText": error
                 }
                 welcomeWindow.webContents.send(`statusUpdate`, ipcUpdate)
+            } else {
+                //Install openvpn and stunnel
+                exec(`./"${app.getPath('userData')}/homebrew/bin/brew" install openvpn stunnel`, (error, stdout, stderr) => {
+                    if (error) {
+                        let ipcUpdate = {
+                            "error": "OpenVPNInstallFail",
+                            "errorText": error
+                        }
+                        welcomeWindow.webContents.send(`statusUpdate`, ipcUpdate)
+                    } else {
+                        log.info(stdout)
+                    }
+                })
             }
-            log.info(path.join(app.getPath('userData')))
-            log.info(stdout)
         })
     }
 }
