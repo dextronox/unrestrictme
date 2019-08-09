@@ -326,58 +326,11 @@ function startBackgroundServer() {
 }
 
 function createBackgroundService() {
-    if (!fs.existsSync(path.join(app.getPath('userData'), "node"))) {
-        fs.copyFile(path.join(__dirname, "assets/node/node"), path.join(app.getPath('userData'), "node"), (error) => {
-            if (error) {
-                log.error(`Main: An error occurred copying the node executable to the userData folder.`)
-                try {
-                    mainWindow.webContents.send("backgroundService", "startingError")
-                } catch (e) {
-                    log.error(`Main: Couldn't send backgroundService startingError to renderer.`)
-                }
-                return
-            }
-
-        })
-    }
-    let template = `[Unit]
-    Description=unrestrictme Service
-    
-    [Service]
-    ExecStart=${path.join(app.getPath('userData'), 'service.js')}
-    Restart=no
-    User=root
-    Group=root
-    Environment=PATH=/usr/bin:/usr/sbin:/usr/local/bin:/sbin
-    Environment=NODE_ENV=production
-    WorkingDirectory=${app.getPath('userData')}
-    
-    [Install]
-    WantedBy=multi-user.target`
-    fs.readFile(path.join(__dirname, 'service.js'), (error, templateData) => {
-        if (error) {
-            log.error(`Main: An error occurred reading the template service file. Error: ${error}`)
-            try {
-                mainWindow.webContents.send("backgroundService", "startingError")
-            } catch (e) {
-                log.error(`Main: Couldn't send backgroundService startingError to renderer.`)
-            }
-            return
-        }
-        let shebang = new Buffer(`#!${app.getPath('userData')}/node\n`)
-        fs.writeFile(path.join(app.getPath('userData'), 'service.js'), shebang, (error) => {
-            if (error) {
-                log.error(`Main: An error occurred writing the shebang to the service file. Error: ${error}`)
-                try {
-                    mainWindow.webContents.send("backgroundService", "startingError")
-                } catch (e) {
-                    log.error(`Main: Couldn't send backgroundService startingError to renderer.`)
-                }
-                return
-            }
-            fs.appendFile(path.join(app.getPath('userData'), 'service.js'), templateData, (error) => {
+    if (os.platform() === "linux") {
+        if (!fs.existsSync(path.join(app.getPath('userData'), "node"))) {
+            fs.copyFile(path.join(__dirname, "assets/node/node"), path.join(app.getPath('userData'), "node"), (error) => {
                 if (error) {
-                    log.error(`Main: An error occurred appending the service file. Error: ${error}`)
+                    log.error(`Main: An error occurred copying the node executable to the userData folder.`)
                     try {
                         mainWindow.webContents.send("backgroundService", "startingError")
                     } catch (e) {
@@ -385,21 +338,87 @@ function createBackgroundService() {
                     }
                     return
                 }
+    
+            })
+        }
+        let template = `[Unit]
+        Description=unrestrictme Service
+        
+        [Service]
+        ExecStart=${path.join(app.getPath('userData'), 'service.js')}
+        Restart=no
+        User=root
+        Group=root
+        Environment=PATH=/usr/bin:/usr/sbin:/usr/local/bin:/sbin
+        Environment=NODE_ENV=production
+        WorkingDirectory=${app.getPath('userData')}
+        
+        [Install]
+        WantedBy=multi-user.target`
+        fs.readFile(path.join(__dirname, 'service.js'), (error, templateData) => {
+            if (error) {
+                log.error(`Main: An error occurred reading the template service file. Error: ${error}`)
+                try {
+                    mainWindow.webContents.send("backgroundService", "startingError")
+                } catch (e) {
+                    log.error(`Main: Couldn't send backgroundService startingError to renderer.`)
+                }
+                return
+            }
+            let shebang = new Buffer(`#!${app.getPath('userData')}/node\n`)
+            fs.writeFile(path.join(app.getPath('userData'), 'service.js'), shebang, (error) => {
+                if (error) {
+                    log.error(`Main: An error occurred writing the shebang to the service file. Error: ${error}`)
+                    try {
+                        mainWindow.webContents.send("backgroundService", "startingError")
+                    } catch (e) {
+                        log.error(`Main: Couldn't send backgroundService startingError to renderer.`)
+                    }
+                    return
+                }
+                fs.appendFile(path.join(app.getPath('userData'), 'service.js'), templateData, (error) => {
+                    if (error) {
+                        log.error(`Main: An error occurred appending the service file. Error: ${error}`)
+                        try {
+                            mainWindow.webContents.send("backgroundService", "startingError")
+                        } catch (e) {
+                            log.error(`Main: Couldn't send backgroundService startingError to renderer.`)
+                        }
+                        return
+                    }
+                })
             })
         })
-    })
-    fs.writeFile(path.join(app.getPath('userData'), 'serviceTemplate'), template, (error) => {
-        if (error) {
-            log.error(`Main: An error occurred writing the service file. Error: ${error}`)
-            try {
-                mainWindow.webContents.send("backgroundService", "startingError")
-            } catch (e) {
-                log.error(`Main: Couldn't send backgroundService startingError to renderer.`)
+        fs.writeFile(path.join(app.getPath('userData'), 'serviceTemplate'), template, (error) => {
+            if (error) {
+                log.error(`Main: An error occurred writing the service file. Error: ${error}`)
+                try {
+                    mainWindow.webContents.send("backgroundService", "startingError")
+                } catch (e) {
+                    log.error(`Main: Couldn't send backgroundService startingError to renderer.`)
+                }
+                return
             }
-            return
+            startBackgroundService()
+        })
+    } else if (os.platform() === "darwin") {
+        if (!fs.existsSync(path.join(app.getPath('userData'), "node"))) {
+            fs.copyFile(path.join(__dirname, "assets/node/node"), path.join(app.getPath('userData'), "node"), (error) => {
+                if (error) {
+                    log.error(`Main: An error occurred copying the node executable to the userData folder.`)
+                    try {
+                        mainWindow.webContents.send("backgroundService", "startingError")
+                    } catch (e) {
+                        log.error(`Main: Couldn't send backgroundService startingError to renderer.`)
+                    }
+                    return
+                } else {
+                    startBackgroundService()
+                }
+            })
         }
-        startBackgroundService()
-    })
+    }
+
 }
 function startBackgroundService() {
     try {
@@ -410,46 +429,92 @@ function startBackgroundService() {
     let options = {
         name: "unrestrictme"
     }
-    sudo.exec(`sh -c "cp ${path.join(app.getPath('userData'), 'serviceTemplate')} /etc/systemd/system/unrestrictme.service && systemctl daemon-reload && chmod +x /etc/systemd/system/unrestrictme.service && systemctl start unrestrictme"`, options, (error, stdout, stderr) => {
-        if (error) {
-            if (String(error).includes(`User did not grant permission`)) {
-                log.error(`Main: User did not grant permission to start background service. Error: ${error}`)
-                try {
-                    mainWindow.webContents.send("backgroundService", "startingPermission")
-                } catch (e) {
-                    log.error(`Main: Couldn't send backgroundService startingPermission to renderer.`)
-                }
-            } else {
-                if (!clientObj || clientObj != "killed") {
-                    log.error(`Main: An error occurred running the command to start the background service.`)
+    if (os.platform() === "linux") {
+        sudo.exec(`sh -c "cp ${path.join(app.getPath('userData'), 'serviceTemplate')} /etc/systemd/system/unrestrictme.service && systemctl daemon-reload && chmod +x /etc/systemd/system/unrestrictme.service && systemctl start unrestrictme"`, options, (error, stdout, stderr) => {
+            if (error) {
+                if (String(error).includes(`User did not grant permission`)) {
+                    log.error(`Main: User did not grant permission to start background service. Error: ${error}`)
                     try {
-                        mainWindow.webContents.send("backgroundService", "startingError")
+                        mainWindow.webContents.send("backgroundService", "startingPermission")
                     } catch (e) {
-                        log.error(`Main: Couldn't send backgroundService startingError to renderer.`)
+                        log.error(`Main: Couldn't send backgroundService startingPermission to renderer.`)
+                    }
+                } else {
+                    if (!clientObj || clientObj != "killed") {
+                        log.error(`Main: An error occurred running the command to start the background service.`)
+                        try {
+                            mainWindow.webContents.send("backgroundService", "startingError")
+                        } catch (e) {
+                            log.error(`Main: Couldn't send backgroundService startingError to renderer.`)
+                        }
+                    }
+                }
+            } else if (stderr) {
+                if (String(stderr).includes(`Request dismissed`)) {
+                    log.error(`Main: User did not grant permission to start background service. Error: ${error}`)
+                    try {
+                        mainWindow.webContents.send("backgroundService", "startingPermission")
+                    } catch (e) {
+                        log.error(`Main: Couldn't send backgroundService startingPermission to renderer.`)
+                    }
+                } else {
+                    if (!clientObj || clientObj != "killed") {
+                        log.error(`Main: An error occurred running the command to start the background service.`)
+                        try {
+                            mainWindow.webContents.send("backgroundService", "startingError")
+                        } catch (e) {
+                            log.error(`Main: Couldn't send backgroundService startingError to renderer.`)
+                        }
                     }
                 }
             }
-        } else if (stderr) {
-            if (String(stderr).includes(`Request dismissed`)) {
-                log.error(`Main: User did not grant permission to start background service. Error: ${error}`)
-                try {
-                    mainWindow.webContents.send("backgroundService", "startingPermission")
-                } catch (e) {
-                    log.error(`Main: Couldn't send backgroundService startingPermission to renderer.`)
-                }
-            } else {
-                if (!clientObj || clientObj != "killed") {
-                    log.error(`Main: An error occurred running the command to start the background service.`)
-                    try {
-                        mainWindow.webContents.send("backgroundService", "startingError")
-                    } catch (e) {
-                        log.error(`Main: Couldn't send backgroundService startingError to renderer.`)
-                    }
-                }
-            }
+            log.info(`Stdout: ${stdout}, Stderr: ${stderr}, Error: ${error}`)
+        })
+    } else if (os.platform() === "darwin") {
+        let options = {
+            name: "unrestrictme"
         }
-        log.info(`Stdout: ${stdout}, Stderr: ${stderr}, Error: ${error}`)
-    })
+        sudo.exec(`${app.getPath("userData")}/node ${app.getPath("userData")}/service.js`, options, (error, stdout, stderr) => {
+            if (error) {
+                if (String(error).includes(`User did not grant permission`)) {
+                    log.error(`Main: User did not grant permission to start background service. Error: ${error}`)
+                    try {
+                        mainWindow.webContents.send("backgroundService", "startingPermission")
+                    } catch (e) {
+                        log.error(`Main: Couldn't send backgroundService startingPermission to renderer.`)
+                    }
+                } else {
+                    if (!clientObj || clientObj != "killed") {
+                        log.error(`Main: An error occurred running the command to start the background service.`)
+                        try {
+                            mainWindow.webContents.send("backgroundService", "startingError")
+                        } catch (e) {
+                            log.error(`Main: Couldn't send backgroundService startingError to renderer.`)
+                        }
+                    }
+                }
+            } else if (stderr) {
+                if (String(stderr).includes(`Request dismissed`)) {
+                    log.error(`Main: User did not grant permission to start background service. Error: ${error}`)
+                    try {
+                        mainWindow.webContents.send("backgroundService", "startingPermission")
+                    } catch (e) {
+                        log.error(`Main: Couldn't send backgroundService startingPermission to renderer.`)
+                    }
+                } else {
+                    if (!clientObj || clientObj != "killed") {
+                        log.error(`Main: An error occurred running the command to start the background service.`)
+                        try {
+                            mainWindow.webContents.send("backgroundService", "startingError")
+                        } catch (e) {
+                            log.error(`Main: Couldn't send backgroundService startingError to renderer.`)
+                        }
+                    }
+                }
+            }
+        })
+    }
+
 }
 
 function backgroundProcessDataHandler(data) {
