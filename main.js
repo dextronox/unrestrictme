@@ -1401,32 +1401,43 @@ function installDependenciesMac(checkError) {
             "update": "installingOpenVPN"
         }
         welcomeWindow.webContents.send(`statusUpdate`, ipcUpdate)
-        exec(`mkdir "${app.getPath('userData')}/homebrew" && curl -L https://github.com/Homebrew/brew/tarball/master | tar xz --strip 1 -C "${app.getPath('userData')}/homebrew"`, (error, stdout, stderr) => {
-            if (error) {
-                log.error(`Main: Error downloading brew. Error: ${error}`)
-                let ipcUpdate = {
-                    "error": "downloadingBrew",
-                    "errorText": error
-                }
-                welcomeWindow.webContents.send(`statusUpdate`, ipcUpdate)
+        fs.exists(`${app.getPath('userData')}/homebrew/bin/brew`, (exists) => {
+            if (exists) {
+                log.info(`Main: Brew is already installed.`)
+                brewInstallDependencies()
             } else {
-                //Install openvpn and stunnel
-                exec(`./"${app.getPath('userData')}/homebrew/bin/brew" install openvpn stunnel`, (error, stdout, stderr) => {
+                exec(`mkdir "${app.getPath('userData')}/homebrew" && curl -L https://github.com/Homebrew/brew/tarball/master | tar xz --strip 1 -C "${app.getPath('userData')}/homebrew"`, (error, stdout, stderr) => {
                     if (error) {
+                        log.error(`Main: Error downloading brew. Error: ${error}`)
                         let ipcUpdate = {
-                            "error": "OpenVPNInstallFail",
-                            "errorText": error
+                            "error": "downloadingBrew",
+                            "errorText": JSON.stringify(error)
                         }
                         welcomeWindow.webContents.send(`statusUpdate`, ipcUpdate)
                     } else {
-                        log.info(stdout)
+                        //Install openvpn and stunnel
+                            brewInstallDependencies()
                     }
                 })
             }
         })
+
     }
 }
 
+function brewInstallDependencies() {
+    exec(`./"${app.getPath('userData')}/homebrew/bin/brew" install openvpn stunnel`, (error, stdout, stderr) => {
+        if (error) {
+            let ipcUpdate = {
+                "error": "OpenVPNInstallFail",
+                "errorText": error
+            }
+            welcomeWindow.webContents.send(`statusUpdate`, ipcUpdate)
+        } else {
+            log.info(stdout)
+        }
+    })
+}
 function checkIfConnected() {
     //This function runs on start to check if openvpn is already running.
     if (os.platform() === "win32") {
