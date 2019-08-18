@@ -999,7 +999,7 @@ function connect(config) {
                 })
             })
         } else if (os.platform() === "linux" || os.platform() === "darwin") {
-            fs.copyFile(path.join(__dirname, "assets", "openvpn", "update-resolv-conf"), app.getPath("userData"), (error) => {
+            fs.copyFile(path.join(__dirname, "assets", "openvpn", "update-resolv-conf"), path.join(app.getPath("userData"), "update-resolv-conf"), (error) => {
                 if (error) {
                     let status = {
                         "writeError": true
