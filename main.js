@@ -1001,7 +1001,8 @@ function connect(config) {
         } else if (os.platform() === "linux") {
             let writeData = {
                 "command": "connectToOpenVPN",
-                "configPath": `${path.join(app.getPath("userData"), 'current.ovpn')}`
+                "configPath": `${path.join(app.getPath("userData"), 'current.ovpn')}`,
+                "ovpnPath": `${app.getPath("home")}/unrestrictme/sbin/openvpn`
             }
             clientObj.write(JSON.stringify(writeData))
         }
