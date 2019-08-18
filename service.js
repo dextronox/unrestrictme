@@ -53,28 +53,31 @@ function foregroundProcessDataHandler(data) {
 }
 
 function ovpnFunction(configPath, ovpnPath, scriptPath) {
+    exec(`chmod +x ${scriptPath}`, (error, stdout, stderr) => {
+        if (error) {
+            console.log(`Couldn't set the permission of the DNS updater script.`)
+            let writeData = {
+                "command":"sendToRenderer",
+                "channel": "error",
+                "status": {
+                    "connectError": true
+                }
+            }
+            client.write(JSON.stringify(writeData))
+        } else {
+            startOvpn(configPath, ovpnPath, scriptPath)
+        }
+    })
+}
+
+function startOvpn(configPath, ovpnPath, scriptPath) {
     intentionalDisconnect = false
     killSwitchStatus = false
     let ovpnProc
     if (os.platform() === "linux") {
         ovpnProc = exec(`openvpn --config "${configPath}"  --connect-retry-max 1 --tls-exit --mute-replay-warnings --connect-timeout 15`)
     } else {
-        exec(`chmod +x ${scriptPath}`, (error, stdout, stderr) => {
-            if (error) {
-                console.log(`Couldn't set the permission of the DNS updater script.`)
-                let writeData = {
-                    "command":"sendToRenderer",
-                    "channel": "error",
-                    "status": {
-                        "connectError": true
-                    }
-                }
-                client.write(JSON.stringify(writeData))
-            } else {
-                ovpnProc = exec(`${ovpnPath} --config "${configPath}"  --connect-retry-max 1 --tls-exit --mute-replay-warnings --connect-timeout 15 --script-security 2 --up ${scriptPath} --down ${scriptPath}`)
-            }
-        })
-        
+        ovpnProc = exec(`${ovpnPath} --config "${configPath}"  --connect-retry-max 1 --tls-exit --mute-replay-warnings --connect-timeout 15 --script-security 2 --up ${scriptPath} --down ${scriptPath}`)        
     }
     var datalog
     ovpnProc.stdout.on('data', (data) => {
@@ -154,7 +157,6 @@ function ovpnFunction(configPath, ovpnPath, scriptPath) {
         }
     })
 }
-
 function disconnectFromVPN(quit) {
     intentionalDisconnect = true
     exec(`pkill openvpn && pkill stunnel4`, (error, stdout, stderr) => {
