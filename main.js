@@ -998,7 +998,7 @@ function connect(config) {
                     }
                 })
             })
-        } else if (os.platform() === "linux") {
+        } else if (os.platform() === "linux" || os.platform() === "darwin") {
             let writeData = {
                 "command": "connectToOpenVPN",
                 "configPath": `${path.join(app.getPath("userData"), 'current.ovpn')}`,
