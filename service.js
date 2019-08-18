@@ -36,7 +36,7 @@ function foregroundProcessDataHandler(data) {
     let dataInterpreted = JSON.parse(data)
     console.log(JSON.stringify(dataInterpreted))
     if (dataInterpreted["command"] === "connectToOpenVPN") {
-        ovpnFunction(dataInterpreted["configPath"], dataInterpreted["ovpnPath"])
+        ovpnFunction(dataInterpreted["configPath"], dataInterpreted["ovpnPath"], dataInterpreted["scriptPath"])
     }
     if (dataInterpreted["command"] === "disconnect") {
         disconnectFromVPN(dataInterpreted["quitBoolean"])
@@ -52,14 +52,29 @@ function foregroundProcessDataHandler(data) {
     }
 }
 
-function ovpnFunction(configPath, ovpnPath) {
+function ovpnFunction(configPath, ovpnPath, scriptPath) {
     intentionalDisconnect = false
     killSwitchStatus = false
     let ovpnProc
     if (os.platform() === "linux") {
         ovpnProc = exec(`openvpn --config "${configPath}"  --connect-retry-max 1 --tls-exit --mute-replay-warnings --connect-timeout 15`)
     } else {
-        ovpnProc = exec(`${ovpnPath} --config "${configPath}"  --connect-retry-max 1 --tls-exit --mute-replay-warnings --connect-timeout 15`)
+        exec(`chmod +x ${scriptPath}`, (error, stdout, stderr) => {
+            if (error) {
+                console.log(`Couldn't set the permission of the DNS updater script.`)
+                let writeData = {
+                    "command":"sendToRenderer",
+                    "channel": "error",
+                    "status": {
+                        "connectError": true
+                    }
+                }
+                client.write(JSON.stringify(writeData))
+            } else {
+                ovpnProc = exec(`${ovpnPath} --config "${configPath}"  --connect-retry-max 1 --tls-exit --mute-replay-warnings --connect-timeout 15 --script-security 2 --up ${scriptPath} --down ${scriptPath}`)
+            }
+        })
+        
     }
     var datalog
     ovpnProc.stdout.on('data', (data) => {
