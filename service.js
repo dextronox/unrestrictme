@@ -7,10 +7,6 @@ const os = require("os")
 const {exec} = require('child_process')
 
 let killSwitchStatus, intentionalDisconnect
-function setLogValues() {
-    //We need a new way of logging, because this script runs as root (i.e. different user environment)
-}
-setLogValues()
 const client = net.createConnection({ port: 4964 }, () => {
     //Runs once connected to the server.
     console.log(`Background: Connected to client server. Ready to receive instructions.`)
@@ -145,7 +141,7 @@ function disconnectFromVPN(quit) {
     intentionalDisconnect = true
     exec(`pkill openvpn && pkill stunnel4`, (error, stdout, stderr) => {
         if (error) {
-            console.log(`Background: An error occurred running pkill for OpenVPN and stunnel4. Error: ${error}`)
+            console.log(`Background: An error occurred running pkill for OpenVPN and stunnel4. Error: ${error + stdout + stderr}`)
             let writeData = {
                 "command":"sendToRenderer",
                 "channel": "error",
