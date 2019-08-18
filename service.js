@@ -141,7 +141,7 @@ function disconnectFromVPN(quit) {
     intentionalDisconnect = true
     exec(`pkill openvpn && pkill stunnel4`, (error, stdout, stderr) => {
         if (error) {
-            console.log(`Background: An error occurred running pkill for OpenVPN and stunnel4. Error: ${error + stdout + stderr}`)
+            console.log(error, stdout, stderr)
             let writeData = {
                 "command":"sendToRenderer",
                 "channel": "error",
