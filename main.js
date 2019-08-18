@@ -1,6 +1,6 @@
 //unrestrict.me Desktop Application.
 //Dependencies
-const {app, BrowserWindow, ipcMain, Menu, Tray, dialog, clipboard} = require("electron")
+const {app, BrowserWindow, ipcMain, Menu, Tray, dialog, clipboard, nativeImage} = require("electron")
 const path = require("path")
 module.paths.push(path.resolve('node_modules'));
 module.paths.push(path.resolve('../node_modules'));
