@@ -999,14 +999,29 @@ function connect(config) {
                 })
             })
         } else if (os.platform() === "linux" || os.platform() === "darwin") {
-            fs.copyFile(path.join(__dirname, "assets", "openvpn", "update-resolv-conf"), app.getPath("userData"))
-            let writeData = {
-                "command": "connectToOpenVPN",
-                "configPath": `${path.join(app.getPath("userData"), 'current.ovpn')}`,
-                "ovpnPath": `${app.getPath("home")}/unrestrictme/sbin/openvpn`,
-                "scriptPath": `${app.getPath("userData")}/update-resolv-conf`
-            }
-            clientObj.write(JSON.stringify(writeData))
+            fs.copyFile(path.join(__dirname, "assets", "openvpn", "update-resolv-conf"), app.getPath("userData"), (error) => {
+                if (error) {
+                    let status = {
+                        "writeError": true
+                    }
+                    try {
+                        mainWindow.webContents.send('error', status)
+                    } catch(e) {
+                        log.error(`Main: Couldn't send OpenVPN status to renderer. Error: ${e}`)
+                    }
+                    log.info(`Main: Couldn't copy the DNS updater script. Error: ${error}`)
+                    return
+                } else {
+                    let writeData = {
+                        "command": "connectToOpenVPN",
+                        "configPath": `${path.join(app.getPath("userData"), 'current.ovpn')}`,
+                        "ovpnPath": `${app.getPath("home")}/unrestrictme/sbin/openvpn`,
+                        "scriptPath": `${app.getPath("userData")}/update-resolv-conf`
+                    }
+                    clientObj.write(JSON.stringify(writeData))
+                }
+            })
+
         }
     }) 
 }
