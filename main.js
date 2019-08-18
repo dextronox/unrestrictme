@@ -1,6 +1,6 @@
 //unrestrict.me Desktop Application.
 //Dependencies
-const {app, BrowserWindow, ipcMain, Menu, Tray, dialog, clipboard, nativeImage} = require("electron")
+const {app, BrowserWindow, ipcMain, Menu, Tray, dialog, clipboard} = require("electron")
 const path = require("path")
 module.paths.push(path.resolve('node_modules'));
 module.paths.push(path.resolve('../node_modules'));
@@ -642,7 +642,7 @@ function createMainWindow() {
     if (os.platform() === "win32") {
         tray = new Tray(path.join(__dirname, "assets", "icons", "win.ico"))
     } else if (os.platform() === "darwin") {
-        tray = new Tray(nativeImage.createFromPath(path.join(__dirname, "assets", "icons", "icon.png")))
+        tray = new Tray(path.join(__dirname, "assets", "icons", "mac.png"))
     } else {
         tray = new Tray(path.join(__dirname, "assets", "icons", "icon.png"))
     }
