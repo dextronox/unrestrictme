@@ -1098,7 +1098,7 @@ function disconnect() {
             log.info(`Main: OpenVPN was killed`)
             return true;
         })
-    } else if (os.platform() === "linux") {
+    } else if (os.platform() === "linux" || os.platform() === "darwin") {
         let writeData = {
             "command": "disconnect",
             "quitBoolean": false
