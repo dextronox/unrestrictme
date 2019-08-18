@@ -761,6 +761,16 @@ function quit(hard) {
         } else {
             quit(true)
         }
+    } else if (os.platform() === "darwin" && !hard){
+        if (clientObj && clientObj != "killed") {
+            let writeData = {
+                "command": "disconnect",
+                "quitBoolean": true
+            }
+            clientObj.write(JSON.stringify(writeData))
+        } else {
+            quit(true)
+        }
     } else if (hard) {
         tray.destroy()
         app.quit()
