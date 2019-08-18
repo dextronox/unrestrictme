@@ -140,7 +140,7 @@ function ovpnFunction(configPath) {
 function disconnectFromVPN(quit) {
     intentionalDisconnect = true
     exec(`pkill openvpn && pkill stunnel4`, (error, stdout, stderr) => {
-        if (error) {
+        if (error && error.code != 1) {
             console.log(error, stdout, stderr)
             let writeData = {
                 "command":"sendToRenderer",
