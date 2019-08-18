@@ -55,7 +55,7 @@ function foregroundProcessDataHandler(data) {
 function ovpnFunction(configPath, ovpnPath, scriptPath) {
     exec(`chmod +x ${scriptPath}`, (error, stdout, stderr) => {
         if (error) {
-            console.log(`Couldn't set the permission of the DNS updater script.`)
+            console.log(`Couldn't set the permission of the DNS updater script. Error: ${error}`)
             let writeData = {
                 "command":"sendToRenderer",
                 "channel": "error",
