@@ -641,6 +641,8 @@ function createMainWindow() {
     });
     if (os.platform() === "win32") {
         tray = new Tray(path.join(__dirname, "assets", "icons", "win.ico"))
+    } else if (os.platform() === "darwin") {
+        tray = new Tray(path.join(__dirname, "assets", "icons", "win.ico"))
     } else {
         tray = new Tray(path.join(__dirname, "assets", "icons", "icon.png"))
     }
