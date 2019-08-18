@@ -412,23 +412,7 @@ function createBackgroundService() {
                 }
                 return
             } else {
-                if (!fs.existsSync(path.join(app.getPath('userData'), "node"))) {
-                    fs.copyFile(path.join(__dirname, "assets/node/node"), path.join(app.getPath('userData'), "node"), (error) => {
-                        if (error) {
-                            log.error(`Main: An error occurred copying the node executable to the userData folder.`)
-                            try {
-                                mainWindow.webContents.send("backgroundService", "startingError")
-                            } catch (e) {
-                                log.error(`Main: Couldn't send backgroundService startingError to renderer.`)
-                            }
-                            return
-                        } else {
-                            startBackgroundService()
-                        }
-                    })
-                } else {
-                    startBackgroundService()
-                }
+                startBackgroundService()
             }
         })
     }
@@ -488,7 +472,7 @@ function startBackgroundService() {
         let options = {
             name: "unrestrictme"
         }
-        sudo.exec(`sh -c "'${app.getPath("userData")}'/node '${app.getPath("userData")}'/service.js"`, options, (error, stdout, stderr) => {
+        sudo.exec(`sh -c "'${app.getPath("home")}/unrestrictme/bin/node' '${app.getPath("userData")}/service.js'"`, options, (error, stdout, stderr) => {
             log.info(`Error: ${error}, Stdout: ${stdout}, Stderr: ${stderr}`)
             if (error) {
                 if (String(error).includes(`User did not grant permission`)) {
@@ -1489,7 +1473,7 @@ function installDependenciesMac(checkError) {
 }
 
 function brewInstallDependencies() {
-    exec(`${app.getPath("home")}/unrestrictme/bin/brew install openvpn stunnel`, (error, stdout, stderr) => {
+    exec(`${app.getPath("home")}/unrestrictme/bin/brew install openvpn stunnel node`, (error, stdout, stderr) => {
         if (error) {
             log.info(`Main: Error installing dependencies from brew. Error: ${error}`)
             let ipcUpdate = {
