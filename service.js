@@ -48,7 +48,7 @@ function foregroundProcessDataHandler(data) {
         killSwitchDisable(dataInterpreted["nic"])
     }
     if (dataInterpreted["command"] === "connectToStealth") {
-        stealthFunction(dataInterpreted["stunnelPath"]["config"], dataInterpreted["stunnelPath"]["pem"], dataInterpreted["configPath"])
+        stealthFunction(dataInterpreted["resourcePath"]["config"], dataInterpreted["resourcePath"]["pem"], dataInterpreted["configPath"], dataInterpreted["ovpnPath"], dataInterpreted["scriptPath"])
     }
 }
 
@@ -253,7 +253,15 @@ function killSwitchDisable(nic) {
     })
 }
 
-function stealthFunction(stunnelConfig, stunnelPem, openvpnConfig) {
-    let stunnelProc = exec(`stunnel4 "${stunnelConfig}" -p "${stunnelPem}"`)
-    ovpnFunction(openvpnConfig)
+function stealthFunction(stunnelPath, stunnelConfig, stunnelPem, ovpnConfig, ovpnPath, scriptPath) {
+    let stunnelProc
+    if (os.platform() === "linux") {
+        stunnelProc = exec(`stunnel4 "${stunnelConfig}" -p "${stunnelPem}"`)
+        ovpnFunction(ovpnConfig)
+    } else if (os.platform() === "darwin") {
+        stunnelProc = exec(`${stunnelPath} "${stunnelConfig}" -p "${stunnelPem}"`)
+        ovpnFunction(ovpnConfig, ovpnPath, scriptPath)
+    }
+    
+    
 }

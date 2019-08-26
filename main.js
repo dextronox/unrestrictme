@@ -1062,7 +1062,7 @@ exports.stealthConnect = (decryptedResponse) => {
                 connect(decryptedResponse["config"])
             }
         })
-    } else if (os.platform() === "linux") {
+    } else if (os.platform() === "linux" || os.platform() === "darwin") {
         fs.writeFile(path.join(app.getPath('userData'), "current.ovpn"), decryptedResponse["config"], (error) => {
             if (error) {
                 let status = {
@@ -1076,11 +1076,14 @@ exports.stealthConnect = (decryptedResponse) => {
             } else {
                 let writeData = {
                     "command": "connectToStealth",
-                    "stunnelPath": {
+                    "stunnelPath": `${app.getPath("home")}/unrestrictme/bin/stunnel`,
+                    "resourcePath": {
                         "config": path.join(app.getPath("userData"), 'stunnel.conf'),
                         "pem": path.join(app.getPath("userData"), 'stunnel.pem')
                     },
-                    "configPath": path.join(app.getPath('userData'), "current.ovpn")
+                    "configPath": path.join(app.getPath('userData'), "current.ovpn"),
+                    "ovpnPath": `${app.getPath("home")}/unrestrictme/sbin/openvpn`,
+                    "scriptPath": `${app.getPath("home")}/unrestrictme/sbin/update-resolv-conf`
                 }
                 clientObj.write(JSON.stringify(writeData))
             }
