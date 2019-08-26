@@ -1323,7 +1323,7 @@ function killSwitchEnable(nic) {
                 })
             })
         }
-    } else if (os.platform() === "linux") {
+    } else if (os.platform() === "linux" || os.platform() === "darwin") {
         log.info(`Main: Enabling Kill Switch for ${os.platform()}.`)
         //This refers to the function nic, stupid.
         if (nic === "auto") {
@@ -1421,7 +1421,7 @@ function killSwitchDisable(nic) {
             }
             log.info(`Main: Kill switch disabled.`)
         })
-    } else if (os.platform() === "linux") {
+    } else if (os.platform() === "linux" || os.platform() === "darwin") {
         let writeData = {
             "command": "killSwitchDisable",
             "nic": nic
