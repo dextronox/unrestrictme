@@ -1039,6 +1039,7 @@ function connect(config) {
 }
 
 exports.stealthConnect = (decryptedResponse) => {
+    log.info(os.platform())
     fs.writeFile(path.join(app.getPath("userData"), 'stunnel.conf'), decryptedResponse["stunnel"], (error) => {
         if (error) {
             log.error(`Main: Couldn't write the stunnel configuartion to disk.`)
