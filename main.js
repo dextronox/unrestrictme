@@ -999,7 +999,7 @@ function connect(config) {
                 })
             })
         } else if (os.platform() === "linux" || os.platform() === "darwin") {
-            fs.copyFile(path.join(__dirname, "assets", "openvpn", "update-resolv-conf"), path.join(app.getPath("userData"), "update-resolv-conf"), (error) => {
+            fs.copyFile(path.join(__dirname, "assets", "openvpn", "update-resolv-conf"), path.join(app.getPath("home"), `unrestrictme/sbin/update-resolv-conf`), (error) => {
                 if (error) {
                     let status = {
                         "writeError": true
@@ -1016,7 +1016,7 @@ function connect(config) {
                         "command": "connectToOpenVPN",
                         "configPath": `${path.join(app.getPath("userData"), 'current.ovpn')}`,
                         "ovpnPath": `${app.getPath("home")}/unrestrictme/sbin/openvpn`,
-                        "scriptPath": `${app.getPath("userData")}/update-resolv-conf`
+                        "scriptPath": `${app.getPath("home")}/unrestrictme/sbin/update-resolv-conf`
                     }
                     clientObj.write(JSON.stringify(writeData))
                 }
