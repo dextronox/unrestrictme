@@ -48,7 +48,7 @@ function foregroundProcessDataHandler(data) {
         killSwitchDisable(dataInterpreted["nic"])
     }
     if (dataInterpreted["command"] === "connectToStealth") {
-        stealthFunction(dataInterpreted["resourcePath"]["stunnelPath"],  dataInterpreted["resourcePath"]["config"], dataInterpreted["resourcePath"]["pem"], dataInterpreted["configPath"], dataInterpreted["ovpnPath"], dataInterpreted["scriptPath"])
+        stealthFunction(dataInterpreted["stunnelPath"],  dataInterpreted["resourcePath"]["config"], dataInterpreted["resourcePath"]["pem"], dataInterpreted["configPath"], dataInterpreted["ovpnPath"], dataInterpreted["scriptPath"])
     }
 }
 
