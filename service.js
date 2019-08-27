@@ -30,7 +30,7 @@ function testMessage() {
     let writeData = {
         "command":"testMessage"
     }
-    bufferManager(writeData)
+    client.write(JSON.stringify(writeData))
 }
 function foregroundProcessDataHandler(data) {
     let dataInterpreted = JSON.parse(data)
@@ -63,7 +63,7 @@ function ovpnFunction(configPath, ovpnPath, scriptPath) {
                     "connectError": true
                 }
             }
-            bufferManager(writeData)
+            client.write(JSON.stringify(writeData))
         } else {
             startOvpn(configPath, ovpnPath, scriptPath)
         }
@@ -95,7 +95,7 @@ function startOvpn(configPath, ovpnPath, scriptPath) {
                         "connected": true
                     }
                 }
-                bufferManager(writeData)
+                client.write(JSON.stringify(writeData))
             }
         }
         if (data.includes(`All TAP-Windows adapters on this system are currently in use.`)) {
@@ -107,7 +107,7 @@ function startOvpn(configPath, ovpnPath, scriptPath) {
                     "tapError": true
                 }
             }
-            bufferManager(writeData)
+            client.write(JSON.stringify(writeData))
         }
         if (data.includes('Closing TUN/TAP interface')) {
             if (datalog.includes(`Initialization Sequence Completed`) && !intentionalDisconnect) {
@@ -128,7 +128,7 @@ function startOvpn(configPath, ovpnPath, scriptPath) {
                         "connectError": true
                     }
                 }
-                bufferManager(writeData)
+                client.write(JSON.stringify(writeData))
             }
         }
         if (data.includes(`Inactivity timeout (--ping-restart), restarting`)) {
@@ -140,7 +140,7 @@ function startOvpn(configPath, ovpnPath, scriptPath) {
                     "inactivityTimeout": true
                 }
             }
-            bufferManager(writeData)
+            client.write(JSON.stringify(writeData))
         }
     })
     ovpnProc.on('close', (data) => {
@@ -153,7 +153,7 @@ function startOvpn(configPath, ovpnPath, scriptPath) {
                     "killSwitch(true)"
                 ]
             }
-            bufferManager(writeData)
+            client.write(JSON.stringify(writeData))
         }
     })
 }
@@ -177,7 +177,7 @@ function disconnectFromVPN(quit) {
                 },
                 "showWindow": true
             }
-            bufferManager(writeData)
+            client.write(JSON.stringify(writeData))
             return;
         }
         console.log(`Background: pkill has run successfully.`)
@@ -188,18 +188,19 @@ function disconnectFromVPN(quit) {
                 "connected": false
             }
         }
-        bufferManager(writeData)
-        if (quit) {
-            console.log(`Background: Sending command to quit unrestrict.me`)
-            let writeData = {
-                "command":"execute",
-                "methods": [
-                    "tray.destroy()",
-                    "app.quit()"
-                ]
+        client.write(JSON.stringify(writeData), () => {
+            if (quit) {
+                console.log(`Background: Sending command to quit unrestrict.me`)
+                let writeData = {
+                    "command":"execute",
+                    "methods": [
+                        "tray.destroy()",
+                        "app.quit()"
+                    ]
+                }
+                client.write(JSON.stringify(writeData))
             }
-            bufferManager(writeData)
-        }
+        })
 
     })
 }
@@ -216,7 +217,7 @@ function killSwitchEnable(nic) {
                 },
                 "showWindow": true
             }
-            bufferManager(writeData)
+            client.write(JSON.stringify(writeData))
             return;
         }
         let writeData = {
@@ -226,7 +227,7 @@ function killSwitchEnable(nic) {
                 "enabled": true
             }
         }
-        bufferManager(writeData)
+        client.write(JSON.stringify(writeData))
         console.log(`Main: Kill switch enabled.`)
     })
 }
@@ -243,7 +244,7 @@ function killSwitchDisable(nic) {
                 },
                 "showWindow": true
             }
-            bufferManager(writeData)
+            client.write(JSON.stringify(writeData))
             return;
         }
         let writeData = {
@@ -253,7 +254,7 @@ function killSwitchDisable(nic) {
                 "enabled": false
             }
         }
-        bufferManager(writeData)
+        client.write(JSON.stringify(writeData))
         console.log(`Main: Kill switch disabled.`)
     })
 }
@@ -278,6 +279,7 @@ function stealthFunction(stunnelPath, stunnelConfig, stunnelPem, ovpnConfig, ovp
     }
     
     
+<<<<<<< HEAD
 }
 
 function bufferManager(data) {
@@ -289,4 +291,6 @@ function bufferManager(data) {
     } else {
         client.write(JSON.stringify(data))
     }
+=======
+>>>>>>> parent of e15334c... Buffer management
 }
