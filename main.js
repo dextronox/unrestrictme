@@ -1024,7 +1024,8 @@ function connect(config) {
             copyDnsHelper()
             let writeData = {
                 "command": "connectToOpenVPN",
-                "configPath": `${path.join(app.getPath("userData"), 'current.ovpn')}`
+                "configPath": `${path.join(app.getPath("userData"), 'current.ovpn')}`,
+                "scriptPath": `${app.getPath("userData")}/update-systemd-resolved`
             }
             clientObj.write(JSON.stringify(writeData))
 
