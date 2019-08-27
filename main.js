@@ -1012,23 +1012,21 @@ function connect(config) {
                 })
             })
         } else if (os.platform() === "darwin") {
-            if (copyDnsHelper() === true) {
-                let writeData = {
-                    "command": "connectToOpenVPN",
-                    "configPath": `${path.join(app.getPath("userData"), 'current.ovpn')}`,
-                    "ovpnPath": `${app.getPath("home")}/unrestrictme/sbin/openvpn`,
-                    "scriptPath": `${app.getPath("home")}/unrestrictme/sbin/update-resolv-conf`
-                }
-                clientObj.write(JSON.stringify(writeData))
+            copyDnsHelper()
+            let writeData = {
+                "command": "connectToOpenVPN",
+                "configPath": `${path.join(app.getPath("userData"), 'current.ovpn')}`,
+                "ovpnPath": `${app.getPath("home")}/unrestrictme/sbin/openvpn`,
+                "scriptPath": `${app.getPath("home")}/unrestrictme/sbin/update-resolv-conf`
             }
+            clientObj.write(JSON.stringify(writeData))
         } else if (os.platform() === "linux") {
-            if (copyDnsHelper() === true) {
-                let writeData = {
-                    "command": "connectToOpenVPN",
-                    "configPath": `${path.join(app.getPath("userData"), 'current.ovpn')}`
-                }
-                clientObj.write(JSON.stringify(writeData))
+            copyDnsHelper()
+            let writeData = {
+                "command": "connectToOpenVPN",
+                "configPath": `${path.join(app.getPath("userData"), 'current.ovpn')}`
             }
+            clientObj.write(JSON.stringify(writeData))
 
         }
     }) 
@@ -1127,8 +1125,6 @@ function copyDnsHelper() {
                 }
                 log.info(`Main: Couldn't copy the DNS updater script. Error: ${error}`)
                 return false
-            } else {
-                return true
             }
         })
     } else if (os.platform() === "linux") {
@@ -1144,8 +1140,6 @@ function copyDnsHelper() {
                 }
                 log.info(`Main: Couldn't copy the DNS updater script. Error: ${error}`)
                 return false
-            } else {
-                return true
             }
         })
     }
