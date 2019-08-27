@@ -80,7 +80,7 @@ function startOvpn(configPath, ovpnPath, scriptPath) {
     killSwitchStatus = false
     let ovpnProc
     if (os.platform() === "linux") {
-        ovpnProc = exec(`openvpn --config "${configPath}"  --connect-retry-max 1 --tls-exit --mute-replay-warnings --connect-timeout 15 --script-security 2 --up '/etc/openvpn/update-resolv-conf' --down '/etc/openvpn/update-resolv-conf'`)
+        ovpnProc = exec(`openvpn --config "${configPath}"  --connect-retry-max 1 --tls-exit --mute-replay-warnings --connect-timeout 15`)
     } else {
         ovpnProc = exec(`${ovpnPath} --config "${configPath}"  --connect-retry-max 1 --tls-exit --mute-replay-warnings --connect-timeout 15 --script-security 2 --up '${scriptPath}' --down '${scriptPath}'`)        
     }
