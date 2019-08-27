@@ -293,7 +293,7 @@ function startBackgroundServer() {
         })
         client.on("data", (data) => {
             //We've got data from the background process. Send it to the function that handles that stuff.
-            backgroundProcessDataHandler(data.toString())
+            backgroundProcessDataHandler(JSON.stringify(data.toString()))
         })
         client.on("end", () => {
             //Background process has disconnected.
