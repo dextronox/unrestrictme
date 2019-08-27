@@ -1070,18 +1070,34 @@ exports.stealthConnect = (decryptedResponse) => {
                     log.error(`Main: Couldn't send OpenVPN status to renderer. Error: ${e}`)
                 }
             } else {
-                let writeData = {
-                    "command": "connectToStealth",
-                    "stunnelPath": `${app.getPath("home")}/unrestrictme/bin/stunnel`,
-                    "resourcePath": {
-                        "config": path.join(app.getPath("userData"), 'stunnel.conf'),
-                        "pem": path.join(app.getPath("userData"), 'stunnel.pem')
-                    },
-                    "configPath": path.join(app.getPath('userData'), "current.ovpn"),
-                    "ovpnPath": `${app.getPath("home")}/unrestrictme/sbin/openvpn`,
-                    "scriptPath": `${app.getPath("home")}/unrestrictme/sbin/update-resolv-conf`
+                if (os.platform() === "darwin") {
+                    let writeData = {
+                        "command": "connectToStealth",
+                        "stunnelPath": `${app.getPath("home")}/unrestrictme/bin/stunnel`,
+                        "resourcePath": {
+                            "config": path.join(app.getPath("userData"), 'stunnel.conf'),
+                            "pem": path.join(app.getPath("userData"), 'stunnel.pem')
+                        },
+                        "configPath": path.join(app.getPath('userData'), "current.ovpn"),
+                        "ovpnPath": `${app.getPath("home")}/unrestrictme/sbin/openvpn`,
+                        "scriptPath": `${app.getPath("home")}/unrestrictme/sbin/update-resolv-conf`
+                    }
+                    clientObj.write(JSON.stringify(writeData))
+                } else if (os.platform() === "linux") {
+                    let writeData = {
+                        "command": "connectToStealth",
+                        "stunnelPath": `${app.getPath("home")}/unrestrictme/bin/stunnel`,
+                        "resourcePath": {
+                            "config": path.join(app.getPath("userData"), 'stunnel.conf'),
+                            "pem": path.join(app.getPath("userData"), 'stunnel.pem')
+                        },
+                        "configPath": path.join(app.getPath('userData'), "current.ovpn"),
+                        "ovpnPath": `${app.getPath("home")}/unrestrictme/sbin/openvpn`,
+                        "scriptPath": `${app.getPath("userData")}/update-systemd-resolved`
+                    }
+                    clientObj.write(JSON.stringify(writeData))
                 }
-                clientObj.write(JSON.stringify(writeData))
+
             }
         })
 
