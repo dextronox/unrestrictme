@@ -198,7 +198,11 @@ function disconnectFromVPN(quit) {
                         "app.quit()"
                     ]
                 }
-                client.write(JSON.stringify(writeData))
+                setTimeout(() => {
+                    //Give main js time to deal with buffer
+                    client.write(JSON.stringify(writeData))
+                }, 200)
+                
             }
         })
 
@@ -279,18 +283,4 @@ function stealthFunction(stunnelPath, stunnelConfig, stunnelPem, ovpnConfig, ovp
     }
     
     
-<<<<<<< HEAD
-}
-
-function bufferManager(data) {
-    console.log(client.bufferSize)
-    if (client.bufferSize != 0) {
-        setTimeout(() => {
-            bufferManager(data)
-        }, 100)
-    } else {
-        client.write(JSON.stringify(data))
-    }
-=======
->>>>>>> parent of e15334c... Buffer management
 }
