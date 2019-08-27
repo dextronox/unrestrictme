@@ -265,7 +265,16 @@ function killSwitchDisable(nic) {
 
 function stealthFunction(stunnelPath, stunnelConfig, stunnelPem, ovpnConfig, ovpnPath, scriptPath) {
     if (os.platform() === "linux") {
-        let stunnelProc = exec(`stunnel4 "${stunnelConfig}" -p "${stunnelPem}"`)
+        exec(`stunnel4 "${stunnelConfig}" -p "${stunnelPem}"`, (error, stdout, stderr) => {
+            if (error) {
+                console.log(`Error!`)
+                console.log(error)
+                console.log(stdout)
+                console.log(stderr)
+            }
+            console.log(stdout)
+            console.log(stderr)
+        })
         ovpnFunction(ovpnConfig)
     } else if (os.platform() === "darwin") {
         console.log(`Going to execute: ${`${stunnelPath} "${stunnelConfig}" -p "${stunnelPem}"`}`)
