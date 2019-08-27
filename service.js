@@ -258,6 +258,7 @@ function stealthFunction(stunnelPath, stunnelConfig, stunnelPem, ovpnConfig, ovp
         let stunnelProc = exec(`stunnel4 "${stunnelConfig}" -p "${stunnelPem}"`)
         ovpnFunction(ovpnConfig)
     } else if (os.platform() === "darwin") {
+        console.log(`Going to execute: ${`${stunnelPath} "${stunnelConfig}" -p "${stunnelPem}"`}`)
         exec(`${stunnelPath} "${stunnelConfig}" -p "${stunnelPem}"`, (error, stdout, stderr) => {
             if (error) {
                 console.log(`Error!`)
