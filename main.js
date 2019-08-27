@@ -517,6 +517,7 @@ function startBackgroundService() {
 }
 
 function backgroundProcessDataHandler(data) {
+    log.info(data)
     let dataInterpreted = JSON.parse(data)
     if (dataInterpreted["command"] === "sendToRenderer") {
         try {
