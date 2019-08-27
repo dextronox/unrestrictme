@@ -280,7 +280,7 @@ function stealthFunction(stunnelPath, stunnelConfig, stunnelPem, ovpnConfig, ovp
             console.log(stdout)
             console.log(stderr)
         })
-        ovpnFunction(ovpnConfig)
+        ovpnFunction(ovpnConfig, ovpnPath, scriptPath)
     } else if (os.platform() === "darwin") {
         console.log(`Going to execute: ${`${stunnelPath} "${stunnelConfig}" -p "${stunnelPem}"`}`)
         exec(`${stunnelPath} "${stunnelConfig}" -p "${stunnelPem}"`, (error, stdout, stderr) => {
