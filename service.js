@@ -159,7 +159,13 @@ function startOvpn(configPath, ovpnPath, scriptPath) {
 }
 function disconnectFromVPN(quit) {
     intentionalDisconnect = true
-    exec(`pkill openvpn && pkill stunnel4`, (error, stdout, stderr) => {
+    let execCmd = ""
+    if (os.platform() === "linux") {
+        execCmd = "pkill openvpn && pkill stunnel4"
+    } else if (os.platform() === "darwin") {
+        execCmd = "pkill openvpn && pkill stunnel"
+    }
+    exec(execCmd, (error, stdout, stderr) => {
         //https://www.freebsd.org/cgi/man.cgi?query=pkill&sektion=1
         if (error && error.code != 1) {
             console.log(error, stdout, stderr)
