@@ -1012,35 +1012,24 @@ function connect(config) {
                 })
             })
         } else if (os.platform() === "darwin") {
-            fs.copyFile(path.join(__dirname, "assets", "openvpn", "update-resolv-conf"), path.join(app.getPath("home"), `unrestrictme/sbin/update-resolv-conf`), (error) => {
-                if (error) {
-                    let status = {
-                        "writeError": true
-                    }
-                    try {
-                        mainWindow.webContents.send('error', status)
-                    } catch(e) {
-                        log.error(`Main: Couldn't send OpenVPN status to renderer. Error: ${e}`)
-                    }
-                    log.info(`Main: Couldn't copy the DNS updater script. Error: ${error}`)
-                    return
-                } else {
-                    let writeData = {
-                        "command": "connectToOpenVPN",
-                        "configPath": `${path.join(app.getPath("userData"), 'current.ovpn')}`,
-                        "ovpnPath": `${app.getPath("home")}/unrestrictme/sbin/openvpn`,
-                        "scriptPath": `${app.getPath("home")}/unrestrictme/sbin/update-resolv-conf`
-                    }
-                    clientObj.write(JSON.stringify(writeData))
+            if (copyDnsHelper() === true) {
+                let writeData = {
+                    "command": "connectToOpenVPN",
+                    "configPath": `${path.join(app.getPath("userData"), 'current.ovpn')}`,
+                    "ovpnPath": `${app.getPath("home")}/unrestrictme/sbin/openvpn`,
+                    "scriptPath": `${app.getPath("home")}/unrestrictme/sbin/update-resolv-conf`
                 }
-            })
-
-        } else if (os.platform() === "linux") {
-            let writeData = {
-                "command": "connectToOpenVPN",
-                "configPath": `${path.join(app.getPath("userData"), 'current.ovpn')}`
+                clientObj.write(JSON.stringify(writeData))
             }
-            clientObj.write(JSON.stringify(writeData))
+        } else if (os.platform() === "linux") {
+            if (copyDnsHelper() === true) {
+                let writeData = {
+                    "command": "connectToOpenVPN",
+                    "configPath": `${path.join(app.getPath("userData"), 'current.ovpn')}`
+                }
+                clientObj.write(JSON.stringify(writeData))
+            }
+
         }
     }) 
 }
@@ -1121,6 +1110,44 @@ exports.stealthConnect = (decryptedResponse) => {
         } catch(e) {
             log.error(`Main: Couldn't send OpenVPN status to renderer. Error: ${e}`)
         }
+    }
+}
+
+function copyDnsHelper() {
+    if (os.platform() === "darwin") {
+        fs.copyFile(path.join(__dirname, "assets", "openvpn", "update-resolv-conf"), path.join(app.getPath("home"), `unrestrictme/sbin/update-resolv-conf`), (error) => {
+            if (error) {
+                let status = {
+                    "writeError": true
+                }
+                try {
+                    mainWindow.webContents.send('error', status)
+                } catch(e) {
+                    log.error(`Main: Couldn't send OpenVPN status to renderer. Error: ${e}`)
+                }
+                log.info(`Main: Couldn't copy the DNS updater script. Error: ${error}`)
+                return false
+            } else {
+                return true
+            }
+        })
+    } else if (os.platform() === "linux") {
+        fs.copyFile(path.join(__dirname, "assets", "openvpn", "update-systemd-resolved"), path.join(app.getPath("userData"), `update-systemd-resolved`), (error) => {
+            if (error) {
+                let status = {
+                    "writeError": true
+                }
+                try {
+                    mainWindow.webContents.send('error', status)
+                } catch(e) {
+                    log.error(`Main: Couldn't send OpenVPN status to renderer. Error: ${e}`)
+                }
+                log.info(`Main: Couldn't copy the DNS updater script. Error: ${error}`)
+                return false
+            } else {
+                return true
+            }
+        })
     }
 }
 
