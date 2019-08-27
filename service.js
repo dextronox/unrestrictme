@@ -281,6 +281,7 @@ function stealthFunction(stunnelPath, stunnelConfig, stunnelPem, ovpnConfig, ovp
 }
 
 function bufferManager(data) {
+    console.log(client.bufferSize)
     if (client.bufferSize != 0) {
         setTimeout(() => {
             bufferManager(data)
