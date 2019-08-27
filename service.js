@@ -53,21 +53,26 @@ function foregroundProcessDataHandler(data) {
 }
 
 function ovpnFunction(configPath, ovpnPath, scriptPath) {
-    exec(`chmod +x "${scriptPath}"`, (error, stdout, stderr) => {
-        if (error) {
-            console.log(`Couldn't set the permission of the DNS updater script. Error: ${error}`)
-            let writeData = {
-                "command":"sendToRenderer",
-                "channel": "error",
-                "status": {
-                    "connectError": true
+    if (scriptPath) {
+        exec(`chmod +x "${scriptPath}"`, (error, stdout, stderr) => {
+            if (error) {
+                console.log(`Couldn't set the permission of the DNS updater script. Error: ${error}`)
+                let writeData = {
+                    "command":"sendToRenderer",
+                    "channel": "error",
+                    "status": {
+                        "connectError": true
+                    }
                 }
+                client.write(JSON.stringify(writeData))
+            } else {
+                startOvpn(configPath, ovpnPath, scriptPath)
             }
-            client.write(JSON.stringify(writeData))
-        } else {
-            startOvpn(configPath, ovpnPath, scriptPath)
-        }
-    })
+        })
+    } else {
+        startOvpn(configPath)
+    }
+
 }
 
 function startOvpn(configPath, ovpnPath, scriptPath) {
