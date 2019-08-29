@@ -737,7 +737,7 @@ function quit(hard) {
     intentionalDisconnect = true
     if (os.platform() === "win32" && !hard) {
         exec(`taskkill /IM openvpn.exe /F & taskkill /IM tstunnel.exe /F`, (error, stdout, stderr) => {
-            if (error) {
+            if (error && !String(error).includes(`"tstunnel.exe" not found.`)) {
                 log.error(`Main: An error occurred killing OpenVPN. Error: ${error}`)
                 mainWindow.show()
                 let status = {
@@ -1152,7 +1152,7 @@ function disconnect() {
     log.info(`Main: We're about to kill OpenVPN. If OpenVPN is not running, you will see no confirmation it wasn't killed.`)
     if (os.platform() === "win32") {
         exec(`taskkill /IM openvpn.exe /F & taskkill /IM tstunnel.exe /F`, (error, stdout, stderr) => {
-            if (error) {
+            if (error && !String(error).includes(`"tstunnel.exe" not found.`)) {
                 log.error(`Main: An error occurred killing OpenVPN. Error: ${error}`)
                 mainWindow.show()
                 let status = {
