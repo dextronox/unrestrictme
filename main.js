@@ -20,6 +20,7 @@ const sudo = require('sudo-prompt');
 const appLock = app.requestSingleInstanceLock()
 const { autoUpdater } = require("electron-updater")
 const net = require("net")
+const spawn = require("child_process").spawn
 
 autoUpdater.logger = null
 
@@ -1564,21 +1565,30 @@ function installDependenciesMac(checkError) {
 }
 
 function brewInstallDependencies() {
-    exec(`${app.getPath("home")}/unrestrictme/bin/brew install openvpn stunnel node`, (error, stdout, stderr) => {
-        if (error) {
+    let brewInstallSpawn = spawn(`${app.getPath("home")}/unrestrictme/bin/brew install openvpn stunnel node`)
+    let dataLog
+    brewInstallSpawn.stdout.on('data', (data) => {
+        log.info(`Main: ${data.toString()}`)
+        dataLog = dataLog + data.toString()
+    })
+    brewInstallSpawn.stderr.on('data', (data) => {
+        log.error(`Main: ${data.toString()}`)
+        dataLog = dataLog + data.toString()
+    })
+    brewInstallSpawn.on('close', (code) => {
+        if (code === 0 || dataLog.includes("is already installed and up-to-date")) {
+            let ipcUpdate = {
+                "update": "InstallComplete"
+            }
+            welcomeWindow.webContents.send(`statusUpdate`, ipcUpdate)
+            writeBlankSettingsFile()
+        } else {
             log.info(`Main: Error installing dependencies from brew. Error: ${error}`)
             let ipcUpdate = {
                 "error": "OpenVPNInstallFail",
                 "errorText": JSON.stringify(error)
             }
             welcomeWindow.webContents.send(`statusUpdate`, ipcUpdate)
-        } else {
-            let ipcUpdate = {
-                "update": "InstallComplete"
-            }
-            welcomeWindow.webContents.send(`statusUpdate`, ipcUpdate)
-            log.info(stdout)
-            writeBlankSettingsFile()
         }
     })
 }
