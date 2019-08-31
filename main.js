@@ -882,9 +882,9 @@ exports.dependenciesCheck = () => {
             }
         })
     } else if (os.platform() === "darwin") {
-        exec(`openvpn`, (error, stdout, stderr) => {
+        exec(`openvpn && stunnel`, (error, stdout, stderr) => {
             if (error) {
-                log.error(`Main: Error checking whether OpenVPN is installed. Error: ${error}`)
+                log.error(`Main: Error checking whether OpenVPN and stunnel are installed. This probably means they aren't. Error: ${error}`)
                 installDependenciesMac(error)
             } else if (String(stdout).includes(`built on`)) {
                 let settings = {}
@@ -1554,7 +1554,7 @@ function installDependenciesMac(checkError) {
                         }
                         welcomeWindow.webContents.send(`statusUpdate`, ipcUpdate)
                     } else {
-                        //Install openvpn and stunnel
+                        //Install dependencies
                         brewInstallDependencies()
                     }
                 })
@@ -1570,10 +1570,18 @@ function brewInstallDependencies() {
     brewInstallSpawn.stdout.on('data', (data) => {
         log.info(`Main: ${data.toString()}`)
         dataLog = dataLog + data.toString()
+        let ipcUpdate = {
+            "installLog": dataLog
+        }
+        welcomeWindow.webContents.send(`statusUpdate`, ipcUpdate)
     })
     brewInstallSpawn.stderr.on('data', (data) => {
         log.error(`Main: ${data.toString()}`)
         dataLog = dataLog + data.toString()
+        let ipcUpdate = {
+            "installLog": dataLog
+        }
+        welcomeWindow.webContents.send(`statusUpdate`, ipcUpdate)
     })
     brewInstallSpawn.on('close', (code) => {
         if (code === 0 || dataLog.includes("is already installed and up-to-date")) {

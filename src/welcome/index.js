@@ -82,6 +82,10 @@ $(document).ready(() => {
                     app.quit()
                 });
             }
+        } else if (args["installLog"]) {
+            $("#step3").css("display", "none")
+            $("#installProgress").css("display", "block")
+            $("#installLogText").html(args["installLog"])
         }
     })
     ipcRenderer.once(`error`, (event, args) => {
