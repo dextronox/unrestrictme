@@ -127,5 +127,9 @@ $("#step3_button1").on("click", () => {
     main.dependenciesCheck()
     $("#step3_button_div1").css("display", "none")
 })
+$("#show_install_log").on("click", () => {
+    $("#show_install_log").css("display", "none")
+    $("#installLog").css("display", "block")
+})
 
 
