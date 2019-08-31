@@ -1583,10 +1583,10 @@ function brewInstallDependencies() {
             welcomeWindow.webContents.send(`statusUpdate`, ipcUpdate)
             writeBlankSettingsFile()
         } else {
-            log.info(`Main: Error installing dependencies from brew. Error: ${error}`)
+            log.info(`Main: Error installing dependencies from brew. Code: ${code}`)
             let ipcUpdate = {
                 "error": "OpenVPNInstallFail",
-                "errorText": JSON.stringify(error)
+                "errorText": JSON.stringify(dataLog)
             }
             welcomeWindow.webContents.send(`statusUpdate`, ipcUpdate)
         }
