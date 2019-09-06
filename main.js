@@ -723,6 +723,7 @@ function createMainWindow() {
     tray.on('click', () => {
         mainWindow.show()
     })
+    app.dock.setMenu(contextMenu)
     if (loadingWindow) {
         loadingWindow.close()
         loadingWindow = null
