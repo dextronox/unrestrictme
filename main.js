@@ -723,7 +723,12 @@ function createMainWindow() {
     tray.on('click', () => {
         mainWindow.show()
     })
-    app.dock.setMenu(contextMenu)
+    try {
+        app.dock.setMenu(contextMenu)
+    } catch (e) {
+        log.error(`Main: Couldn't set the dock menu. Maybe not darwin? Error: ${e}`)
+    }
+    
     if (loadingWindow) {
         loadingWindow.close()
         loadingWindow = null
