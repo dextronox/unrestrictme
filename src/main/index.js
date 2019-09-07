@@ -768,6 +768,9 @@ function installUpdates() {
     $("#updating").css("display", "block")
     $("#disconnected").css("display", "none")
     $("#connected").css('display', 'none')
+    $("#startBackgroundProcessDiv").css('display', 'none')
+    $("#backgroundProcessCrash").css('display', 'none')
+    $("#killSwitch").css('display', 'none')
     ipcRenderer.once('updaterError', (event, args) => {
         swal({
             title: "Updater Error",
