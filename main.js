@@ -687,9 +687,9 @@ function createMainWindow() {
                             method: "GET"
                         } 
                     } else {
-                        log.info(`Renderer: Using normal API.`)
+                        log.info(`Renderer: Using ifconfig.me to retrieve external IP.`)
                         requestConfig = {
-                            url: `https://api.unrestrict.me/client/ip`,
+                            url: `https://ifconfig.me/ip`,
                             timeout: 5000,
                             method: "GET"
                         }
