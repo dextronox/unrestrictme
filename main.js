@@ -241,6 +241,7 @@ function checkForUpdates(install) {
         autoUpdater.downloadUpdate()
         autoUpdater.on("update-downloaded", (info) => {
             autoUpdater.quitAndInstall()
+            quit(true)
         })
     } else {
         autoUpdater.checkForUpdates()
