@@ -743,6 +743,7 @@ function createMainWindow() {
 
 function quit(hard) {
     log.info(`Main: We're about to kill OpenVPN. Hard kill?: ${hard}`)
+    killSwitch(false)
     intentionalDisconnect = true
     if (os.platform() === "win32" && !hard) {
         exec(`taskkill /IM openvpn.exe /F & taskkill /IM tstunnel.exe /F`, (error, stdout, stderr) => {
