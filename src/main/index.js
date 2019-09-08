@@ -144,6 +144,8 @@ $(document).ready(() => {
             $("#killSwitch").css("display", "block")
         } else if (args["enabled"] === false) {
             $("#killSwitch").css("display", "none")
+            $("#loading3").css("display", "none")
+            $("#connectButtons").css("display", "block")
             $("#disconnected").css('display', 'block')
         } else if (args["error"] === "disable") {
             swal("Whoops!", "We were unable to disable the kill switch. You can try enabling the effected network driver manually. This error may have occurred because the kill switch has already been disabled, in which case the interface should be updated to reflect this shortly.", "error")
