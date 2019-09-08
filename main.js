@@ -553,7 +553,9 @@ function createLoadingWindow() {
         slashes: true
     }))
     loadingWindow.webContents.on('did-finish-load', () => {
-        loadingWindow.show()
+        if (loadingWindow) {
+            loadingWindow.show()
+        }
     })
     //loadingWindow.webContents.openDevTools({mode: "undocked"})
     loadingWindow.setAlwaysOnTop(true)
