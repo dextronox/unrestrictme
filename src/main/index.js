@@ -54,7 +54,7 @@ $(document).ready(() => {
                     }
                 }
                 request(requestConfig, (error, response, body) => {
-                    if (error) {
+                    if (error || response.statusCode != 200) {
                         log.error(`Renderer: Error getting public IP. Error: ${error}`)
                         populateConnected("API Failure", currentRequestId)
                     } else {
@@ -304,7 +304,7 @@ $("#connect").on("click", () => {
             }
             request(requestConfig, (error, response, body) => {
                 log.info(`Renderer: Response received!`)
-                if (error) {
+                if (error || response.statusCode != 200) {
                     log.error(`Renderer: Connection request error. Error: ${error}`)
                     swal("Whoops!", "An error occurred sending a request for a new connection identifier. Check your internet connection.", "error")
                     $("#loading1").css("display", "none")
@@ -423,7 +423,7 @@ function monitorRequest(id) {
             } 
         }
         request(requestConfig, (error, response, body) => {
-            if (error) {
+            if (error || response.statusCode != 200) {
                 log.error(`Renderer: Couldn't query connection id. Error: ${error}`)
                 $("#connectButtons").css("display", "block")
                 $("#loading1").css("display", "none")
@@ -492,7 +492,7 @@ $("#cancelRequest").on("click", () => {
             } 
         }
         request(requestConfig, (error, response, body) => {
-            if (error) {
+            if (error || response.statusCode != 200) {
                 log.error(`Renderer: Error deleting request. Error: ${error}`)
                 $("#loading2").css("display", "none")
                 $("#connectButtons").css("display", "block")
