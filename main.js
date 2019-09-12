@@ -20,6 +20,7 @@ const sudo = require('sudo-prompt');
 const appLock = app.requestSingleInstanceLock()
 const { autoUpdater } = require("electron-updater")
 const net = require("net")
+const spawn = require("child_process").spawn
 
 autoUpdater.logger = null
 
@@ -82,8 +83,8 @@ app.on('window-all-closed', function () {
 })
 
 app.on('activate', function () {
-    if (mainWindow === null) {
-        createWindow()
+    if (mainWindow) {
+        mainWindow.show()
     }
 })
 
@@ -100,15 +101,9 @@ function appStart() {
             }
         })
     } else if (os.platform() === "linux") {
-        isElevated().then(elevated => {
-            if (!elevated) {
-                log.error("Main: Application is not elevated. Consequently, we will run with limited functionality.")
-                checkSettings()
-            } else {
-                log.info("Main: Application is elevated.")
-                checkSettings()
-            }
-        })
+        checkSettings()
+    } else if (os.platform() === "darwin") {
+        checkSettings()
     }
 
 }
@@ -234,14 +229,12 @@ function createKeys() {
 
 function checkForUpdates(install) {
     if (install) {
-        if (disconnect() === true) {
-            appUpdater.downloadUpdate()
-            autoUpdater.on("update-downloaded", (info) => {
-                autoUpdater.quitAndInstall()
-            })
-        } else {
-            log.error("Main: We can't update because we're still connected to unrestrict.me.")
-        }
+        log.info(`Main: The client will now attempt to download the update.`)
+        autoUpdater.downloadUpdate()
+        autoUpdater.on("update-downloaded", (info) => {
+            autoUpdater.quitAndInstall()
+            quit(true)
+        })
     } else {
         autoUpdater.checkForUpdates()
         autoUpdater.autoDownload = false
@@ -327,58 +320,11 @@ function startBackgroundServer() {
 }
 
 function createBackgroundService() {
-    if (!fs.existsSync(path.join(app.getPath('userData'), "node"))) {
-        fs.copyFile(path.join(__dirname, "assets/node/node"), path.join(app.getPath('userData'), "node"), (error) => {
-            if (error) {
-                log.error(`Main: An error occurred copying the node executable to the userData folder.`)
-                try {
-                    mainWindow.webContents.send("backgroundService", "startingError")
-                } catch (e) {
-                    log.error(`Main: Couldn't send backgroundService startingError to renderer.`)
-                }
-                return
-            }
-
-        })
-    }
-    let template = `[Unit]
-    Description=unrestrictme Service
-    
-    [Service]
-    ExecStart=${path.join(app.getPath('userData'), 'service.js')}
-    Restart=no
-    User=root
-    Group=root
-    Environment=PATH=/usr/bin:/usr/sbin:/usr/local/bin:/sbin
-    Environment=NODE_ENV=production
-    WorkingDirectory=${app.getPath('userData')}
-    
-    [Install]
-    WantedBy=multi-user.target`
-    fs.readFile(path.join(__dirname, 'service.js'), (error, templateData) => {
-        if (error) {
-            log.error(`Main: An error occurred reading the template service file. Error: ${error}`)
-            try {
-                mainWindow.webContents.send("backgroundService", "startingError")
-            } catch (e) {
-                log.error(`Main: Couldn't send backgroundService startingError to renderer.`)
-            }
-            return
-        }
-        let shebang = new Buffer(`#!${app.getPath('userData')}/node\n`)
-        fs.writeFile(path.join(app.getPath('userData'), 'service.js'), shebang, (error) => {
-            if (error) {
-                log.error(`Main: An error occurred writing the shebang to the service file. Error: ${error}`)
-                try {
-                    mainWindow.webContents.send("backgroundService", "startingError")
-                } catch (e) {
-                    log.error(`Main: Couldn't send backgroundService startingError to renderer.`)
-                }
-                return
-            }
-            fs.appendFile(path.join(app.getPath('userData'), 'service.js'), templateData, (error) => {
+    if (os.platform() === "linux") {
+        if (!fs.existsSync(path.join(app.getPath('userData'), "node"))) {
+            fs.copyFile(path.join(__dirname, "assets/node/node"), path.join(app.getPath('userData'), "node"), (error) => {
                 if (error) {
-                    log.error(`Main: An error occurred appending the service file. Error: ${error}`)
+                    log.error(`Main: An error occurred copying the node executable to the userData folder.`)
                     try {
                         mainWindow.webContents.send("backgroundService", "startingError")
                     } catch (e) {
@@ -386,69 +332,186 @@ function createBackgroundService() {
                     }
                     return
                 }
+    
+            })
+        }
+        let template = `[Unit]
+        Description=unrestrictme Service
+        
+        [Service]
+        ExecStart=${path.join(app.getPath('userData'), 'service.js')}
+        Restart=no
+        User=root
+        Group=root
+        Environment=PATH=/usr/bin:/usr/sbin:/usr/local/bin:/sbin
+        Environment=NODE_ENV=production
+        WorkingDirectory=${app.getPath('userData')}
+        
+        [Install]
+        WantedBy=multi-user.target`
+        fs.readFile(path.join(__dirname, 'service.js'), (error, templateData) => {
+            if (error) {
+                log.error(`Main: An error occurred reading the template service file. Error: ${error}`)
+                try {
+                    mainWindow.webContents.send("backgroundService", "startingError")
+                } catch (e) {
+                    log.error(`Main: Couldn't send backgroundService startingError to renderer.`)
+                }
+                return
+            }
+            let shebang = new Buffer(`#!${app.getPath('userData')}/node\n`)
+            fs.writeFile(path.join(app.getPath('userData'), 'service.js'), shebang, (error) => {
+                if (error) {
+                    log.error(`Main: An error occurred writing the shebang to the service file. Error: ${error}`)
+                    try {
+                        mainWindow.webContents.send("backgroundService", "startingError")
+                    } catch (e) {
+                        log.error(`Main: Couldn't send backgroundService startingError to renderer.`)
+                    }
+                    return
+                }
+                fs.appendFile(path.join(app.getPath('userData'), 'service.js'), templateData, (error) => {
+                    if (error) {
+                        log.error(`Main: An error occurred appending the service file. Error: ${error}`)
+                        try {
+                            mainWindow.webContents.send("backgroundService", "startingError")
+                        } catch (e) {
+                            log.error(`Main: Couldn't send backgroundService startingError to renderer.`)
+                        }
+                        return
+                    }
+                })
             })
         })
-    })
-    fs.writeFile(path.join(app.getPath('userData'), 'serviceTemplate'), template, (error) => {
-        if (error) {
-            log.error(`Main: An error occurred writing the service file. Error: ${error}`)
-            try {
-                mainWindow.webContents.send("backgroundService", "startingError")
-            } catch (e) {
-                log.error(`Main: Couldn't send backgroundService startingError to renderer.`)
+        fs.writeFile(path.join(app.getPath('userData'), 'serviceTemplate'), template, (error) => {
+            if (error) {
+                log.error(`Main: An error occurred writing the service file. Error: ${error}`)
+                try {
+                    mainWindow.webContents.send("backgroundService", "startingError")
+                } catch (e) {
+                    log.error(`Main: Couldn't send backgroundService startingError to renderer.`)
+                }
+                return
             }
-            return
-        }
-        startBackgroundService()
-    })
+            startBackgroundService()
+        })
+    } else if (os.platform() === "darwin") {
+        fs.copyFile(path.join(__dirname, "service.js"), path.join(app.getPath("userData"), "service.js"), (error) => {
+            if (error) {
+                log.error(`Main: An error occurred copying the service.js to the userData folder.`)
+                try {
+                    mainWindow.webContents.send("backgroundService", "startingError")
+                } catch (e) {
+                    log.error(`Main: Couldn't send backgroundService startingError to renderer.`)
+                }
+                return
+            } else {
+                startBackgroundService()
+            }
+        })
+    }
+
 }
 function startBackgroundService() {
+    try {
+        mainWindow.webContents.send("authentication", "waiting")
+    } catch (e) {
+        log.error(`Main: Couldn't send authentication waiting to renderer.`)
+    }
     let options = {
         name: "unrestrictme"
     }
-    sudo.exec(`sh -c "cp ${path.join(app.getPath('userData'), 'serviceTemplate')} /etc/systemd/system/unrestrictme.service && systemctl daemon-reload && systemctl start unrestrictme"`, options, (error, stdout, stderr) => {
-        if (error) {
-            if (String(error).includes(`User did not grant permission`)) {
-                log.error(`Main: User did not grant permission to start background service. Error: ${error}`)
-                try {
-                    mainWindow.webContents.send("backgroundService", "startingPermission")
-                } catch (e) {
-                    log.error(`Main: Couldn't send backgroundService startingPermission to renderer.`)
-                }
-            } else {
-                if (!clientObj || clientObj != "killed") {
-                    log.error(`Main: An error occurred running the command to start the background service.`)
+    if (os.platform() === "linux") {
+        sudo.exec(`sh -c "cp ${path.join(app.getPath('userData'), 'serviceTemplate')} /etc/systemd/system/unrestrictme.service && systemctl daemon-reload && chmod +x /etc/systemd/system/unrestrictme.service && systemctl start unrestrictme"`, options, (error, stdout, stderr) => {
+            if (error) {
+                if (String(error).includes(`User did not grant permission`)) {
+                    log.error(`Main: User did not grant permission to start background service. Error: ${error}`)
                     try {
-                        mainWindow.webContents.send("backgroundService", "startingError")
+                        mainWindow.webContents.send("backgroundService", "startingPermission")
                     } catch (e) {
-                        log.error(`Main: Couldn't send backgroundService startingError to renderer.`)
+                        log.error(`Main: Couldn't send backgroundService startingPermission to renderer.`)
+                    }
+                } else {
+                    if (!clientObj || clientObj != "killed") {
+                        log.error(`Main: An error occurred running the command to start the background service.`)
+                        try {
+                            mainWindow.webContents.send("backgroundService", "startingError")
+                        } catch (e) {
+                            log.error(`Main: Couldn't send backgroundService startingError to renderer.`)
+                        }
+                    }
+                }
+            } else if (stderr) {
+                if (String(stderr).includes(`Request dismissed`)) {
+                    log.error(`Main: User did not grant permission to start background service. Error: ${error}`)
+                    try {
+                        mainWindow.webContents.send("backgroundService", "startingPermission")
+                    } catch (e) {
+                        log.error(`Main: Couldn't send backgroundService startingPermission to renderer.`)
+                    }
+                } else {
+                    if (!clientObj || clientObj != "killed") {
+                        log.error(`Main: An error occurred running the command to start the background service.`)
+                        try {
+                            mainWindow.webContents.send("backgroundService", "startingError")
+                        } catch (e) {
+                            log.error(`Main: Couldn't send backgroundService startingError to renderer.`)
+                        }
                     }
                 }
             }
-        } else if (stderr) {
-            if (String(stderr).includes(`Request dismissed`)) {
-                log.error(`Main: User did not grant permission to start background service. Error: ${error}`)
-                try {
-                    mainWindow.webContents.send("backgroundService", "startingPermission")
-                } catch (e) {
-                    log.error(`Main: Couldn't send backgroundService startingPermission to renderer.`)
-                }
-            } else {
-                if (!clientObj || clientObj != "killed") {
-                    log.error(`Main: An error occurred running the command to start the background service.`)
-                    try {
-                        mainWindow.webContents.send("backgroundService", "startingError")
-                    } catch (e) {
-                        log.error(`Main: Couldn't send backgroundService startingError to renderer.`)
-                    }
-                }
-            }
+            log.info(`Stdout: ${stdout}, Stderr: ${stderr}, Error: ${error}`)
+        })
+    } else if (os.platform() === "darwin") {
+        let options = {
+            name: "unrestrictme"
         }
-        log.info(`Stdout: ${stdout}, Stderr: ${stderr}, Error: ${error}`)
-    })
+        sudo.exec(`sh -c "'${app.getPath("home")}/unrestrictme/bin/node' '${app.getPath("userData")}/service.js'"`, options, (error, stdout, stderr) => {
+            log.info(`Error: ${error}, Stdout: ${stdout}, Stderr: ${stderr}`)
+            if (error) {
+                if (String(error).includes(`User did not grant permission`)) {
+                    log.error(`Main: User did not grant permission to start background service. Error: ${error}`)
+                    try {
+                        mainWindow.webContents.send("backgroundService", "startingPermission")
+                    } catch (e) {
+                        log.error(`Main: Couldn't send backgroundService startingPermission to renderer.`)
+                    }
+                } else {
+                    if (!clientObj || clientObj != "killed") {
+                        log.error(`Main: An error occurred running the command to start the background service.`)
+                        try {
+                            mainWindow.webContents.send("backgroundService", "startingError")
+                        } catch (e) {
+                            log.error(`Main: Couldn't send backgroundService startingError to renderer.`)
+                        }
+                    }
+                }
+            } else if (stderr) {
+                if (String(stderr).includes(`Request dismissed`)) {
+                    log.error(`Main: User did not grant permission to start background service. Error: ${error}`)
+                    try {
+                        mainWindow.webContents.send("backgroundService", "startingPermission")
+                    } catch (e) {
+                        log.error(`Main: Couldn't send backgroundService startingPermission to renderer.`)
+                    }
+                } else {
+                    if (!clientObj || clientObj != "killed") {
+                        log.error(`Main: An error occurred running the command to start the background service.`)
+                        try {
+                            mainWindow.webContents.send("backgroundService", "startingError")
+                        } catch (e) {
+                            log.error(`Main: Couldn't send backgroundService startingError to renderer.`)
+                        }
+                    }
+                }
+            }
+        })
+    }
+
 }
 
 function backgroundProcessDataHandler(data) {
+    log.debug(data)
     let dataInterpreted = JSON.parse(data)
     if (dataInterpreted["command"] === "sendToRenderer") {
         try {
@@ -467,10 +530,15 @@ function backgroundProcessDataHandler(data) {
     }
     if (dataInterpreted["command"] === "testMessage") {
         log.info(`Main: We can communicate with the service.js.`)
+        try {
+            mainWindow.webContents.send("authentication", "passed")
+        } catch (e) {
+            log.error(`Main: Couldn't send authentication waiting to renderer.`)
+        }
     }
 }
 function createLoadingWindow() {
-    loadingWindow = new BrowserWindow({show: false, frame: false, width: 300, height: 300, icon: path.resolve(__dirname, 'assets', 'icons', 'icon.png'), 'minWidth': 300, 'minHeight': 300, transparent: false, title: "unrestrict.me Client", resizable: false})
+    loadingWindow = new BrowserWindow({show: false, frame: false, width: 300, height: 300, icon: path.resolve(__dirname, 'assets', 'icons', 'icon.png'), 'minWidth': 300, 'minHeight': 300, transparent: false, title: "unrestrict.me Client", resizable: false, maximizable: false})
     loadingWindow.setMenu(null)
     loadingWindow.loadURL(url.format({
         pathname: path.join(__dirname, 'src/loading/index.html'),
@@ -478,14 +546,16 @@ function createLoadingWindow() {
         slashes: true
     }))
     loadingWindow.webContents.on('did-finish-load', () => {
-        loadingWindow.show()
+        if (loadingWindow) {
+            loadingWindow.show()
+        }
     })
     //loadingWindow.webContents.openDevTools({mode: "undocked"})
     loadingWindow.setAlwaysOnTop(true)
 }
 
 function createErrorWindow(error, sendError) {
-    errorWindow = new BrowserWindow({show: false, frame: true, width: 600, height: 420, icon: path.resolve(__dirname, 'assets', 'icons', 'icon.png'), 'minWidth': 600, 'minHeight': 420, transparent: false, title: "unrestrict.me Client", resizable: false})
+    errorWindow = new BrowserWindow({show: false, frame: true, width: 600, height: 420, icon: path.resolve(__dirname, 'assets', 'icons', 'icon.png'), 'minWidth': 600, 'minHeight': 420, transparent: false, title: "unrestrict.me Client", resizable: false, maximizable: false})
     errorWindow.setMenu(null)
     errorWindow.loadURL(url.format({
         pathname: path.join(__dirname, 'src/error/index.html'),
@@ -515,7 +585,7 @@ function createErrorWindow(error, sendError) {
 }
 
 function createWelcomeWindow() {
-    welcomeWindow = new BrowserWindow({show: false, frame: true, width: 600, height: 420, icon: path.resolve(__dirname, 'assets', 'icons', 'icon.png'), 'minWidth': 600, 'minHeight': 420, transparent: false, title: "unrestrict.me Client", resizable: false})
+    welcomeWindow = new BrowserWindow({show: false, frame: true, width: 600, height: 420, icon: path.resolve(__dirname, 'assets', 'icons', 'icon.png'), 'minWidth': 600, 'minHeight': 420, transparent: false, title: "unrestrict.me Client", resizable: false, maximizable: false})
     welcomeWindow.setMenu(null)
     welcomeWindow.loadURL(url.format({
         pathname: path.join(__dirname, 'src/welcome/index.html'),
@@ -525,7 +595,7 @@ function createWelcomeWindow() {
     welcomeWindow.webContents.on('did-finish-load', () => {
         welcomeWindow.show()
     })
-    //welcomeWindow.webContents.openDevTools({mode: "undocked"})
+    welcomeWindow.webContents.openDevTools({mode: "undocked"})
     welcomeWindow.setAlwaysOnTop(false)
     if (loadingWindow) {
         loadingWindow.close()
@@ -534,7 +604,19 @@ function createWelcomeWindow() {
 }
 
 function createMainWindow() {
-    mainWindow = new BrowserWindow({show: false, frame: true, width: 600, height: 420, icon: path.resolve(__dirname, 'assets', 'icons', 'icon.png'), 'minWidth': 600, 'minHeight': 420, transparent: false, title: "unrestrict.me Client", resizable: false})
+    mainWindow = new BrowserWindow({
+        show: false, 
+        frame: true, 
+        width: 600, 
+        height: 420, 
+        icon: path.resolve(__dirname, 'assets', 'icons', 'icon.png'), 
+        'minWidth': 600, 
+        'minHeight': 420,
+        transparent: false, 
+        title: "unrestrict.me Client", 
+        resizable: false,
+        maximizable: false
+    })
     mainWindow.setMenu(null)
     mainWindow.loadURL(url.format({
         pathname: path.join(__dirname, 'src/main/index.html'),
@@ -568,6 +650,8 @@ function createMainWindow() {
     });
     if (os.platform() === "win32") {
         tray = new Tray(path.join(__dirname, "assets", "icons", "win.ico"))
+    } else if (os.platform() === "darwin") {
+        tray = new Tray(path.join(__dirname, "assets", "icons", "mac.png"))
     } else {
         tray = new Tray(path.join(__dirname, "assets", "icons", "icon.png"))
     }
@@ -596,9 +680,9 @@ function createMainWindow() {
                             method: "GET"
                         } 
                     } else {
-                        log.info(`Renderer: Using normal API.`)
+                        log.info(`Renderer: Using ifconfig.me to retrieve external IP.`)
                         requestConfig = {
-                            url: `https://api.unrestrict.me/client/ip`,
+                            url: `https://ifconfig.me/ip`,
                             timeout: 5000,
                             method: "GET"
                         }
@@ -634,6 +718,12 @@ function createMainWindow() {
     tray.on('click', () => {
         mainWindow.show()
     })
+    try {
+        app.dock.setMenu(contextMenu)
+    } catch (e) {
+        log.error(`Main: Couldn't set the dock menu. Maybe not darwin? Error: ${e}`)
+    }
+    
     if (loadingWindow) {
         loadingWindow.close()
         loadingWindow = null
@@ -646,10 +736,11 @@ function createMainWindow() {
 
 function quit(hard) {
     log.info(`Main: We're about to kill OpenVPN. Hard kill?: ${hard}`)
+    killSwitch(false)
     intentionalDisconnect = true
     if (os.platform() === "win32" && !hard) {
-        exec(`taskkill /IM openvpn.exe /F`, (error, stdout, stderr) => {
-            if (error) {
+        exec(`taskkill /IM openvpn.exe /F & taskkill /IM tstunnel.exe /F`, (error, stdout, stderr) => {
+            if (error && !String(error).includes(`"tstunnel.exe" not found.`)) {
                 log.error(`Main: An error occurred killing OpenVPN. Error: ${error}`)
                 mainWindow.show()
                 let status = {
@@ -686,6 +777,16 @@ function quit(hard) {
         } else {
             quit(true)
         }
+    } else if (os.platform() === "darwin" && !hard){
+        if (clientObj && clientObj != "killed") {
+            let writeData = {
+                "command": "disconnect",
+                "quitBoolean": true
+            }
+            clientObj.write(JSON.stringify(writeData))
+        } else {
+            quit(true)
+        }
     } else if (hard) {
         tray.destroy()
         app.quit()
@@ -693,17 +794,47 @@ function quit(hard) {
 
 }
 
-function openTapInstaller () {
-    exec(`"${path.join(__dirname, 'assets', 'openvpn', 'tap-windows.exe')}"`, (error, stdout, stderr) => {
+function runTapInstaller () {
+    exec(`"${path.join(__dirname, `assets`, `openvpn`, `tap-${os.arch()}`, `tapinstall.exe`)}" install "${path.join(__dirname, `assets`, `openvpn`, `tap-${os.arch()}`, `OemVista.inf`)}" tap0901`, (error, stdout, stderr) => {
         if (error) {
-            log.error(`Main: Could not run TAP installer. Error: ${error}`)
+            log.error(`Main: Could not install the TAP driver. Error: ${error}`)
+            //Alert renderer.
+            let ipcUpdate = {
+                "error":"TAPInstallationFailure",
+                "errorText":`Error: ${error}`
+            }
+            welcomeWindow.webContents.send(`statusUpdate`, ipcUpdate)
+        } else if (String(stdout).includes(`Drivers installed successfully.`)) {
+            //The driver install successfully.
+            createSettingsFile()
         } else {
-            log.info("Main: TAP installation complete.")
+            //Something went wrong with the installation.
+            let ipcUpdate = {
+                "error":"TAPInstallationFailure",
+                "errorText":`Stdout: ${stdout}, Stderr: ${stderr}`
+            }
+            welcomeWindow.webContents.send(`statusUpdate`, ipcUpdate)
         }
     })
 }
-
-exports.dependenciesCheck = (verifyTap) => {
+function createSettingsFile() {
+    let settings = {}
+    fs.writeFile(path.join(app.getPath('userData'), 'settings.conf'), JSON.stringify(settings), (error) => {
+        if (error) {
+            log.error(`Main: Error occurred writing settings file. Permissions error perhaps? Error: ${error}`)
+            let ipcUpdate = {
+                "error":"writingSettingsFile",
+                "errorText": error
+            }
+            welcomeWindow.webContents.send(`statusUpdate`, ipcUpdate)
+        } else {
+            log.info(`Main: Settings file created!`)
+            app.relaunch()
+            app.quit()
+        }
+    })
+}
+exports.dependenciesCheck = () => {
     if (os.platform() === "win32") {
         exec(`"${path.join(__dirname, 'assets', 'openvpn', `${os.arch()}`, 'openvpn.exe')}" --show-adapters`, (error, stdout, stderr) => {
             if (error) {
@@ -714,45 +845,22 @@ exports.dependenciesCheck = (verifyTap) => {
                 }
                 welcomeWindow.webContents.send(`statusUpdate`, ipcUpdate)
             } else if ((stdout.replace('Available TAP-WIN32 adapters [name, GUID]:', '')).replace(/\s/g, '') === "") {
-                if (verifyTap) {
-                    log.error(`Main: TAP installation was a failure. Alert the user.`)
-                    let ipcUpdate = {
-                        "error": "TAPInstallationFailure"
-                    }
-                    welcomeWindow.webContents.send(`statusUpdate`, ipcUpdate)
-                } else {
-                    log.error(`Main: There is no TAP adapter on the system. Log: ${stdout}`)
-                    openTapInstaller()
-                    let ipcUpdate = {
-                        "update":"installingTAPAdapter"
-                    }
-                    welcomeWindow.webContents.send(`statusUpdate`, ipcUpdate)
+                log.error(`Main: There is no TAP adapter on the system. Log: ${stdout}`)
+                runTapInstaller()
+/*                     let ipcUpdate = {
+                    "update":"installingTAPAdapter"
                 }
+                welcomeWindow.webContents.send(`statusUpdate`, ipcUpdate) */
             } else {
-                log.info(`Main: ${stdout}`)
-                let settings = {}
-                fs.writeFile(path.join(app.getPath('userData'), 'settings.conf'), JSON.stringify(settings), (error) => {
-                    if (error) {
-                        log.error(`Main: Error occurred writing settings file. Permissions error perhaps? Error: ${error}`)
-                        let ipcUpdate = {
-                            "error":"writingSettingsFile",
-                            "errorText": error
-                        }
-                        welcomeWindow.webContents.send(`statusUpdate`, ipcUpdate)
-                    } else {
-                        log.info(`Main: Settings file created!`)
-                        app.relaunch()
-                        app.quit()
-                    }
-                })
+                createSettingsFile()
             }
         })
     } else if (os.platform() === "linux") {
         exec(`openvpn`, (error, stdout, stderr) => {
             if (error) {
+                log.error(`Main: Error checking whether OpenVPN is installed. Error: ${error}`)
                 installDependenciesLinux(error)
-            }
-            if (String(stdout).includes(`built on`)) {
+            } else if (String(stdout).includes(`built on`)) {
                 let settings = {}
                 fs.writeFile(path.join(app.getPath('userData'), 'settings.conf'), JSON.stringify(settings), (error) => {
                     if (error) {
@@ -775,6 +883,34 @@ exports.dependenciesCheck = (verifyTap) => {
                 installDependenciesLinux(stdout)
             }
         })
+    } else if (os.platform() === "darwin") {
+        exec(`openvpn && stunnel`, (error, stdout, stderr) => {
+            if (error) {
+                log.error(`Main: Error checking whether OpenVPN and stunnel are installed. This probably means they aren't. Error: ${error}`)
+                installDependenciesMac(error)
+            } else if (String(stdout).includes(`built on`)) {
+                let settings = {}
+                fs.writeFile(path.join(app.getPath('userData'), 'settings.conf'), JSON.stringify(settings), (error) => {
+                    if (error) {
+                        log.error(`Main: Error occurred writing settings file. Permissions error perhaps? Error: ${error}`)
+                        let ipcUpdate = {
+                            "error":"writingSettingsFile",
+                            "errorText": error
+                        }
+                        welcomeWindow.webContents.send(`statusUpdate`, ipcUpdate)
+                    } else {
+                        log.info(`Main: Settings file created!`)
+                        //Show alert to user and have them run quit()
+                        let ipcUpdate = {
+                            "update": "InstallComplete"
+                        }
+                        welcomeWindow.webContents.send(`statusUpdate`, ipcUpdate)
+                    }
+                })
+            } else {
+                installDependenciesMac(stdout)
+            }
+        })
     } else {
         log.error(`Main: This is not a supported system. Time to exit.`)
         app.quit()
@@ -783,6 +919,10 @@ exports.dependenciesCheck = (verifyTap) => {
 }
 
 exports.connect = (config) => {
+    connect(config)
+}
+
+function connect(config) {
     intentionalDisconnect = false
     killSwitchStatus = false
     log.info(`Main: Received command to connect OpenVPN.`)
@@ -874,22 +1014,148 @@ exports.connect = (config) => {
                     }
                 })
             })
-        } else if (os.platform() === "linux") {
+        } else if (os.platform() === "darwin") {
+            copyDnsHelper()
             let writeData = {
                 "command": "connectToOpenVPN",
-                "configPath": `${path.join(app.getPath("userData"), 'current.ovpn')}`
+                "configPath": `${path.join(app.getPath("userData"), 'current.ovpn')}`,
+                "ovpnPath": `${app.getPath("home")}/unrestrictme/sbin/openvpn`,
+                "scriptPath": `${app.getPath("home")}/unrestrictme/sbin/update-resolv-conf`
             }
             clientObj.write(JSON.stringify(writeData))
+        } else if (os.platform() === "linux") {
+            copyDnsHelper()
+            let writeData = {
+                "command": "connectToOpenVPN",
+                "configPath": `${path.join(app.getPath("userData"), 'current.ovpn')}`,
+                "scriptPath": `${app.getPath("userData")}/update-systemd-resolved`
+            }
+            clientObj.write(JSON.stringify(writeData))
+
         }
     }) 
+}
+
+exports.stealthConnect = (decryptedResponse) => {
+    fs.writeFile(path.join(app.getPath("userData"), 'stunnel.conf'), decryptedResponse["stunnel"], (error) => {
+        if (error) {
+            log.error(`Main: Couldn't write the stunnel configuartion to disk.`)
+        }
+    })
+    fs.writeFile(path.join(app.getPath("userData"), 'stunnel.pem'), decryptedResponse["cert"], (error) => {
+        if (error) {
+            log.error(`Main: Couldn't write the stunnel configuartion to disk.`)
+        }
+    })
+    //Fire up stunnel and send off the config
+    if (os.platform() === "win32" && os.arch() === "x64") {
+        log.info(`"${path.join(__dirname, "assets", "stunnel", "bin", "tstunnel.exe")}" "${path.join(app.getPath("userData"), 'stunnel.conf')}" -p "${path.join(app.getPath("userData"), 'stunnel.pem')}"`)
+        let stunnelProc = exec(`"${path.join(__dirname, "assets", "stunnel", "bin", "tstunnel.exe")}" "${path.join(app.getPath("userData"), 'stunnel.conf')}" -p "${path.join(app.getPath("userData"), 'stunnel.pem')}"`)
+        let dataLog
+        stunnelProc.stderr.on('data', (data) => {
+            log.info(`Stunnel: ${data}`)
+            dataLog = dataLog + data
+            if (String(data).includes("Configuration successful")) {
+                //Stunnel has loaded successfully.
+                connect(decryptedResponse["config"])
+            }
+        })
+    } else if (os.platform() === "linux" || os.platform() === "darwin") {
+        copyDnsHelper()
+        fs.writeFile(path.join(app.getPath('userData'), "current.ovpn"), decryptedResponse["config"], (error) => {
+            if (error) {
+                let status = {
+                    "writeError": true
+                }
+                try {
+                    mainWindow.webContents.send('error', status)
+                } catch(e) {
+                    log.error(`Main: Couldn't send OpenVPN status to renderer. Error: ${e}`)
+                }
+            } else {
+                if (os.platform() === "darwin") {
+                    let writeData = {
+                        "command": "connectToStealth",
+                        "stunnelPath": `${app.getPath("home")}/unrestrictme/bin/stunnel`,
+                        "resourcePath": {
+                            "config": path.join(app.getPath("userData"), 'stunnel.conf'),
+                            "pem": path.join(app.getPath("userData"), 'stunnel.pem')
+                        },
+                        "configPath": path.join(app.getPath('userData'), "current.ovpn"),
+                        "ovpnPath": `${app.getPath("home")}/unrestrictme/sbin/openvpn`,
+                        "scriptPath": `${app.getPath("home")}/unrestrictme/sbin/update-resolv-conf`
+                    }
+                    clientObj.write(JSON.stringify(writeData))
+                } else if (os.platform() === "linux") {
+                    let writeData = {
+                        "command": "connectToStealth",
+                        "stunnelPath": `${app.getPath("home")}/unrestrictme/bin/stunnel`,
+                        "resourcePath": {
+                            "config": path.join(app.getPath("userData"), 'stunnel.conf'),
+                            "pem": path.join(app.getPath("userData"), 'stunnel.pem')
+                        },
+                        "configPath": path.join(app.getPath('userData'), "current.ovpn"),
+                        "ovpnPath": `${app.getPath("home")}/unrestrictme/sbin/openvpn`,
+                        "scriptPath": `${app.getPath("userData")}/update-systemd-resolved`
+                    }
+                    clientObj.write(JSON.stringify(writeData))
+                }
+
+            }
+        })
+
+    } else {
+        let status = {
+            "platformSupport": true
+        }
+        try {
+            mainWindow.webContents.send('error', status)
+        } catch(e) {
+            log.error(`Main: Couldn't send OpenVPN status to renderer. Error: ${e}`)
+        }
+    }
+}
+
+function copyDnsHelper() {
+    if (os.platform() === "darwin") {
+        fs.copyFile(path.join(__dirname, "assets", "openvpn", "update-resolv-conf"), path.join(app.getPath("home"), `unrestrictme/sbin/update-resolv-conf`), (error) => {
+            if (error) {
+                let status = {
+                    "writeError": true
+                }
+                try {
+                    mainWindow.webContents.send('error', status)
+                } catch(e) {
+                    log.error(`Main: Couldn't send OpenVPN status to renderer. Error: ${e}`)
+                }
+                log.info(`Main: Couldn't copy the DNS updater script. Error: ${error}`)
+                return false
+            }
+        })
+    } else if (os.platform() === "linux") {
+        fs.copyFile(path.join(__dirname, "assets", "openvpn", "update-systemd-resolved"), path.join(app.getPath("userData"), `update-systemd-resolved`), (error) => {
+            if (error) {
+                let status = {
+                    "writeError": true
+                }
+                try {
+                    mainWindow.webContents.send('error', status)
+                } catch(e) {
+                    log.error(`Main: Couldn't send OpenVPN status to renderer. Error: ${e}`)
+                }
+                log.info(`Main: Couldn't copy the DNS updater script. Error: ${error}`)
+                return false
+            }
+        })
+    }
 }
 
 function disconnect() {
     intentionalDisconnect = true
     log.info(`Main: We're about to kill OpenVPN. If OpenVPN is not running, you will see no confirmation it wasn't killed.`)
     if (os.platform() === "win32") {
-        exec(`taskkill /IM openvpn.exe /F`, (error, stdout, stderr) => {
-            if (error) {
+        exec(`taskkill /IM openvpn.exe /F & taskkill /IM tstunnel.exe /F`, (error, stdout, stderr) => {
+            if (error && !String(error).includes(`"tstunnel.exe" not found.`)) {
                 log.error(`Main: An error occurred killing OpenVPN. Error: ${error}`)
                 mainWindow.show()
                 let status = {
@@ -913,7 +1179,7 @@ function disconnect() {
             log.info(`Main: OpenVPN was killed`)
             return true;
         })
-    } else if (os.platform() === "linux") {
+    } else if (os.platform() === "linux" || os.platform() === "darwin") {
         let writeData = {
             "command": "disconnect",
             "quitBoolean": false
@@ -957,6 +1223,10 @@ exports.hardQuit = () => {
 
 exports.installUpdates = () => {
     checkForUpdates(true)
+}
+exports.restartApp = () => {
+    app.relaunch()
+    app.exit()
 }
 function killSwitch(enable) {
     //All platform specific options are to be handled in killSwitchEnable
@@ -1105,7 +1375,7 @@ function killSwitchEnable(nic) {
                 })
             })
         }
-    } else if (os.platform() === "linux") {
+    } else if (os.platform() === "linux" || os.platform() === "darwin") {
         log.info(`Main: Enabling Kill Switch for ${os.platform()}.`)
         //This refers to the function nic, stupid.
         if (nic === "auto") {
@@ -1203,7 +1473,7 @@ function killSwitchDisable(nic) {
             }
             log.info(`Main: Kill switch disabled.`)
         })
-    } else if (os.platform() === "linux") {
+    } else if (os.platform() === "linux" || os.platform() === "darwin") {
         let writeData = {
             "command": "killSwitchDisable",
             "nic": nic
@@ -1211,8 +1481,8 @@ function killSwitchDisable(nic) {
         clientObj.write(JSON.stringify(writeData))
     }
 }
-function installDependenciesLinux(error) {
-    if (String(error).includes("openvpn: not found")) {
+function installDependenciesLinux(checkError) {
+    if (String(checkError).includes("openvpn: not found")) {
         //OpenVPN not installed. Get from package repository.
         log.info(`Main: Installing OpenVPN from package repository.`)
         getos((error, ops) => {
@@ -1233,7 +1503,7 @@ function installDependenciesLinux(error) {
                 let options = {
                     name: "unrestrictme"
                 }
-                sudo.exec(`apt-get -y install openvpn node`, options, (error, stdout, stderr) => {
+                sudo.exec(`apt-get -y install openvpn stunnel4`, options, (error, stdout, stderr) => {
                     if (error) {
                         //Couldn't run the install command.
                         log.error(`Main: Failed to run command to install OpenVPN. Error: ${error}`)
@@ -1252,30 +1522,13 @@ function installDependenciesLinux(error) {
                         }
                         welcomeWindow.webContents.send(`statusUpdate`, ipcUpdate)
                     } else {
-                        let settings = {}
-                        fs.writeFile(path.join(app.getPath('userData'), 'settings.conf'), JSON.stringify(settings), (error) => {
-                            if (error) {
-                                log.error(`Main: Error occurred writing settings file. Permissions error perhaps? Error: ${error}`)
-                                let ipcUpdate = {
-                                    "error":"writingSettingsFile",
-                                    "errorText": error
-                                }
-                                welcomeWindow.webContents.send(`statusUpdate`, ipcUpdate)
-                            } else {
-                                log.info(`Main: Settings file created!`)
-                                //Show alert to user and have them run quit()
-                                let ipcUpdate = {
-                                    "update": "InstallComplete"
-                                }
-                                welcomeWindow.webContents.send(`statusUpdate`, ipcUpdate)
-                            }
-                        }) 
+                        writeBlankSettingsFile()
                     }
                 })
             }
         })
-    } else if (!String(stdout).includes('built on')) {
-        log.error(`Main: Couldn't detect whether OpenVPN is installed. Error: ${error}`)
+    } else if (!String(checkError).includes('built on')) {
+        log.error(`Main: Couldn't detect whether OpenVPN is installed. Error: ${checkError}`)
         let ipcUpdate = {
             "error": "builtOnMissing"
         }
@@ -1283,6 +1536,93 @@ function installDependenciesLinux(error) {
     }
 }
 
+function installDependenciesMac(checkError) {
+    if (String(checkError).includes(`command not found`)) {
+        let ipcUpdate = {
+            "update": "installingOpenVPN"
+        }
+        welcomeWindow.webContents.send(`statusUpdate`, ipcUpdate)
+        fs.exists(`${app.getPath("home")}/unrestrictme/bin/brew`, (exists) => {
+            if (exists) {
+                log.info(`Main: Brew is already installed.`)
+                brewInstallDependencies()
+            } else {
+                exec(`mkdir "${app.getPath("home")}/unrestrictme/" && curl -L https://github.com/Homebrew/brew/tarball/master | tar xz --strip 1 -C "${app.getPath("home")}/unrestrictme/"`, (error, stdout, stderr) => {
+                    if (error) {
+                        log.error(`Main: Error downloading brew. Error: ${error}`)
+                        let ipcUpdate = {
+                            "error": "downloadingBrew",
+                            "errorText": JSON.stringify(error)
+                        }
+                        welcomeWindow.webContents.send(`statusUpdate`, ipcUpdate)
+                    } else {
+                        //Install dependencies
+                        brewInstallDependencies()
+                    }
+                })
+            }
+        })
+
+    }
+}
+
+function brewInstallDependencies() {
+    let brewInstallSpawn = spawn(`${app.getPath("home")}/unrestrictme/bin/brew`, ['install', 'openvpn', 'stunnel', 'node'])
+    let dataLog
+    brewInstallSpawn.stdout.on('data', (data) => {
+        log.info(`Main: ${data.toString()}`)
+        dataLog = dataLog + data.toString()
+        let ipcUpdate = {
+            "installLog": dataLog
+        }
+        welcomeWindow.webContents.send(`statusUpdate`, ipcUpdate)
+    })
+    brewInstallSpawn.stderr.on('data', (data) => {
+        log.error(`Main: ${data.toString()}`)
+        dataLog = dataLog + data.toString()
+        let ipcUpdate = {
+            "installLog": dataLog
+        }
+        welcomeWindow.webContents.send(`statusUpdate`, ipcUpdate)
+    })
+    brewInstallSpawn.on('close', (code) => {
+        if (code === 0 || dataLog.includes("is already installed and up-to-date")) {
+            let ipcUpdate = {
+                "update": "InstallComplete"
+            }
+            welcomeWindow.webContents.send(`statusUpdate`, ipcUpdate)
+            writeBlankSettingsFile()
+        } else {
+            log.info(`Main: Error installing dependencies from brew. Code: ${code}`)
+            let ipcUpdate = {
+                "error": "OpenVPNInstallFail",
+                "errorText": JSON.stringify(dataLog)
+            }
+            welcomeWindow.webContents.send(`statusUpdate`, ipcUpdate)
+        }
+    })
+}
+
+function writeBlankSettingsFile() {
+    let settings = {}
+    fs.writeFile(path.join(app.getPath('userData'), 'settings.conf'), JSON.stringify(settings), (error) => {
+        if (error) {
+            log.error(`Main: Error occurred writing settings file. Permissions error perhaps? Error: ${error}`)
+            let ipcUpdate = {
+                "error":"writingSettingsFile",
+                "errorText": error
+            }
+            welcomeWindow.webContents.send(`statusUpdate`, ipcUpdate)
+        } else {
+            log.info(`Main: Settings file created!`)
+            //Show alert to user and have them run quit()
+            let ipcUpdate = {
+                "update": "InstallComplete"
+            }
+            welcomeWindow.webContents.send(`statusUpdate`, ipcUpdate)
+        }
+    }) 
+}
 function checkIfConnected() {
     //This function runs on start to check if openvpn is already running.
     if (os.platform() === "win32") {
@@ -1305,8 +1645,7 @@ function checkIfConnected() {
                 //Error occurred checking if OpenVPN is running.
                 log.error(`Main: We couldn't check if OpenVPN is running.`)
                 return;
-            }
-            if (String(stdout) != "") {
+            } else if (String(stdout) != "") {
                 //OpenVPN is running.
                 try {
                     mainWindow.webContents.send("openvpnStatus", "processRunning")

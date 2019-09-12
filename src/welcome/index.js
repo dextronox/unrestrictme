@@ -21,7 +21,7 @@ $(document).ready(() => {
                 //WINDOWS
                 swal("Whoops!", "The TAP adapter installation was a failure.", "error")
                 $("#errorExcerpt").css("display", "block")
-                $("#errorExcerptText").html("Check the log.txt file for more information.")
+                $("#errorExcerptText").html(args["errorText"])
             } else if (args["error"] === "operatingSystemCheck") {
                 swal("Whoops!", "A programmatic error occurred getting operating system information.", "error")
                 $("#errorExcerpt").css("display", "block")
@@ -58,11 +58,16 @@ $(document).ready(() => {
                 $("#errorExcerpt").css("display", "block")
                 $("#errorExcerptText").html(args["errorText"])
                 swal("Whoops!", "We were unable to create a settings.conf file.", "error")
+            } else if (args["error"] === "downloadingBrew") {
+                //MACOS
+                $("#step3_repository_installing").css("display", "none")
+                $("#errorExcerpt").css("display", "block")
+                $("#errorExcerptText").html(args["errorText"])
+                swal("Whoops!", "An error occurred downloading and unpacking brew, the package repository we use to download dependencies.", "error")
             }
         } else if (args["update"]) {
             if (args["update"] === "installingTAPAdapter") {
-                //The TAP installer dialogue will be opened.
-                $("#step3_button_div2").css("display", "block")
+                //The TAP driver is being installed in the background.
 
             } else if (args["update"] === "installingOpenVPN") {
                 $("#step3_repository_installing").css("display", "block")
@@ -73,10 +78,13 @@ $(document).ready(() => {
                     icon: "success",
                     button: "Okay"
                 }).then((restart) => {
-                    log.info(`Renderer: unrestrict.me will now close because setup is complete.`)
-                    app.quit()
+                    main.restartApp()
                 });
             }
+        } else if (args["installLog"]) {
+            $("#step3").css("display", "none")
+            $("#installProgress").css("display", "block")
+            $("#installLogText").html(args["installLog"])
         }
     })
     ipcRenderer.once(`error`, (event, args) => {
@@ -118,10 +126,9 @@ $("#step3_button1").on("click", () => {
     main.dependenciesCheck()
     $("#step3_button_div1").css("display", "none")
 })
-
-$("#step3_button2").on("click", () => {
-    $("#step3_button_div2").css("display", "none")
-    main.dependenciesCheck(true)
+$("#show_install_log").on("click", () => {
+    $("#show_install_log").css("display", "none")
+    $("#installLog").css("display", "block")
 })
 
 

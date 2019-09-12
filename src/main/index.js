@@ -54,7 +54,7 @@ $(document).ready(() => {
                     }
                 }
                 request(requestConfig, (error, response, body) => {
-                    if (error) {
+                    if (error || response.statusCode != 200) {
                         log.error(`Renderer: Error getting public IP. Error: ${error}`)
                         populateConnected("API Failure", currentRequestId)
                     } else {
@@ -99,7 +99,7 @@ $(document).ready(() => {
             $("#connectButtons").css("display", "block")
         } else if (args["writeError"]) {
             //Issue should never occur because up until this point writing has been successful. Maybe if we run out of storage?
-            swal("Whoops!", "We couldn't write the OpenVPN config file to disk.", "error")
+            swal("Whoops!", "There was an issue writing a file to disk.", "error")
             $("#connected").css('display', 'none')
             $("#disconnected").css('display', 'block')
             $("#loading3").css("display", "none")
@@ -116,7 +116,7 @@ $(document).ready(() => {
             //Linux no root.
             swal("Whoops!", "We need your root password to disconnect from unrestrict.me. Leave limited functionality mode to remove this hindrance.", "error")
         } else if (args["connectError"]) {
-            swal("Whoops!", "We couldn't connect you to OpenVPN. Feel free to try a different location.", "error")
+            swal("Whoops!", "We couldn't connect you to unrestrict.me. Feel free to try a different location.", "error")
             $("#loading3").css("display", "none")
             $("#connectButtons").css("display", "block")
         } else if (args["requireSudo"]) {
@@ -130,6 +130,10 @@ $(document).ready(() => {
             swal("Whoops!", "We couldn't check if OpenVPN is running, and subsequently the application may quit leaving the VPN connected. Check the log file for more information.", "error").then((value) => {
                 main.hardQuit()
             })
+        } else if (args["platformSupport"]) {
+            swal("Whoops!", "Stealth mode isn't supported on this system configuration.", "error")
+            $("#loading3").css("display", "none")
+            $("#connectButtons").css("display", "block")
         }
     })
     ipcRenderer.on(`killSwitch`, (event, args) => {
@@ -140,6 +144,8 @@ $(document).ready(() => {
             $("#killSwitch").css("display", "block")
         } else if (args["enabled"] === false) {
             $("#killSwitch").css("display", "none")
+            $("#loading3").css("display", "none")
+            $("#connectButtons").css("display", "block")
             $("#disconnected").css('display', 'block')
         } else if (args["error"] === "disable") {
             swal("Whoops!", "We were unable to disable the kill switch. You can try enabling the effected network driver manually. This error may have occurred because the kill switch has already been disabled, in which case the interface should be updated to reflect this shortly.", "error")
@@ -166,21 +172,8 @@ $(document).ready(() => {
             }).then((willUpdate) => {
                 if (willUpdate) {
                     //Tell we wish to update. They will take care of disconnection.
-                    log.info(`Renderer: User has indicated they wish to update their client.`)
-                    main.installUpdates()
-                    ipcRenderer.once('updaterError', (event, args) => {
-                        swal({
-                            title: "Updater Error",
-                            text: "Something went wrong and we were unable to download the update. Please check the log file and try again later. The client will now restart.",
-                            icon: "error"
-                        }).then(() => {
-                            app.relaunch()
-                            app.quit()
-                        })
-                    })
-                    ipcRenderer.on('updaterProgress', (event, args) => {
-                        log.info(`Renderer: Updater Progress: ${JSON.stringify(args)}`)
-                    })
+                    log.info(`Renderer: User has indicated they wish to update their client....`)
+                    installUpdates()
                 }
             })
         }
@@ -226,6 +219,15 @@ $(document).ready(() => {
             $("#disconnected-normal").css('display', 'none')
             $("#disconnected-OpenVPNRunning").css('display', 'block')
 
+        }
+    })
+    ipcRenderer.on(`authentication`, (event, args) => {
+        if (args === "waiting") {
+            $("#initialLoad").css("display", "block")
+            $("#disconnected-normal").css("display", "none")
+        } else if (args === "passed") {
+            $("#initialLoad").css("display", "none")
+            $("#disconnected-normal").css("display", "block")
         }
     })
     $("#clientVersion").html(`You're currently running unrestrict.me v${app.getVersion()}`)
@@ -304,7 +306,7 @@ $("#connect").on("click", () => {
             }
             request(requestConfig, (error, response, body) => {
                 log.info(`Renderer: Response received!`)
-                if (error) {
+                if (error || response.statusCode != 200) {
                     log.error(`Renderer: Connection request error. Error: ${error}`)
                     swal("Whoops!", "An error occurred sending a request for a new connection identifier. Check your internet connection.", "error")
                     $("#loading1").css("display", "none")
@@ -423,7 +425,7 @@ function monitorRequest(id) {
             } 
         }
         request(requestConfig, (error, response, body) => {
-            if (error) {
+            if (error || response.statusCode != 200) {
                 log.error(`Renderer: Couldn't query connection id. Error: ${error}`)
                 $("#connectButtons").css("display", "block")
                 $("#loading1").css("display", "none")
@@ -451,7 +453,14 @@ function monitorRequest(id) {
                     let decryptedResponse = JSON.parse(key.decrypt(body, 'utf8'))
                     $("#loading2").css("display", "none")
                     $("#loading3").css("display", "block")
-                    main.connect(decryptedResponse["config"])
+                    log.info(decryptedResponse)
+                    if (decryptedResponse["mode"] === "normal") {
+                        log.info(`Renderer: Normal connection.`)
+                        main.connect(decryptedResponse["config"])
+                    } else {
+                        log.info(`Renderer: Stealth connection.`)
+                        main.stealthConnect(decryptedResponse)
+                    }
                 }) 
             }
         })
@@ -485,7 +494,7 @@ $("#cancelRequest").on("click", () => {
             } 
         }
         request(requestConfig, (error, response, body) => {
-            if (error) {
+            if (error || response.statusCode != 200) {
                 log.error(`Renderer: Error deleting request. Error: ${error}`)
                 $("#loading2").css("display", "none")
                 $("#connectButtons").css("display", "block")
@@ -754,4 +763,28 @@ function populateConnected (publicIp, connectionId) {
             $("#placeholderTimeRemaining").html("Connection has expired. Expect to disconnect shortly. Fail safe will engage.")
         }
     }, 1000); 
+}
+
+function installUpdates() {
+    log.info(`Renderer: Attempting to update.`)
+    $("#updating").css("display", "block")
+    $("#disconnected").css("display", "none")
+    $("#connected").css('display', 'none')
+    $("#startBackgroundProcessDiv").css('display', 'none')
+    $("#backgroundProcessCrash").css('display', 'none')
+    $("#killSwitch").css('display', 'none')
+    ipcRenderer.once('updaterError', (event, args) => {
+        swal({
+            title: "Updater Error",
+            text: "Something went wrong and we were unable to download the update. Please check the log file and try again later. The client will now restart.",
+            icon: "error"
+        }).then(() => {
+            main.restartApp()
+        })
+    })
+    ipcRenderer.on('updaterProgress', (event, args) => {
+        log.info(`Renderer: Updater Progress: ${JSON.stringify(args)}`)
+        $("#updateProgressBar").css("width", `${args["progress"]["percent"]}%`)
+    })
+    main.installUpdates()
 }

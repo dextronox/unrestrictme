@@ -1,6 +1,6 @@
 {
   "name": "unrestrictme",
-  "version": "1.0.0",
+  "version": "1.0.4",
   "description": "Desktop application for connecting to the unrestrict.me VPN network.",
   "main": "./main.js",
   "scripts": {
@@ -29,8 +29,7 @@
     "win": {
       "target": "nsis",
       "icon": "build/icon.ico",
-      "publisherName": "unrestrict.me",
-      "verifyUpdateCodeSignature": true,
+      "verifyUpdateCodeSignature": false,
       "asar": false,
       "requestedExecutionLevel": "requireAdministrator"
     },
@@ -54,11 +53,16 @@
     "appImage": {
       "synopsis": "unrestrict.me Linux Client",
       "category": "Network",
-      "desktop": "unrestrictme",
-      "systemIntegration": "doNotAsk"
+      "desktop": "unrestrictme"
     },
     "mac": {
-      "category": "public.app-category.utilities"
+      "category": "public.app-category.utilities",
+      "target": "default",
+      "icon": "icon.icns",
+      "type": "development"
+    },
+    "dmg": {
+      "icon": "build/icon.icns"
     },
     "publish": {
       "provider": "github",
@@ -81,15 +85,15 @@
   },
   "devDependencies": {
     "electron": "^4.0.2",
-    "electron-builder": "^20.38.5"
+    "electron-builder": "^21.1.5"
   },
   "dependencies": {
     "child_process": "^1.0.2",
     "electron-log": "^2.2.17",
-    "electron-updater": "^4.0.6",
+    "electron-updater": "^4.1.2",
     "getos": "^3.1.1",
     "is-elevated": "^2.0.1",
-    "jquery": "^3.3.1",
+    "jquery": "^3.4.1",
     "network": "^0.4.1",
     "node-rsa": "^1.0.1",
     "os": "^0.1.1",

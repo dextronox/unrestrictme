@@ -7,10 +7,6 @@ const os = require("os")
 const {exec} = require('child_process')
 
 let killSwitchStatus, intentionalDisconnect
-function setLogValues() {
-    //We need a new way of logging, because this script runs as root (i.e. different user environment)
-}
-setLogValues()
 const client = net.createConnection({ port: 4964 }, () => {
     //Runs once connected to the server.
     console.log(`Background: Connected to client server. Ready to receive instructions.`)
@@ -40,7 +36,7 @@ function foregroundProcessDataHandler(data) {
     let dataInterpreted = JSON.parse(data)
     console.log(JSON.stringify(dataInterpreted))
     if (dataInterpreted["command"] === "connectToOpenVPN") {
-        ovpnFunction(dataInterpreted["configPath"])
+        ovpnFunction(dataInterpreted["configPath"], dataInterpreted["ovpnPath"], dataInterpreted["scriptPath"])
     }
     if (dataInterpreted["command"] === "disconnect") {
         disconnectFromVPN(dataInterpreted["quitBoolean"])
@@ -51,150 +47,155 @@ function foregroundProcessDataHandler(data) {
     if (dataInterpreted["command"] === "killSwitchDisable") {
         killSwitchDisable(dataInterpreted["nic"])
     }
-}
-
-function ovpnFunction(configPath) {
-    if (os.platform() === "linux") {
-        intentionalDisconnect = false
-        killSwitchStatus = false
-        let ovpnProc = exec(`openvpn --config "${configPath}"  --connect-retry-max 1 --tls-exit --mute-replay-warnings --connect-timeout 15`)
-        var datalog
-        ovpnProc.stdout.on('data', (data) => {
-            console.log(data)
-            datalog = datalog + data 
-            if (data.includes(`Initialization Sequence Completed`)) {
-                killSwitchStatus = false
-                let initializeCount = (datalog.match(/Initialization Sequence Completed/g) || []).length;
-                if (initializeCount <= 1) {
-                    //Connected to unrestrictme
-                    let writeData = {
-                        "command":"sendToRenderer",
-                        "channel": "connection",
-                        "status": {
-                            "connected": true
-                        }
-                    }
-                    client.write(JSON.stringify(writeData))
-                }
-            }
-            if (data.includes(`All TAP-Windows adapters on this system are currently in use.`)) {
-                //Couldn't connect, some other VPN (maybe us) is already connected
-                let writeData = {
-                    "command":"sendToRenderer",
-                    "channel": "error",
-                    "status": {
-                        "tapError": true
-                    }
-                }
-                client.write(JSON.stringify(writeData))
-            }
-            if (data.includes('Closing TUN/TAP interface')) {
-                if (datalog.includes(`Initialization Sequence Completed`) && !intentionalDisconnect) {
-                    //OpenVPN has disconnected on its own. Activate kill switch.
-                    console.log(`Main: OpenVPN has disconnected on its own. Enabling kill switch.`)
-                    killSwitchStatus = true
-                }
-            }
-            if (data.includes('SIGTERM[soft,tls-error] received, process exiting') || data.includes('Exiting due to fatal error')) {
-                //OpenVPN failed to connect, check if had already connected.
-                if (!datalog.includes(`Initialization Sequence Completed`)) {
-                    console.log(`Main: OpenVPN failed to connect.`)
-                    intentionalDisconnect = true
-                    let writeData = {
-                        "command":"sendToRenderer",
-                        "channel": "error",
-                        "status": {
-                            "connectError": true
-                        }
-                    }
-                    client.write(JSON.stringify(writeData))
-                }
-            }
-            if (data.includes(`Inactivity timeout (--ping-restart), restarting`)) {
-                //Something has caused the VPN to restart. Alert the user that there are issues.
-                let writeData = {
-                    "command":"sendToRenderer",
-                    "channel": "error",
-                    "status": {
-                        "inactivityTimeout": true
-                    }
-                }
-                client.write(JSON.stringify(writeData))
-            }
-        })
-        ovpnProc.on('close', (data) => {
-            //OpenVPN has closed!
-            if (killSwitchStatus === true || !intentionalDisconnect) {
-                console.log(`Main: Activating failsafe.`)
-                let writeData = {
-                    "command":"execute",
-                    "methods": [
-                        "killSwitch(true)"
-                    ]
-                }
-                client.write(JSON.stringify(writeData))
-            }
-        })
+    if (dataInterpreted["command"] === "connectToStealth") {
+        stealthFunction(dataInterpreted["stunnelPath"],  dataInterpreted["resourcePath"]["config"], dataInterpreted["resourcePath"]["pem"], dataInterpreted["configPath"], dataInterpreted["ovpnPath"], dataInterpreted["scriptPath"])
     }
 }
 
-function disconnectFromVPN(quit) {
-    exec(`pgrep openvpn`, (error, stdout, stderr) => {
-        if (error && !error.code === 1) {
-            //Error occurred checking if OpenVPN is running.
-            console.log(`Background: We couldn't check if OpenVPN is running. Error: ${error}. stdout: ${stdout}. stderr: ${stderr}`)
+function ovpnFunction(configPath, ovpnPath, scriptPath) {
+    if (scriptPath) {
+        exec(`/bin/chmod +x "${scriptPath}"`, (error, stdout, stderr) => {
+            if (error) {
+                console.log(`Couldn't set the permission of the DNS updater script. Error: ${error}`)
+                let writeData = {
+                    "command":"sendToRenderer",
+                    "channel": "error",
+                    "status": {
+                        "connectError": true
+                    }
+                }
+                client.write(JSON.stringify(writeData))
+            } else {
+                startOvpn(configPath, ovpnPath, scriptPath)
+            }
+        })
+    } else {
+        startOvpn(configPath)
+    }
+
+}
+
+function startOvpn(configPath, ovpnPath, scriptPath) {
+    intentionalDisconnect = false
+    killSwitchStatus = false
+    let ovpnProc
+    if (os.platform() === "linux") {
+        ovpnProc = exec(`openvpn --config "${configPath}"  --connect-retry-max 1 --tls-exit --mute-replay-warnings --connect-timeout 15 --script-security 2 --up '${scriptPath}' --down '${scriptPath}'`)
+    } else {
+        ovpnProc = exec(`${ovpnPath} --config "${configPath}"  --connect-retry-max 1 --tls-exit --mute-replay-warnings --connect-timeout 15 --script-security 2 --up '${scriptPath}' --down '${scriptPath}'`)        
+    }
+    var datalog
+    ovpnProc.stdout.on('data', (data) => {
+        console.log(data)
+        datalog = datalog + data 
+        if (data.includes(`Initialization Sequence Completed`)) {
+            killSwitchStatus = false
+            let initializeCount = (datalog.match(/Initialization Sequence Completed/g) || []).length;
+            if (initializeCount <= 1) {
+                //Connected to unrestrictme
+                let writeData = {
+                    "command":"sendToRenderer",
+                    "channel": "connection",
+                    "status": {
+                        "connected": true
+                    }
+                }
+                client.write(JSON.stringify(writeData))
+            }
+        }
+        if (data.includes(`All TAP-Windows adapters on this system are currently in use.`)) {
+            //Couldn't connect, some other VPN (maybe us) is already connected
             let writeData = {
                 "command":"sendToRenderer",
                 "channel": "error",
                 "status": {
-                    "pgrep": true
+                    "tapError": true
+                }
+            }
+            client.write(JSON.stringify(writeData))
+        }
+        if (data.includes('Closing TUN/TAP interface')) {
+            if (datalog.includes(`Initialization Sequence Completed`) && !intentionalDisconnect) {
+                //OpenVPN has disconnected on its own. Activate kill switch.
+                console.log(`Main: OpenVPN has disconnected on its own. Enabling kill switch.`)
+                killSwitchStatus = true
+            }
+        }
+        if (data.includes('SIGTERM[soft,tls-error] received, process exiting') || data.includes('Exiting due to fatal error')) {
+            //OpenVPN failed to connect, check if had already connected.
+            if (!datalog.includes(`Initialization Sequence Completed`)) {
+                console.log(`Main: OpenVPN failed to connect.`)
+                intentionalDisconnect = true
+                let writeData = {
+                    "command":"sendToRenderer",
+                    "channel": "error",
+                    "status": {
+                        "connectError": true
+                    }
+                }
+                client.write(JSON.stringify(writeData))
+            }
+        }
+        if (data.includes(`Inactivity timeout (--ping-restart), restarting`)) {
+            //Something has caused the VPN to restart. Alert the user that there are issues.
+            let writeData = {
+                "command":"sendToRenderer",
+                "channel": "error",
+                "status": {
+                    "inactivityTimeout": true
+                }
+            }
+            client.write(JSON.stringify(writeData))
+        }
+    })
+    ovpnProc.on('close', (data) => {
+        //OpenVPN has closed!
+        if (killSwitchStatus === true || !intentionalDisconnect) {
+            console.log(`Main: Activating failsafe.`)
+            let writeData = {
+                "command":"execute",
+                "methods": [
+                    "killSwitch(true)"
+                ]
+            }
+            client.write(JSON.stringify(writeData))
+        }
+    })
+}
+function disconnectFromVPN(quit) {
+    intentionalDisconnect = true
+    let execCmd = ""
+    if (os.platform() === "linux") {
+        execCmd = "pkill openvpn && pkill stunnel4"
+    } else if (os.platform() === "darwin") {
+        execCmd = "pkill openvpn && pkill stunnel"
+    }
+    exec(execCmd, (error, stdout, stderr) => {
+        //https://www.freebsd.org/cgi/man.cgi?query=pkill&sektion=1
+        if (error && error.code != 1) {
+            console.log(error, stdout, stderr)
+            let writeData = {
+                "command":"sendToRenderer",
+                "channel": "error",
+                "status": {
+                    "disconnectError": true
                 },
                 "showWindow": true
             }
             client.write(JSON.stringify(writeData))
             return;
         }
-        if (String(stdout) != "") {
-            intentionalDisconnect = true
-            exec(`pkill openvpn`, (error, stdout, stderr) => {
-                if (error) {
-                    console.log(`Background: An error occurred running pkill for OpenVPN.`)
-                    let writeData = {
-                        "command":"sendToRenderer",
-                        "channel": "error",
-                        "status": {
-                            "disconnectError": true
-                        },
-                        "showWindow": true
-                    }
-                    client.write(JSON.stringify(writeData))
-                    return;
-                }
-                console.log(`Background: pkill has run successfully.`)
-                let writeData = {
-                    "command":"sendToRenderer",
-                    "channel": "connection",
-                    "status": {
-                        "connected": false
-                    }
-                }
-                client.write(JSON.stringify(writeData), () => {
-                    if (quit) {
-                        console.log(`Background: Sending command to quit unrestrict.me`)
-                        let writeData = {
-                            "command":"execute",
-                            "methods": [
-                                "tray.destroy()",
-                                "app.quit()"
-                            ]
-                        }
-                        client.write(JSON.stringify(writeData))
-                    }
-                })
-
-            })
-        } else {
+        console.log(`Background: pkill has run successfully.`)
+        let writeData = {
+            "command":"sendToRenderer",
+            "channel": "connection",
+            "status": {
+                "connected": false
+            }
+        }
+        client.write(JSON.stringify(writeData), () => {
             if (quit) {
+                console.log(`Background: Sending command to quit unrestrict.me`)
                 let writeData = {
                     "command":"execute",
                     "methods": [
@@ -202,9 +203,14 @@ function disconnectFromVPN(quit) {
                         "app.quit()"
                     ]
                 }
-                client.write(JSON.stringify(writeData))
+                setTimeout(() => {
+                    //Give main js time to deal with buffer
+                    client.write(JSON.stringify(writeData))
+                }, 200)
+                
             }
-        }
+        })
+
     })
 }
 
@@ -260,4 +266,35 @@ function killSwitchDisable(nic) {
         client.write(JSON.stringify(writeData))
         console.log(`Main: Kill switch disabled.`)
     })
+}
+
+function stealthFunction(stunnelPath, stunnelConfig, stunnelPem, ovpnConfig, ovpnPath, scriptPath) {
+    if (os.platform() === "linux") {
+        exec(`stunnel4 "${stunnelConfig}" -p "${stunnelPem}"`, (error, stdout, stderr) => {
+            if (error) {
+                console.log(`Error!`)
+                console.log(error)
+                console.log(stdout)
+                console.log(stderr)
+            }
+            console.log(stdout)
+            console.log(stderr)
+        })
+        ovpnFunction(ovpnConfig, ovpnPath, scriptPath)
+    } else if (os.platform() === "darwin") {
+        console.log(`Going to execute: ${`${stunnelPath} "${stunnelConfig}" -p "${stunnelPem}"`}`)
+        exec(`${stunnelPath} "${stunnelConfig}" -p "${stunnelPem}"`, (error, stdout, stderr) => {
+            if (error) {
+                console.log(`Error!`)
+                console.log(error)
+                console.log(stdout)
+                console.log(stderr)
+            }
+            console.log(stdout)
+            console.log(stderr)
+        })
+        ovpnFunction(ovpnConfig, ovpnPath, scriptPath)
+    }
+    
+    
 }
