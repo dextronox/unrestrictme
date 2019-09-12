@@ -101,15 +101,7 @@ function appStart() {
             }
         })
     } else if (os.platform() === "linux") {
-        isElevated().then(elevated => {
-            if (!elevated) {
-                log.error("Main: Application is not elevated. Consequently, we will run with limited functionality.")
-                checkSettings()
-            } else {
-                log.info("Main: Application is elevated.")
-                checkSettings()
-            }
-        })
+        checkSettings()
     } else if (os.platform() === "darwin") {
         checkSettings()
     }
@@ -603,7 +595,7 @@ function createWelcomeWindow() {
     welcomeWindow.webContents.on('did-finish-load', () => {
         welcomeWindow.show()
     })
-    //welcomeWindow.webContents.openDevTools({mode: "undocked"})
+    welcomeWindow.webContents.openDevTools({mode: "undocked"})
     welcomeWindow.setAlwaysOnTop(false)
     if (loadingWindow) {
         loadingWindow.close()
