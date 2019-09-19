@@ -22,6 +22,7 @@ const { autoUpdater } = require("electron-updater")
 const net = require("net")
 const spawn = require("child_process").spawn
 const isDev = require("electron-is-dev")
+const rimraf = require("rimraf");
 
 autoUpdater.logger = null
 
@@ -844,7 +845,7 @@ function deleteUnrequiredFolders() {
     osSpecifics[os.platform()].forEach((val, index, array) => {
         if (!isDev) {
             log.info(`Main: Going to delete unnecessary folder ${val}`)
-            fs.rmdir(path.join(__dirname, "assets", val), (error) => {
+            rimraf(path.join(__dirname, "assets", val), (error) => {
                 log.error(`Main: Error occurred deleting unnecessary folders. Error: ${error}`)
             })
         }
