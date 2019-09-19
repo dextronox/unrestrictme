@@ -423,7 +423,7 @@ function startBackgroundService() {
         name: "unrestrictme"
     }
     if (os.platform() === "linux") {
-        sudo.exec(`sh -c "cp ${path.join(app.getPath('userData'), 'serviceTemplate')} /etc/systemd/system/unrestrictme.service && systemctl daemon-reload && chmod +x /etc/systemd/system/unrestrictme.service && systemctl start unrestrictme"`, options, (error, stdout, stderr) => {
+        sudo.exec(`sh -c "cp ${path.join(app.getPath('userData'), 'serviceTemplate')} /etc/systemd/system/unrestrictme.service && systemctl daemon-reload && chmod +x ${path.join(app.getPath("userData"), "service.js")} && chmod +x ${path.join(app.getPath("userData"), "node")} && systemctl start unrestrictme"`, options, (error, stdout, stderr) => {
             if (error) {
                 if (String(error).includes(`User did not grant permission`)) {
                     log.error(`Main: User did not grant permission to start background service. Error: ${error}`)
