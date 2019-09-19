@@ -1250,6 +1250,7 @@ exports.restartApp = () => {
 function killSwitch(enable) {
     //All platform specific options are to be handled in killSwitchEnable
     if (enable) {
+        mainWindow.show()
         fs.readFile(path.join(app.getPath('userData'), 'settings.conf'), 'utf8', (error, data) => {
             if (error) {
                 log.error(`Main: Couldn't read settings file to enter kill switch NIC. Will not proceed. Error: ${error}`)
