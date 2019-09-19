@@ -876,8 +876,7 @@ exports.dependenciesCheck = () => {
         })
     } else if (os.platform() === "linux") {
         exec(`openvpn`, (error, stdout, stderr) => {
-            log.info(JSON.stringify(error.code))
-            if (error) {
+            if (error && !String(stdout).includes("built on")) {
                 log.error(`Main: Error checking whether OpenVPN is installed. Error: ${error}`)
                 installDependenciesLinux(error)
             } else if (String(stdout).includes(`built on`)) {
