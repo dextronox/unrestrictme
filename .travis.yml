@@ -12,12 +12,6 @@ matrix:
       services: docker
       language: generic
 
-cache:
-  directories:
-    - node_modules
-    - $HOME/.cache/electron
-    - $HOME/.cache/electron-builder
-
 
 script:
   - |
