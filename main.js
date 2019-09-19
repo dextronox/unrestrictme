@@ -844,7 +844,9 @@ function deleteUnrequiredFolders() {
     osSpecifics[os.platform()].forEach((val, index, array) => {
         if (!isDev) {
             log.info(`Main: Going to delete unnecessary folder ${val}`)
-            fs.rmdir(path.join(__dirname, "assets", val))
+            fs.rmdir(path.join(__dirname, "assets", val), (error) => {
+                log.error(`Main: Error occurred deleting unnecessary folders. Error: ${error}`)
+            })
         }
         if (index + 1 === osSpecifics[os.platform()].length) {
             app.relaunch()
