@@ -21,6 +21,7 @@ const appLock = app.requestSingleInstanceLock()
 const { autoUpdater } = require("electron-updater")
 const net = require("net")
 const spawn = require("child_process").spawn
+const isDev = require("electron-is-dev")
 
 autoUpdater.logger = null
 
@@ -595,7 +596,7 @@ function createWelcomeWindow() {
     welcomeWindow.webContents.on('did-finish-load', () => {
         welcomeWindow.show()
     })
-    welcomeWindow.webContents.openDevTools({mode: "undocked"})
+    //welcomeWindow.webContents.openDevTools({mode: "undocked"})
     welcomeWindow.setAlwaysOnTop(false)
     if (loadingWindow) {
         loadingWindow.close()
@@ -805,7 +806,7 @@ function runTapInstaller () {
             }
             welcomeWindow.webContents.send(`statusUpdate`, ipcUpdate)
         } else if (String(stdout).includes(`Drivers installed successfully.`)) {
-            //The driver install successfully.
+            //The driver installed successfully.
             createSettingsFile()
         } else {
             //Something went wrong with the installation.
@@ -829,10 +830,28 @@ function createSettingsFile() {
             welcomeWindow.webContents.send(`statusUpdate`, ipcUpdate)
         } else {
             log.info(`Main: Settings file created!`)
+            deleteUnrequiredFolders()
+        }
+    })
+}
+
+function deleteUnrequiredFolders() {
+    let osSpecifics = {
+        "win32": ["node"],
+        "darwin": ["openvpn", "stunnel", "node"],
+        "linux": ["openvpn", "stunnel"]
+    }
+    osSpecifics[os.platform()].forEach((val, index, array) => {
+        if (!isDev) {
+            log.info(`Main: Going to delete unnecessary folder ${val}`)
+            fs.rmdir(path.join(__dirname, "assets", val))
+        }
+        if (index + 1 === osSpecifics[os.platform()].length) {
             app.relaunch()
             app.quit()
         }
     })
+
 }
 exports.dependenciesCheck = () => {
     if (os.platform() === "win32") {
@@ -979,7 +998,7 @@ function connect(config) {
                         killSwitchStatus = true
                     }
                 }
-                if (data.includes('SIGTERM[soft,tls-error] received, process exiting') || data.includes('Exiting due to fatal error')) {
+                if (data.includes('SIGTERM[soft,tls-error] received, process exiting') || data.includes('Exiting due to fatal error') || data.includes('Unrecognized option or missing or extra parameter(s) in ')) {
                     //OpenVPN failed to connect, check if had already connected.
                     if (!datalog.includes(`Initialization Sequence Completed`)) {
                         log.info(`Main: OpenVPN failed to connect.`)
