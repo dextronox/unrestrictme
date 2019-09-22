@@ -668,23 +668,23 @@ function createMainWindow() {
             label: "Copy IP to Clipboard", click: () => {
                 fs.readFile(path.join(app.getPath('userData'), 'settings.conf'), 'utf8', (error, data) => {
                     if (error) {
-                        log.error(`Renderer: Error reading settings file. Error: ${error}`)
+                        log.error(`Main: Error reading settings file. Error: ${error}`)
                         mainWindow.webContents.send("trayError", "")
                         return;
                     }
                     let requestConfig
                     settingsFile = JSON.parse(data)
                     if (settingsFile["customAPI"]) {
-                        log.info(`Renderer: Using custom API.`)
+                        log.info(`Main: Using custom API.`)
                         requestConfig = {
                             url: `${settingsFile["customAPI"]}/client/ip`,
                             timeout: 5000,
                             method: "GET"
                         } 
                     } else {
-                        log.info(`Renderer: Using ifconfig.me to retrieve external IP.`)
+                        log.info(`Main: Using normal API.`)
                         requestConfig = {
-                            url: `https://ifconfig.me/ip`,
+                            url: `https://api.unrestrict.me/client/ip`,
                             timeout: 5000,
                             method: "GET"
                         }
@@ -693,15 +693,15 @@ function createMainWindow() {
                         if (error) {
                             mainWindow.show()
                             mainWindow.webContents.send("trayError", "")
-                            log.error(`Renderer: Error getting public IP. Error: ${error}`)
+                            log.error(`Main: Error getting public IP. Error: ${error}`)
                         } else {
                             if (/^(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/.test(body) || body === "::ffff:127.0.0.1") {
                                 clipboard.writeText(body)
-                                log.info(`Renderer: IP address copied to clipboard.`)
+                                log.info(`Main: IP address copied to clipboard.`)
                             } else {
                                 mainWindow.show()
                                 mainWindow.webContents.send("trayError", "")
-                                log.error(`Renderer: Failed to get IP address. We got a response, however: ${body}`)
+                                log.error(`Main: Failed to get IP address. We got a response, however: ${body}`)
                             }
                         }
                     })
