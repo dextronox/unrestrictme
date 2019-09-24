@@ -1286,7 +1286,7 @@ function killSwitch(enable) {
                 return;
             }
             let settings = JSON.parse(data)
-            killSwitchDisable(settings["nic"])
+            killSwitchDisable(settings["selectedNic"])
         })
     }
 }
