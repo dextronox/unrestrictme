@@ -123,12 +123,24 @@ $("#step2_button").on("click", () => {
 })
 
 $("#step3_button1").on("click", () => {
-    main.dependenciesCheck()
-    $("#step3_button_div1").css("display", "none")
+    //Show legal modal.
+    $("#legal").modal('show')
 })
 $("#show_install_log").on("click", () => {
     $("#show_install_log").css("display", "none")
     $("#installLog").css("display", "block")
 })
 
+$("#openLegalExternal").on('click', () => {
+    require('electron').shell.openExternal('https://unrestrict.me/legal')
+})
+
+$("#tosAccept").on("click", () => {
+    main.dependenciesCheck()
+    $("#step3_button_div1").css("display", "none")
+})
+
+$("#decline").on("click", () => {
+    app.quit()
+})
 
