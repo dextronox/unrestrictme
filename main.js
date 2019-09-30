@@ -809,6 +809,7 @@ function quit(hard) {
     } else if (hard) {
         tray.destroy()
         app.quit()
+        app.on('window-all-closed', app.quit);
     }
 
 }
