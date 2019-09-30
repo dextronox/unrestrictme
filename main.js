@@ -1061,7 +1061,9 @@ function connect(config) {
                 "ovpnPath": `${app.getPath("home")}/unrestrictme/sbin/openvpn`,
                 "scriptPath": `${app.getPath("home")}/unrestrictme/sbin/update-resolv-conf`
             }
-            clientObj.write(JSON.stringify(writeData))
+            if (clientObj && clientObj != "killed") {
+                clientObj.write(JSON.stringify(writeData))  
+            }
         } else if (os.platform() === "linux") {
             copyDnsHelper()
             let writeData = {
@@ -1069,8 +1071,9 @@ function connect(config) {
                 "configPath": `${path.join(app.getPath("userData"), 'current.ovpn')}`,
                 "scriptPath": `${app.getPath("userData")}/update-systemd-resolved`
             }
-            clientObj.write(JSON.stringify(writeData))
-
+            if (clientObj && clientObj != "killed") {
+                clientObj.write(JSON.stringify(writeData))
+            }
         }
     }) 
 }
@@ -1124,7 +1127,9 @@ exports.stealthConnect = (decryptedResponse) => {
                         "ovpnPath": `${app.getPath("home")}/unrestrictme/sbin/openvpn`,
                         "scriptPath": `${app.getPath("home")}/unrestrictme/sbin/update-resolv-conf`
                     }
-                    clientObj.write(JSON.stringify(writeData))
+                    if (clientObj && clientObj != "killed") {
+                        clientObj.write(JSON.stringify(writeData))
+                    }
                 } else if (os.platform() === "linux") {
                     let writeData = {
                         "command": "connectToStealth",
@@ -1137,7 +1142,9 @@ exports.stealthConnect = (decryptedResponse) => {
                         "ovpnPath": `${app.getPath("home")}/unrestrictme/sbin/openvpn`,
                         "scriptPath": `${app.getPath("userData")}/update-systemd-resolved`
                     }
-                    clientObj.write(JSON.stringify(writeData))
+                    if (clientObj && clientObj != "killed") {
+                        clientObj.write(JSON.stringify(writeData))
+                    }   
                 }
 
             }
@@ -1219,11 +1226,13 @@ function disconnect() {
             return true;
         })
     } else if (os.platform() === "linux" || os.platform() === "darwin") {
-        let writeData = {
-            "command": "disconnect",
-            "quitBoolean": false
+        if (clientObj && clientObj != "killed") {
+            let writeData = {
+                "command": "disconnect",
+                "quitBoolean": false
+            }
+            clientObj.write(JSON.stringify(writeData))
         }
-        clientObj.write(JSON.stringify(writeData))
     }
 }
 

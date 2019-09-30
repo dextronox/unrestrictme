@@ -74,7 +74,7 @@ $(document).ready(() => {
             } else if (args["update"] === "InstallComplete") {
                 swal({
                     title: "Success!",
-                    text: "Everything has been setup and you are ready to use unrestrict.me. Due to platform limitations, you must reopen the program manually to begin connecting.",
+                    text: "Everything has been setup and you are ready to use unrestrict.me. The application will now restart.",
                     icon: "success",
                     button: "Okay"
                 }).then((restart) => {
