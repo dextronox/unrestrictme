@@ -1526,11 +1526,13 @@ function killSwitchDisable(nic) {
             log.info(`Main: Kill switch disabled.`)
         })
     } else if (os.platform() === "linux" || os.platform() === "darwin") {
-        let writeData = {
-            "command": "killSwitchDisable",
-            "nic": nic
+        if (clientObj && clientObj != "killed") {
+            let writeData = {
+                "command": "killSwitchDisable",
+                "nic": nic
+            }
+            clientObj.write(JSON.stringify(writeData))
         }
-        clientObj.write(JSON.stringify(writeData))
     }
 }
 function installDependenciesLinux(checkError) {
