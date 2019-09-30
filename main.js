@@ -825,7 +825,7 @@ function runTapInstaller () {
             }
             welcomeWindow.webContents.send(`statusUpdate`, ipcUpdate)
         } else if (String(stdout).includes(`Drivers installed successfully.`)) {
-            //The driver installed successfully.
+            //The driver been installed successfully.
             createSettingsFile()
         } else {
             //Something went wrong with the installation.
