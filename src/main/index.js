@@ -788,3 +788,7 @@ function installUpdates() {
     })
     main.installUpdates()
 }
+
+$("#openLog").on("click", () => {
+    main.openLog()
+})

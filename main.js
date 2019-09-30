@@ -1,6 +1,6 @@
 //unrestrict.me Desktop Application.
 //Dependencies
-const {app, BrowserWindow, ipcMain, Menu, Tray, dialog, clipboard} = require("electron")
+const {app, BrowserWindow, ipcMain, Menu, Tray, dialog, clipboard, shell} = require("electron")
 const path = require("path")
 module.paths.push(path.resolve('node_modules'));
 module.paths.push(path.resolve('../node_modules'));
@@ -91,6 +91,15 @@ app.on('activate', function () {
 })
 
 function appStart() {
+    log.info(`ENVIRONMENT DETAILS` + '\n' + 
+    `CPU Architecture: ${os.arch()}` + '\n' + 
+    `CPU Model: ${os.cpus()[0]["model"]}` + '\n' + 
+    `Network Interfaces: ${JSON.stringify(os.networkInterfaces())}` + '\n' + 
+    `System Memory: ${os.totalmem()/1073741824} GB` + '\n' + 
+    `System Platform: ${os.platform()}` + '\n' + 
+    `System Release: ${os.release()}` + '\n' + 
+    `unrestrict.me Version: ${app.getVersion()}`  + '\n' + 
+    `Arguments: ${process.argv}`)
     createLoadingWindow()
     if (os.platform() === "win32") {
         isElevated().then(elevated => {
@@ -552,7 +561,9 @@ function createLoadingWindow() {
             loadingWindow.show()
         }
     })
-    //loadingWindow.webContents.openDevTools({mode: "undocked"})
+    if (process.argv.includes(`--devConsole`)) {
+        loadingWindow.webContents.openDevTools({mode: "undocked"})
+    }
     loadingWindow.setAlwaysOnTop(true)
 }
 
@@ -578,7 +589,9 @@ function createErrorWindow(error, sendError) {
             }
         }
     })
-    //errorWindow.webContents.openDevTools({mode: "undocked"})
+    if (process.argv.includes(`--devConsole`)) {
+        errorWindow.webContents.openDevTools({mode: "undocked"})
+    }
     errorWindow.setAlwaysOnTop(false)
     if (loadingWindow) {
         loadingWindow.close()
@@ -597,7 +610,9 @@ function createWelcomeWindow() {
     welcomeWindow.webContents.on('did-finish-load', () => {
         welcomeWindow.show()
     })
-    //welcomeWindow.webContents.openDevTools({mode: "undocked"})
+    if (process.argv.includes(`--devConsole`)) {
+        welcomeWindow.webContents.openDevTools({mode: "undocked"})
+    }
     welcomeWindow.setAlwaysOnTop(false)
     if (loadingWindow) {
         loadingWindow.close()
@@ -635,7 +650,9 @@ function createMainWindow() {
             createBackgroundService()
         }
     })
-    //mainWindow.webContents.openDevTools({mode: "undocked"})
+    if (process.argv.includes(`--devConsole`)) {
+        mainWindow.webContents.openDevTools({mode: "undocked"})
+    }
     mainWindow.setAlwaysOnTop(false)
     mainWindow.on('minimize',function(event){
         event.preventDefault();
@@ -1249,6 +1266,9 @@ exports.installUpdates = () => {
 exports.restartApp = () => {
     app.relaunch()
     app.exit()
+}
+exports.openLog = () => {
+    shell.openExternal(log.transports.file.stream["path"])
 }
 function killSwitch(enable) {
     //All platform specific options are to be handled in killSwitchEnable
