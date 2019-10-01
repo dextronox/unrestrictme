@@ -813,10 +813,13 @@ function quit(hard) {
         app.quit()
         app.on('window-all-closed', app.quit);
         if (os.platform() === "win32") {
-            exec(`taskkill /IM unrestrict.me.exe`, (error, stdout, stderr) => {
+            exec(`taskkill /IM unrestrict.me.exe /F`, (error, stdout, stderr) => {
                 if (error) {
                     log.error(`Main: Error killing main process for quit method. ${error} ${stdout} ${stderr}`)
+                } else {
+                    log.info(`Main: Results from main process quit method: ${stdout} ${stderr}`)
                 }
+                
             })
         }
     }
