@@ -137,6 +137,7 @@ $("#openLegalExternal").on('click', () => {
 
 $("#tosAccept").on("click", () => {
     main.dependenciesCheck()
+    $("#legal").modal('hide')
     $("#step3_button_div1").css("display", "none")
 })
 
