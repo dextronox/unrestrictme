@@ -69,7 +69,21 @@ function setLogValues() {
         }
     });
     log.transports.file.streamConfig = { flags: 'w' };
+
+    //Log environment details
+    setTimeout(() => {
+        log.info(`ENVIRONMENT DETAILS` + '\n' + 
+        `CPU Architecture: ${os.arch()}` + '\n' + 
+        `CPU Model: ${os.cpus()[0]["model"]}` + '\n' + 
+        `Network Interfaces: ${JSON.stringify(os.networkInterfaces())}` + '\n' + 
+        `System Memory: ${Math.round(os.totalmem()/1073741824 * 100) / 100} GB` + '\n' + 
+        `System Platform: ${os.platform()}` + '\n' + 
+        `System Release: ${os.release()}` + '\n' + 
+        `unrestrict.me Version: ${app.getVersion()}`  + '\n' + 
+        `Arguments: ${process.argv}`)
+    }, 1000)
 }
+
 
 app.on('ready', () => {
     setLogValues()
@@ -91,15 +105,6 @@ app.on('activate', function () {
 })
 
 function appStart() {
-    log.info(`ENVIRONMENT DETAILS` + '\n' + 
-    `CPU Architecture: ${os.arch()}` + '\n' + 
-    `CPU Model: ${os.cpus()[0]["model"]}` + '\n' + 
-    `Network Interfaces: ${JSON.stringify(os.networkInterfaces())}` + '\n' + 
-    `System Memory: ${os.totalmem()/1073741824} GB` + '\n' + 
-    `System Platform: ${os.platform()}` + '\n' + 
-    `System Release: ${os.release()}` + '\n' + 
-    `unrestrict.me Version: ${app.getVersion()}`  + '\n' + 
-    `Arguments: ${process.argv}`)
     createLoadingWindow()
     if (os.platform() === "win32") {
         isElevated().then(elevated => {
