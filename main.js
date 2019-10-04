@@ -1640,7 +1640,7 @@ function installDependenciesMac(checkError) {
 
 function brewInstallDependencies() {
     let brewInstallSpawn = spawn(`${app.getPath("home")}/unrestrictme/bin/brew`, ['install', 'openvpn', 'stunnel', 'node'])
-    let dataLog
+    let dataLog = ""
     brewInstallSpawn.stdout.on('data', (data) => {
         log.info(`Main: ${data.toString()}`)
         dataLog = dataLog + data.toString() + '\n'
