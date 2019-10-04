@@ -1643,7 +1643,7 @@ function brewInstallDependencies() {
     let dataLog
     brewInstallSpawn.stdout.on('data', (data) => {
         log.info(`Main: ${data.toString()}`)
-        dataLog = dataLog + data.toString()
+        dataLog = dataLog + data.toString() + '\n'
         let ipcUpdate = {
             "installLog": dataLog
         }
@@ -1653,7 +1653,7 @@ function brewInstallDependencies() {
     })
     brewInstallSpawn.stderr.on('data', (data) => {
         log.error(`Main: ${data.toString()}`)
-        dataLog = dataLog + data.toString()
+        dataLog = dataLog + data.toString() + '\n'
         let ipcUpdate = {
             "installLog": dataLog
         }
