@@ -1647,7 +1647,9 @@ function brewInstallDependencies() {
         let ipcUpdate = {
             "installLog": dataLog
         }
-        welcomeWindow.webContents.send(`statusUpdate`, ipcUpdate)
+        if (data) {
+            welcomeWindow.webContents.send(`statusUpdate`, ipcUpdate)
+        }
     })
     brewInstallSpawn.stderr.on('data', (data) => {
         log.error(`Main: ${data.toString()}`)
@@ -1655,14 +1657,18 @@ function brewInstallDependencies() {
         let ipcUpdate = {
             "installLog": dataLog
         }
-        welcomeWindow.webContents.send(`statusUpdate`, ipcUpdate)
+        if (data) {
+            welcomeWindow.webContents.send(`statusUpdate`, ipcUpdate)
+        }
     })
     brewInstallSpawn.on('close', (code) => {
         if (code === 0 || dataLog.includes("is already installed and up-to-date")) {
             let ipcUpdate = {
                 "update": "InstallComplete"
             }
-            welcomeWindow.webContents.send(`statusUpdate`, ipcUpdate)
+            if (data) {
+                welcomeWindow.webContents.send(`statusUpdate`, ipcUpdate)
+            }
             writeBlankSettingsFile()
         } else {
             log.info(`Main: Error installing dependencies from brew. Code: ${code}`)
@@ -1670,7 +1676,9 @@ function brewInstallDependencies() {
                 "error": "OpenVPNInstallFail",
                 "errorText": JSON.stringify(dataLog)
             }
-            welcomeWindow.webContents.send(`statusUpdate`, ipcUpdate)
+            if (data) {
+                welcomeWindow.webContents.send(`statusUpdate`, ipcUpdate)
+            }
         }
     })
 }
