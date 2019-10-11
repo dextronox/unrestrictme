@@ -730,6 +730,10 @@ $("#openLegalExternal").on('click', () => {
     require('electron').shell.openExternal('https://unrestrict.me/legal')
 })
 
+$("#openSupportExternal").on("click", () => {
+    require('electron').shell.openExternal('https://unrestrict.me/support')
+})
+
 $("#backgroundProcessCrashRestart").on('click', () => {
     app.relaunch()
     app.exit()
