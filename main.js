@@ -1557,7 +1557,7 @@ function killSwitchDisable(nic) {
 function installDependenciesLinux(checkError) {
     if (String(checkError).includes("no packages found matching stunnel4") || String(checkError).includes("no packages found matching openvpn")) {
         //OpenVPN or stunnel4 not installed. Get from package repository.
-        log.info(`Main: Installing OpenVPN from package repository.`)
+        log.info(`Main: Installing OpenVPN and stunnel4 from package repository.`)
         getos((error, ops) => {
             if (error) {
                 log.error(`Main: Error checking operating system environment. Error: ${error}`)
@@ -1568,7 +1568,7 @@ function installDependenciesLinux(checkError) {
                 return;
             }
             if (String(ops["dist"]).includes("Ubuntu") || String(ops["dist"]).includes("Debian")) {
-                log.info(`Main: Will install OpenVPN for Debian/Ubuntu.`)
+                log.info(`Main: Will install dependencies for Debian/Ubuntu.`)
                 let ipcUpdate = {
                     "update": "installingOpenVPN"
                 }

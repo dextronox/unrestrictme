@@ -29,7 +29,7 @@ $(document).ready(() => {
             } else if (args["error"] === "sudoFail") {
                 //User didn't give us sudo permissions. Displaying option to retry.
                 //LINUX
-                swal("Whoops!", "We couldn't run the command to install OpenVPN. To do this, we require sudo privileges.", "error")
+                swal("Whoops!", "We couldn't get permission to install our dependencies. If prompted, please enter your sudo password.", "error")
                 $("#step3_repository_installing").css("display", "none")
                 $("#step3_button_div1").css("display", "block")
             } else if (args["error"] === "OpenVPNInstallFail") {
