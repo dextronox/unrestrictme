@@ -913,7 +913,7 @@ exports.dependenciesCheck = () => {
             }
         })
     } else if (os.platform() === "linux") {
-        exec(`dpkg-query -l openvpn stunnel4`, (error, stdout, stderr) => {
+        exec(`dpkg-query -W openvpn stunnel4`, (error, stdout, stderr) => {
             if (error) {
                 log.error(`Main: Error checking whether OpenVPN and stunnel are installed. Error: ${error}`)
                 installDependenciesLinux(error)
