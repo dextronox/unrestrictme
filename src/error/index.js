@@ -1,5 +1,4 @@
 const {remote, ipcRenderer, shell} = require("electron")
-const {app} = remote
 const $ = jQuery = require('jquery')
 const log = require('electron-log')
 const swal = require('sweetalert')
