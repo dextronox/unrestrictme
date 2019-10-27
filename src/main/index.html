@@ -104,122 +104,122 @@
     <div class="modal fade" id="settings" tabindex="-1" role="dialog" aria-labelledby="settings" aria-hidden="true">
         <div class="modal-dialog" role="document">
             <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Settings</h5>
-                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                <span aria-hidden="true">&times;</span>
-                </button>
-            </div>
-            <div class="modal-body">
-                <p>unrestrict.me should work 'out of the box', and modifying these settings isn't necessary for the average user. If anything breaks, click "Reset Config".</p>
-                <h5>Client Version</h5>
-                <p id="clientVersion"></p>
-                <h5>Kill Switch NIC</h5>
-                <p>Select the adapter from the list below you wish to have disabled when connection is lost to unrestrict.me. By default we try to determine this automatically.</p>
-                <div id="adapterWait">
-                    <p>Please wait. We're getting a list of available adapters.</p>
+                <div class="modal-header">
+                    <h5 class="modal-title">Settings</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                    </button>
                 </div>
-                <div class="form-group" id="adapterDiv" style="display:none;">
-                    <select class="form-control" id="adapterSelect">
-                        <option value="-1">Detect Automatically</option>
-                    </select>
+                <div class="modal-body">
+                    <p>unrestrict.me should work 'out of the box', and modifying these settings isn't necessary for the average user. If anything breaks, click "Reset Config".</p>
+                    <h5>Client Version</h5>
+                    <p id="clientVersion"></p>
+                    <h5>Kill Switch NIC</h5>
+                    <p>Select the adapter from the list below you wish to have disabled when connection is lost to unrestrict.me. By default we try to determine this automatically.</p>
+                    <div id="adapterWait">
+                        <p>Please wait. We're getting a list of available adapters.</p>
+                    </div>
+                    <div class="form-group" id="adapterDiv" style="display:none;">
+                        <select class="form-control" id="adapterSelect">
+                            <option value="-1">Detect Automatically</option>
+                        </select>
+                    </div>
+                    <h5>Custom API Server</h5>
+                    <p>Input a custom API server for unrestrict.me to send requests.</p>
+                    <div class="input-group mb-3">
+                        <input id="customAPI" type="text" class="form-control" placeholder="https://..." required>
+                        <div class="input-group-append">
+                            <button id="customAPISubmit" class="btn btn-outline-secondary" type="button">Save</button>
+                        </div>
+                        <div class="input-group-append">
+                            <button id="customAPIClear" class="btn btn-outline-danger" type="button">Clear</button>
+                        </div>
+                    </div>
+                    <h5>Custom Webpage</h5>
+                    <p>Input a custom webpage for unrestrict.me to navigate you to complete the connection.</p>
+                    <div class="input-group mb-3">
+                        <input id="customWebpage" type="text" class="form-control" placeholder="https://..." required>
+                        <div class="input-group-append">
+                            <button id="customWebpageSubmit" class="btn btn-outline-secondary" type="button">Save</button>
+                        </div>
+                        <div class="input-group-append">
+                            <button id="customWebpageClear" class="btn btn-outline-danger" type="button">Clear</button>
+                        </div>
+                    </div>
+                    <h5>Regenerate RSA Keypair</h5>
+                    <p>This option regenerates the stored RSA keypair. Any pending connections will be impossible to complete.</p>
+                    <button type="button" class="btn btn-danger" id="rsa_regen">Regenerate RSA Keypair</button>
+                    <h5>Manage Log File</h5>
+                    <p>View your log file or upload it to unrestrict.me for analysis.</p>
+                    <button type="button" class="btn btn-danger" id="uploadLog" style="margin-right: 0.5em">Upload Log</button><button type="button" class="btn btn-primary" id="openLog">View Log</button>
+                    <h5>Reset Config</h5>
+                    <p>This option resets unrestrict.me to default settings.</p>
+                    <button type="button" class="btn btn-danger" id="reset">Reset Config</button>
                 </div>
-                <h5>Custom API Server</h5>
-                <p>Input a custom API server for unrestrict.me to send requests.</p>
-                <div class="input-group mb-3">
-                    <input id="customAPI" type="text" class="form-control" placeholder="https://..." required>
-                    <div class="input-group-append">
-                        <button id="customAPISubmit" class="btn btn-outline-secondary" type="button">Save</button>
-                    </div>
-                    <div class="input-group-append">
-                        <button id="customAPIClear" class="btn btn-outline-danger" type="button">Clear</button>
-                    </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
                 </div>
-                <h5>Custom Webpage</h5>
-                <p>Input a custom webpage for unrestrict.me to navigate you to complete the connection.</p>
-                <div class="input-group mb-3">
-                    <input id="customWebpage" type="text" class="form-control" placeholder="https://..." required>
-                    <div class="input-group-append">
-                        <button id="customWebpageSubmit" class="btn btn-outline-secondary" type="button">Save</button>
-                    </div>
-                    <div class="input-group-append">
-                        <button id="customWebpageClear" class="btn btn-outline-danger" type="button">Clear</button>
-                    </div>
-                </div>
-                <h5>Regenerate RSA Keypair</h5>
-                <p>This option regenerates the stored RSA keypair. Any pending connections will be impossible to complete.</p>
-                <button type="button" class="btn btn-danger" id="rsa_regen">Regenerate RSA Keypair</button>
-                <h5>Manage Log File</h5>
-                <p>View your log file or upload it to unrestrict.me for analysis.</p>
-                <button type="button" class="btn btn-danger" id="uploadLog" style="margin-right: 0.5em">Upload Log</button><button type="button" class="btn btn-primary" id="openLog">View Log</button>
-                <h5>Reset Config</h5>
-                <p>This option resets unrestrict.me to default settings.</p>
-                <button type="button" class="btn btn-danger" id="reset">Reset Config</button>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-            </div>
             </div>
         </div>
     </div>
     <div class="modal fade" id="timeRemainingFaq" tabindex="-1" role="dialog" aria-labelledby="timeRemainingFaq" aria-hidden="true">
         <div class="modal-dialog" role="document">
             <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">What does "Time Remaining" mean?</h5>
-                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                <span aria-hidden="true">&times;</span>
-                </button>
-            </div>
-            <div class="modal-body">
-                <p>You are <b>not</b> limited in the amount of time you can spend connected to the unrestrict.me network as a <i>whole</i>. Connections expire to prevent leachers soaking up bandwidth without giving anything back to the network. If your connection expires before you disconnect the fail safe <b>will be engaged</b>.</p>
-                <p>You are free to reconnect even if your connection does expire. We do not cross check new connections with old ones.</p>
-                <p>This policy simply allows unrestrict.me to be as equal as possible for all users.</p>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-            </div>
+                <div class="modal-header">
+                    <h5 class="modal-title">What does "Time Remaining" mean?</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <p>You are <b>not</b> limited in the amount of time you can spend connected to the unrestrict.me network as a <i>whole</i>. Connections expire to prevent leachers soaking up bandwidth without giving anything back to the network. If your connection expires before you disconnect the fail safe <b>will be engaged</b>.</p>
+                    <p>You are free to reconnect even if your connection does expire. We do not cross check new connections with old ones.</p>
+                    <p>This policy simply allows unrestrict.me to be as equal as possible for all users.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                </div>
             </div>
         </div>
     </div>
     <div class="modal fade" id="legal" tabindex="-1" role="dialog" aria-labelledby="legal" aria-hidden="true">
         <div class="modal-dialog" role="document">
             <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Legal</h5>
-                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                <span aria-hidden="true">&times;</span>
-                </button>
-            </div>
-            <div class="modal-body">
-                <p>unrestrict.me is an Electron application built using open source Node.js modules. Electron is a trademark of Github, Inc. Node.js is a registered trademark of Joyent, Inc. The unrestrict.me application is the property of unrestrict.me, however the source code is freely inspectable. unrestrict.me uses technology developed by OpenVPN Inc., and any associated "OpenVPN" trademarks are the property of OpenVPN Inc. unrestrict.me uses stunnel, technology developed by Michal Trojnara licensed under the GNU General Public License. This product includes software developed by the OpenSSL Project for use in the OpenSSL Toolkit (http://www.openssl.org/).</p>
-                <p>By using this application you agree to the Terms and Conditions of the unrestrict.me service located <a id="openLegalExternal" href="#">here</a>.</p>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-            </div>
+                <div class="modal-header">
+                    <h5 class="modal-title">Legal</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <p>unrestrict.me is an Electron application built using open source Node.js modules. Electron is a trademark of Github, Inc. Node.js is a registered trademark of Joyent, Inc. The unrestrict.me application is the property of unrestrict.me, however the source code is freely inspectable. unrestrict.me uses technology developed by OpenVPN Inc., and any associated "OpenVPN" trademarks are the property of OpenVPN Inc. unrestrict.me uses stunnel, technology developed by Michal Trojnara licensed under the GNU General Public License. This product includes software developed by the OpenSSL Project for use in the OpenSSL Toolkit (http://www.openssl.org/).</p>
+                    <p>By using this application you agree to the Terms and Conditions of the unrestrict.me service located <a id="openLegalExternal" href="#">here</a>.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                </div>
             </div>
         </div>
     </div>
     <div class="modal fade" id="backgroundProcessExplanation" tabindex="-1" role="dialog" aria-labelledby="backgroundProcessExplanation" aria-hidden="true">
         <div class="modal-dialog" role="document">
             <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">What is the "Background Process"?</h5>
-                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                <span aria-hidden="true">&times;</span>
-                </button>
-            </div>
-            <div class="modal-body">
-                <p>The background process is the heart of the unrestrict.me application on Linux.</p>
-                <p>A VPN by nature requires a high level of system control to modify routing information, add network adapters etc. On Windows we simply prompt a user for administrative privileges when they launch the application. On Linux, it isn't that simple.</p>
-                <p>Running a graphical program as root creates a whole heap of issues when the user themselves isn't actually the root user. Subsequently, all commands run by the client that require elevation are performed in a background process that is elevated.</p>
-                <p>Whilst it is possible for us to prompt you everytime we're about to run a command that requires sudo this is unrealistic with features like the kill switch, which need commands to be run as soon as possible.</p>
-                <p>If you're cautious about giving us this level of control you're free to inspect the client source code.</p>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-            </div>
+                <div class="modal-header">
+                    <h5 class="modal-title">What is the "Background Process"?</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <p>The background process is the heart of the unrestrict.me application on Linux.</p>
+                    <p>A VPN by nature requires a high level of system control to modify routing information, add network adapters etc. On Windows we simply prompt a user for administrative privileges when they launch the application. On Linux, it isn't that simple.</p>
+                    <p>Running a graphical program as root creates a whole heap of issues when the user themselves isn't actually the root user. Subsequently, all commands run by the client that require elevation are performed in a background process that is elevated.</p>
+                    <p>Whilst it is possible for us to prompt you everytime we're about to run a command that requires sudo this is unrealistic with features like the kill switch, which need commands to be run as soon as possible.</p>
+                    <p>If you're cautious about giving us this level of control you're free to inspect the client source code.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                </div>
             </div>
         </div>
     </div>
