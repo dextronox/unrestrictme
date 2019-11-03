@@ -69,3 +69,4 @@ keys/*
 current.ovpn
 dist/*
 config/*
+dev-app-update.yml

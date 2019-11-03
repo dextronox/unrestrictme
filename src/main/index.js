@@ -163,6 +163,8 @@ $(document).ready(() => {
         swal("Whoops!", "We were unable to get your IP address from our API server.", "error")
     })
     ipcRenderer.on(`updater`, (event, args) => {
+        $("#checkForUpdates").html(`Check for Updates`)
+        $("#checkForUpdates").attr("disabled", false)
         if (args["updateAvailable"] === true) {
             swal({
                 title: "Update Available",
@@ -741,6 +743,14 @@ $("#backgroundProcessCrashRestart").on('click', () => {
 
 $("#killOpenVPN").on("click", () => {
     main.disconnect()
+})
+
+$("#checkForUpdates").on("click", () => {
+    $("#checkForUpdates").html(`<div class="spinner-border" role="status">
+    <span class="sr-only">Loading...</span>
+  </div>`)
+    $("#checkForUpdates").attr("disabled", true)
+    main.checkForUpdates()
 })
 function populateConnected (publicIp, connectionId) {
     if (interval) {

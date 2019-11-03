@@ -254,7 +254,17 @@ function checkForUpdates(install) {
     } else {
         autoUpdater.logger = require("electron-log")
         autoUpdater.logger.transports.file.level = "info"
-        autoUpdater.checkForUpdates()
+        autoUpdater.checkForUpdates().then((promise) => {
+            if (promise["versionInfo"]["version"] < promise["updateInfo"]["version"]) {
+                log.info(`Main: There is an update available.`)
+            } else {
+                log.info(`Main: There is no update available.`)
+                let updater = {
+                    "updateAvailable": false
+                }
+                mainWindow.webContents.send('updater', updater)
+            }
+        })
         autoUpdater.autoDownload = false
         autoUpdater.autoInstallOnAppQuit = false
         autoUpdater.on("error", (error) => {
@@ -284,6 +294,10 @@ function checkForUpdates(install) {
         })
     }
 
+}
+
+exports.checkForUpdates = () => {
+    checkForUpdates()
 }
 
 function startBackgroundServer() {
