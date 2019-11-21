@@ -12,9 +12,6 @@
 <body>
     <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
         <img src="../../assets/icons/logo.svg">
-        <div class="form-inline">
-            <button class="btn btn-outline-secondary my-2 my-sm-0" style="pointer-events: all" id="showNews"><img src="../../assets/icons/bell.svg" style="height:1em;"></button>
-        </div>
     </nav>
     <div id="disconnected" class="container prompt">
         <div id="initialLoad" class="contianer prompt" style="display: none">
@@ -220,29 +217,6 @@
                     <p>Running a graphical program as root creates a whole heap of issues when the user themselves isn't actually the root user. Subsequently, all commands run by the client that require elevation are performed in a background process that is elevated.</p>
                     <p>Whilst it is possible for us to prompt you everytime we're about to run a command that requires sudo this is unrealistic with features like the kill switch, which need commands to be run as soon as possible.</p>
                     <p>If you're cautious about giving us this level of control you're free to inspect the client source code.</p>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-                </div>
-            </div>
-        </div>
-    </div>
-    <div class="modal fade" id="newsModal" tabindex="-1" role="dialog" aria-labelledby="newsModal" aria-hidden="true">
-        <div class="modal-dialog" role="document">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">News</h5>
-                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                    </button>
-                </div>
-                <div class="modal-body" id="newsModalBody" style="overflow-y:auto;max-height:12em;">
-                    <div class="text-center">
-                        <div class="spinner-border" role="status">
-                                <span class="sr-only">Loading...</span>
-                        </div>
-                    </div>
-
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
