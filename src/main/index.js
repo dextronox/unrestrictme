@@ -9,6 +9,7 @@ const log = require('electron-log')
 const swal = require('sweetalert')
 const nodersa = require('node-rsa')
 const network = require("network")
+const timeAgo = require("node-time-ago")
 
 let currentRequestId, interval
 $(document).ready(() => {
@@ -261,6 +262,7 @@ $(document).ready(() => {
             }
         }
     })
+    checkLatestNews()
 })
 
 $("#connect").on("click", () => {
@@ -806,3 +808,98 @@ function installUpdates() {
 $("#openLog").on("click", () => {
     main.openLog()
 })
+
+$("#showNews").on("click", () => {
+    $("#newsModal").modal("show")
+    $("#newsModalBody").html(``)
+    getNewsFeed((data) => {
+        if (data[0]) {
+            setLatestNews(data[0]["id"])
+        }
+        data.forEach((e) => {
+            let date = new Date(e["created"])
+            $("#newsModalBody").append(`<div class="card border-dark mb-3" style="">
+            <div class="card-header">${timeAgo(date)}</div>
+            <div class="card-body">
+              <h4 class="card-title">${e["title"]}</h4>
+              <p class="card-text">${e["body"]}</p>
+            </div>
+          </div>`)
+        })
+        if (data.length === 0) {
+            $("#newsModalBody").html(`
+            <div class="text-center"><p>You're all caught up!</p></div>
+            `)
+        }
+    })
+})
+
+function getNewsFeed(callback) {
+    requestConfig = {
+        url: `https://api-admin.unrestrict.me/news/list`,
+        timeout: 5000,
+        method: "GET",
+    }
+    request(requestConfig, (error, response, body) => {
+        if (error || response.statusCode != 200) {
+            log.error(`Renderer: Error getting news feed. Error: ${error}`)
+            $("#newsModalBody").html(`
+            <div class="text-center"><p>An error occurred getting the news feed.</p></div>
+            `)
+        } else if (JSON.parse(body)["success"]) {
+            callback(JSON.parse(body)["results"])
+        } else {
+            log.error(`Renderer: Did not succeed in getting news feed. Error: ${body}`)
+            $("#newsModalBody").html(`
+            <div class="text-center"><p>An error occurred getting the news feed.</p></div>
+            `)
+        }
+    })
+}
+
+function checkLatestNews() {
+    fs.readFile(path.join(app.getPath('userData'), 'settings.conf'), 'utf8', (error, stored) => {
+        let storedParsed = JSON.parse(stored)
+        if (error) {
+            log.error("Renderer: Error reading settings file to get most recent news item.")
+        } else if (storedParsed["latestNews"] == null) {
+            storedParsed["latestNews"] = 0
+            fs.writeFile(path.join(app.getPath('userData'), 'settings.conf'), JSON.stringify(storedParsed), (error) => {
+                if (error) {
+                    log.error(`Renderer: Error writing latestNews to disk.`)
+                } else {
+                    log.info(JSON.stringify(storedParsed))
+                    checkLatestNews()
+                }
+            })
+        } else {          
+            getNewsFeed((mostRecent) => {
+                if (mostRecent[0]["id"] > JSON.parse(stored)["latestNews"]) {
+                    $("#showNews").removeClass("btn-outline-secondary")
+                    $("#showNews").addClass("btn-success")
+                } else {
+                    $("#showNews").removeClass("btn-success")
+                    $("#showNews").addClass("btn-outline-secondary")
+                }
+            })
+        }
+    })
+}
+
+function setLatestNews(id) {
+    fs.readFile(path.join(app.getPath('userData'), 'settings.conf'), 'utf8', (error, stored) => {
+        if (error) {
+            log.error("Renderer: Error reading settings file to set recent news item.")
+        } else {
+            let storedParsed = JSON.parse(stored)
+            storedParsed["latestNews"] = id
+            fs.writeFile(path.join(app.getPath('userData'), 'settings.conf'), JSON.stringify(storedParsed), (error) => {
+                if (error) {
+                    log.error(`Renderer: Error writing settings file to set recent news item.`)
+                } else {
+                    checkLatestNews()
+                }
+            })
+        }
+    })
+}
