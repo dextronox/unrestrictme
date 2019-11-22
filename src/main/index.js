@@ -233,6 +233,9 @@ $(document).ready(() => {
             $("#disconnected-normal").css("display", "block")
         }
     })
+    ipcRenderer.on(`logFileUpload`, (event, args) => {
+        $("#logFileLocation").val(args[0])
+    })
     $("#clientVersion").html(`You're currently running unrestrict.me v${app.getVersion()}`)
     network.get_interfaces_list(function(error, obj) {
         for (i = 0; Object.keys(obj).length >= i; i++) {
@@ -858,7 +861,7 @@ function getNewsFeed(callback) {
 }
 
 function checkLatestNews() {
-    fs.readFile(path.join(app.getPath('userData'), 'settings.conf'), 'utf8', (error, stored) => {
+    readSettingsFile((error, stored) => {
         let storedParsed = JSON.parse(stored)
         if (error) {
             log.error("Renderer: Error reading settings file to get most recent news item.")
@@ -887,7 +890,7 @@ function checkLatestNews() {
 }
 
 function setLatestNews(id) {
-    fs.readFile(path.join(app.getPath('userData'), 'settings.conf'), 'utf8', (error, stored) => {
+    readSettingsFile((error, stored) => {
         if (error) {
             log.error("Renderer: Error reading settings file to set recent news item.")
         } else {
@@ -900,6 +903,67 @@ function setLatestNews(id) {
                     checkLatestNews()
                 }
             })
+        }
+    })
+}
+
+function readSettingsFile(callback) {
+    fs.readFile(path.join(app.getPath('userData'), 'settings.conf'), 'utf8', (error, data) => {
+        callback(error, data)
+    })
+}
+
+$("#uploadLogOpenModal").on("click", () => {
+    $("#requestId").val(null)
+    $("#requestPassword").val(null)
+    $("#logFileLocation").val(null)
+    $("#settings").modal("hide")
+    setTimeout(() => {
+        $("#uploadLogFile").modal("show")
+    }, 500)
+    
+})
+$("#submitUploadLogFileForm").on("click", () => {
+    fs.readFile($("#logFileLocation").val(), 'utf8', (error, data) => {
+        if (error) {
+            swal("Whoops!", "We couldn't read the log file.", "error")
+        } else {
+            uploadLogFile(data)
+        }
+    })
+})
+
+$("#searchForLogFile").on("click", () => {
+    main.selectLogFileDialog()
+})
+
+function uploadLogFile(data) {
+    requestConfig = {
+        url: `https://api-admin.unrestrict.me/support/uploadLog`,
+        timeout: 5000,
+        method: "POST",
+        json: {
+            "id": $("#requestId").val(),
+            "password":$("#requestPassword").val(),
+            "log":data
+        }
+    }
+    request(requestConfig, (error, response, body) => {
+        if (error) {
+            swal("Whoops!", "We couldn't upload your log file as an error occurred. Check the log for more information.", "error")
+            log.error(`Renderer: Error uploading log file to support. Error: ${error}`)
+        } else if (body["success"]) {
+            swal("Success!", "Your log file has been uploaded successfully.", "success")
+            $("#uploadLogFile").modal("hide")
+        } else if (body["error"] === 'auth') {
+            swal('Whoops!', "Please check your username and password.", "error")
+        } else if (body["error"] === "internal") {
+            swal('Whoops!', "An internal error occurred on our end. Please try again later.", "error")
+        } else if (body["error"] === 'dupe') {
+            swal('Whoops!', "A log file has already been uploaded for this support request.", "error")
+        } else {
+            swal('Whoops!', "An unknown error occurred. Check the log file for more information.", "error")
+            log.error(`Renderer: An unknown error occurred whilst attempting to upload the log file. Body: ${body}`)
         }
     })
 }
