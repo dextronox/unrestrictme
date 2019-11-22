@@ -871,7 +871,6 @@ function checkLatestNews() {
                 if (error) {
                     log.error(`Renderer: Error writing latestNews to disk.`)
                 } else {
-                    log.info(JSON.stringify(storedParsed))
                     checkLatestNews()
                 }
             })
@@ -924,9 +923,15 @@ $("#uploadLogOpenModal").on("click", () => {
     
 })
 $("#submitUploadLogFileForm").on("click", () => {
+    $("#submitUploadLogFileForm").html(`<div class="spinner-border" role="status">
+        <span class="sr-only">Loading...</span>
+    </div>`)
+  $("#submitUploadLogFileForm").attr("disabled", true)
     fs.readFile($("#logFileLocation").val(), 'utf8', (error, data) => {
         if (error) {
             swal("Whoops!", "We couldn't read the log file.", "error")
+            $("#submitUploadLogFileForm").html(`Upload`)
+            $("#submitUploadLogFileForm").attr("disabled", false)
         } else {
             uploadLogFile(data)
         }
@@ -965,5 +970,7 @@ function uploadLogFile(data) {
             swal('Whoops!', "An unknown error occurred. Check the log file for more information.", "error")
             log.error(`Renderer: An unknown error occurred whilst attempting to upload the log file. Body: ${body}`)
         }
+        $("#submitUploadLogFileForm").html(`Upload`)
+        $("#submitUploadLogFileForm").attr("disabled", false)
     })
 }
