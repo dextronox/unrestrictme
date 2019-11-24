@@ -12,6 +12,9 @@
 <body>
     <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
         <img src="../../assets/icons/logo.svg">
+        <div class="form-inline">
+            <button class="btn btn-outline-secondary my-2 my-sm-0" style="pointer-events: all" id="showNews"><img src="../../assets/icons/bell.svg" style="height:1em;"></button>
+        </div>
     </nav>
     <div id="disconnected" class="container prompt">
         <div id="initialLoad" class="contianer prompt" style="display: none">
@@ -152,7 +155,7 @@
                     <button type="button" class="btn btn-danger" id="rsa_regen">Regenerate RSA Keypair</button>
                     <h5>Manage Log File</h5>
                     <p>View your log file or upload it to unrestrict.me for analysis.</p>
-                    <button type="button" class="btn btn-danger" id="uploadLog" style="margin-right: 0.5em">Upload Log</button><button type="button" class="btn btn-primary" id="openLog">View Log</button>
+                    <button type="button" class="btn btn-danger" style="margin-right: 0.5em" id="uploadLogOpenModal">Upload Log</button><button type="button" class="btn btn-primary" id="openLog">View Log</button>
                     <h5>Reset Config</h5>
                     <p>This option resets unrestrict.me to default settings.</p>
                     <button type="button" class="btn btn-danger" id="reset">Reset Config</button>
@@ -176,6 +179,42 @@
                     <p>You are <b>not</b> limited in the amount of time you can spend connected to the unrestrict.me network as a <i>whole</i>. Connections expire to prevent leachers soaking up bandwidth without giving anything back to the network. If your connection expires before you disconnect the fail safe <b>will be engaged</b>.</p>
                     <p>You are free to reconnect even if your connection does expire. We do not cross check new connections with old ones.</p>
                     <p>This policy simply allows unrestrict.me to be as equal as possible for all users.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal fade" id="uploadLogFile" tabindex="-1" role="dialog" aria-labelledby="uploadLogFile" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Upload Log File</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <p>This tool is used to upload your log file to unrestrict.me to assist with an ongoing support request.</p> 
+                    <div class="form-group">
+                        <label for="requestId">Support Request ID</label>
+                        <input class="form-control" id="requestId" placeholder="Support Request ID">
+                    </div>
+                    <div class="form-group">
+                        <label for="requestPassword">Password</label>
+                        <input type="password" class="form-control" id="requestPassword" placeholder="Password">
+                    </div>
+                    <div class="form-group">
+                        <label for="logFileLocation">Log File Location</label>
+                        <div class="input-group mb-3">
+                            <input type="text" class="form-control" placeholder="C:\...\log.txt" id="logFileLocation" aria-label="C:\...\log.txt" aria-describedby="basic-addon2">
+                            <div class="input-group-append">
+                                <button class="btn btn-outline-secondary" type="button" id="searchForLogFile">Search</button>
+                            </div>
+                        </div>
+                    </div>
+                    <button class="btn btn-primary" id="submitUploadLogFileForm">Upload</button>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
@@ -224,7 +263,31 @@
             </div>
         </div>
     </div>
+    <div class="modal fade" id="newsModal" tabindex="-1" role="dialog" aria-labelledby="newsModal" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">News</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body" id="newsModalBody" style="overflow-y:auto;max-height:12em;">
+                    <div class="text-center">
+                        <div class="spinner-border" role="status">
+                                <span class="sr-only">Loading...</span>
+                        </div>
+                    </div>
+
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
     <div class="footer">
+        <p class="mb-1"><a href="#" id="shareFacebook"><img class="mr-1" src="../../assets/icons/facebook.svg" style="max-width: 1em;"></img></a><a href="#" id="shareTwitter"><img src="../../assets/icons/twitter.svg" style="max-width: 1em;"></img></a></p>
         <p>&copy unrestrict.me <script type="text/javascript">document.write(new Date().getFullYear());</script> | <a data-toggle="modal" href="JavaScript:Void(0);" id="openSupportExternal">Facing Issues?</a> | <a data-toggle="modal" href="#legal">Legal</a></p>
     </div>
 </body>

@@ -1312,6 +1312,24 @@ exports.restartApp = () => {
 exports.openLog = () => {
     shell.openExternal(log.transports.file.stream["path"])
 }
+
+exports.selectLogFileDialog = () => {
+    let dialogOptions = {
+        title:"Select Log File",
+        defaultPath: `${path.join(app.getPath('userData'), "logs")}`,
+        buttonLabel:"Select",
+        filters: [
+            {
+                name:"Log Files", 
+                extensions: [
+                    'txt'
+                ]
+            }
+        ],
+        properties: ["openFile"]
+    }
+    mainWindow.webContents.send('logFileUpload', dialog.showOpenDialog(dialogOptions))
+}
 function killSwitch(enable) {
     //All platform specific options are to be handled in killSwitchEnable
     if (enable) {

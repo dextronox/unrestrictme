@@ -9,6 +9,7 @@ const log = require('electron-log')
 const swal = require('sweetalert')
 const nodersa = require('node-rsa')
 const network = require("network")
+const timeAgo = require("node-time-ago")
 
 let currentRequestId, interval
 $(document).ready(() => {
@@ -232,6 +233,9 @@ $(document).ready(() => {
             $("#disconnected-normal").css("display", "block")
         }
     })
+    ipcRenderer.on(`logFileUpload`, (event, args) => {
+        $("#logFileLocation").val(args[0])
+    })
     $("#clientVersion").html(`You're currently running unrestrict.me v${app.getVersion()}`)
     network.get_interfaces_list(function(error, obj) {
         for (i = 0; Object.keys(obj).length >= i; i++) {
@@ -261,6 +265,7 @@ $(document).ready(() => {
             }
         }
     })
+    checkLatestNews()
 })
 
 $("#connect").on("click", () => {
@@ -805,4 +810,175 @@ function installUpdates() {
 
 $("#openLog").on("click", () => {
     main.openLog()
+})
+
+$("#showNews").on("click", () => {
+    $("#newsModal").modal("show")
+    $("#newsModalBody").html(``)
+    getNewsFeed((data) => {
+        if (data[0]) {
+            setLatestNews(data[0]["id"])
+        }
+        data.forEach((e) => {
+            let date = new Date(e["created"])
+            $("#newsModalBody").append(`<div class="card border-dark mb-3" style="">
+            <div class="card-header">${timeAgo(date)}</div>
+            <div class="card-body">
+              <h4 class="card-title">${e["title"]}</h4>
+              <p class="card-text">${e["body"]}</p>
+            </div>
+          </div>`)
+        })
+        if (data.length === 0) {
+            $("#newsModalBody").html(`
+            <div class="text-center"><p>You're all caught up!</p></div>
+            `)
+        }
+    })
+})
+
+function getNewsFeed(callback) {
+    requestConfig = {
+        url: `https://api-admin.unrestrict.me/news/list`,
+        timeout: 5000,
+        method: "GET",
+    }
+    request(requestConfig, (error, response, body) => {
+        if (error || response.statusCode != 200) {
+            log.error(`Renderer: Error getting news feed. Error: ${error}`)
+            $("#newsModalBody").html(`
+            <div class="text-center"><p>An error occurred getting the news feed.</p></div>
+            `)
+        } else if (JSON.parse(body)["success"]) {
+            callback(JSON.parse(body)["results"])
+        } else {
+            log.error(`Renderer: Did not succeed in getting news feed. Error: ${body}`)
+            $("#newsModalBody").html(`
+            <div class="text-center"><p>An error occurred getting the news feed.</p></div>
+            `)
+        }
+    })
+}
+
+function checkLatestNews() {
+    readSettingsFile((error, stored) => {
+        let storedParsed = JSON.parse(stored)
+        if (error) {
+            log.error("Renderer: Error reading settings file to get most recent news item.")
+        } else if (storedParsed["latestNews"] == null) {
+            storedParsed["latestNews"] = 0
+            fs.writeFile(path.join(app.getPath('userData'), 'settings.conf'), JSON.stringify(storedParsed), (error) => {
+                if (error) {
+                    log.error(`Renderer: Error writing latestNews to disk.`)
+                } else {
+                    checkLatestNews()
+                }
+            })
+        } else {          
+            getNewsFeed((mostRecent) => {
+                if (mostRecent[0]["id"] > JSON.parse(stored)["latestNews"]) {
+                    $("#showNews").removeClass("btn-outline-secondary")
+                    $("#showNews").addClass("btn-success")
+                } else {
+                    $("#showNews").removeClass("btn-success")
+                    $("#showNews").addClass("btn-outline-secondary")
+                }
+            })
+        }
+    })
+}
+
+function setLatestNews(id) {
+    readSettingsFile((error, stored) => {
+        if (error) {
+            log.error("Renderer: Error reading settings file to set recent news item.")
+        } else {
+            let storedParsed = JSON.parse(stored)
+            storedParsed["latestNews"] = id
+            fs.writeFile(path.join(app.getPath('userData'), 'settings.conf'), JSON.stringify(storedParsed), (error) => {
+                if (error) {
+                    log.error(`Renderer: Error writing settings file to set recent news item.`)
+                } else {
+                    checkLatestNews()
+                }
+            })
+        }
+    })
+}
+
+function readSettingsFile(callback) {
+    fs.readFile(path.join(app.getPath('userData'), 'settings.conf'), 'utf8', (error, data) => {
+        callback(error, data)
+    })
+}
+
+$("#uploadLogOpenModal").on("click", () => {
+    $("#requestId").val(null)
+    $("#requestPassword").val(null)
+    $("#logFileLocation").val(null)
+    $("#settings").modal("hide")
+    setTimeout(() => {
+        $("#uploadLogFile").modal("show")
+    }, 500)
+    
+})
+$("#submitUploadLogFileForm").on("click", () => {
+    $("#submitUploadLogFileForm").html(`<div class="spinner-border" role="status">
+        <span class="sr-only">Loading...</span>
+    </div>`)
+  $("#submitUploadLogFileForm").attr("disabled", true)
+    fs.readFile($("#logFileLocation").val(), 'utf8', (error, data) => {
+        if (error) {
+            swal("Whoops!", "We couldn't read the log file.", "error")
+            $("#submitUploadLogFileForm").html(`Upload`)
+            $("#submitUploadLogFileForm").attr("disabled", false)
+        } else {
+            uploadLogFile(data)
+        }
+    })
+})
+
+$("#searchForLogFile").on("click", () => {
+    main.selectLogFileDialog()
+})
+
+function uploadLogFile(data) {
+    requestConfig = {
+        url: `https://api-admin.unrestrict.me/support/uploadLog`,
+        timeout: 5000,
+        method: "POST",
+        json: {
+            "id": $("#requestId").val(),
+            "password":$("#requestPassword").val(),
+            "log":data
+        }
+    }
+    request(requestConfig, (error, response, body) => {
+        if (error) {
+            swal("Whoops!", "We couldn't upload your log file as an error occurred. Check the log for more information.", "error")
+            log.error(`Renderer: Error uploading log file to support. Error: ${error}`)
+        } else if (body["success"]) {
+            swal("Success!", "Your log file has been uploaded successfully.", "success")
+            $("#uploadLogFile").modal("hide")
+        } else if (body["error"] === 'auth') {
+            swal('Whoops!', "Please check your username and password.", "error")
+        } else if (body["error"] === "internal") {
+            swal('Whoops!', "An internal error occurred on our end. Please try again later.", "error")
+        } else if (body["error"] === 'dupe') {
+            swal('Whoops!', "A log file has already been uploaded for this support request.", "error")
+        } else {
+            swal('Whoops!', "An unknown error occurred. Check the log file for more information.", "error")
+            log.error(`Renderer: An unknown error occurred whilst attempting to upload the log file. Body: ${body}`)
+        }
+        $("#submitUploadLogFileForm").html(`Upload`)
+        $("#submitUploadLogFileForm").attr("disabled", false)
+    })
+}
+
+$("#shareTwitter").on("click", () => {
+    require('electron').shell.openExternal(`http://twitter.com/share?text=I'm using unrestrict.me to browse the internet openly, for free.&url=https://unrestrict.me`)
+})
+
+$("#shareFacebook").on("click", () => {
+    require('electron').shell.openExternal(`http://www.facebook.com/sharer/sharer.php?u=https://unrestrict.me`)
 })
