@@ -923,20 +923,34 @@ $("#uploadLogOpenModal").on("click", () => {
     
 })
 $("#submitUploadLogFileForm").on("click", () => {
-    $("#submitUploadLogFileForm").html(`<div class="spinner-border" role="status">
-        <span class="sr-only">Loading...</span>
-    </div>`)
-  $("#submitUploadLogFileForm").attr("disabled", true)
-    fs.readFile($("#logFileLocation").val(), 'utf8', (error, data) => {
-        if (error) {
-            swal("Whoops!", "We couldn't read the log file.", "error")
-            $("#submitUploadLogFileForm").html(`Upload`)
-            $("#submitUploadLogFileForm").attr("disabled", false)
-        } else {
-            uploadLogFile(data)
-        }
-    })
+    submitUploadLogFileButton(false)
+    if ($("#logFileLocation").val()) {
+        fs.readFile($("#logFileLocation").val(), 'utf8', (error, data) => {
+            if (error) {
+                swal("Whoops!", "We couldn't read the log file.", "error")
+                submitUploadLogFileButton(true)
+            } else {
+                uploadLogFile(data)
+            }
+        })
+    } else {
+        swal("Whoops!", "Please ensure all sections of the form are entered.", "error")
+        submitUploadLogFileButton(true)
+    }
+
 })
+
+function submitUploadLogFileButton(display) {
+    if (display) {
+        $("#submitUploadLogFileForm").html(`Upload`)
+        $("#submitUploadLogFileForm").attr("disabled", false)
+    } else {
+        $("#submitUploadLogFileForm").html(`<div class="spinner-border" role="status">
+            <span class="sr-only">Loading...</span>
+        </div>`)
+        $("#submitUploadLogFileForm").attr("disabled", true)
+    }
+}
 
 $("#searchForLogFile").on("click", () => {
     main.selectLogFileDialog()
@@ -970,8 +984,7 @@ function uploadLogFile(data) {
             swal('Whoops!', "An unknown error occurred. Check the log file for more information.", "error")
             log.error(`Renderer: An unknown error occurred whilst attempting to upload the log file. Body: ${body}`)
         }
-        $("#submitUploadLogFileForm").html(`Upload`)
-        $("#submitUploadLogFileForm").attr("disabled", false)
+        submitUploadLogFileButton(true)
     })
 }
 
