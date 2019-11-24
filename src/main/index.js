@@ -974,3 +974,11 @@ function uploadLogFile(data) {
         $("#submitUploadLogFileForm").attr("disabled", false)
     })
 }
+
+$("#shareTwitter").on("click", () => {
+    require('electron').shell.openExternal(`http://twitter.com/share?text=I'm using unrestrict.me to browse the internet openly, for free.&url=https://unrestrict.me`)
+})
+
+$("#shareFacebook").on("click", () => {
+    require('electron').shell.openExternal(`http://www.facebook.com/sharer/sharer.php?u=https://unrestrict.me`)
+})
