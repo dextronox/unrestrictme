@@ -27,13 +27,13 @@
       "app": "."
     },
     "win": {
-      "target": "nsis",
+      "target": "nsis-web",
       "icon": "build/icon.ico",
       "verifyUpdateCodeSignature": false,
       "asar": false,
       "requestedExecutionLevel": "requireAdministrator"
     },
-    "nsis": {
+    "nsisWeb": {
       "oneClick": false,
       "runAfterFinish": true,
       "createDesktopShortcut": true,
