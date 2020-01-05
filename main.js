@@ -69,19 +69,6 @@ function setLogValues() {
         }
     });
     log.transports.file.streamConfig = { flags: 'w' };
-
-    //Log environment details
-    setTimeout(() => {
-        log.info(`ENVIRONMENT DETAILS` + '\n' + 
-        `CPU Architecture: ${os.arch()}` + '\n' + 
-        `CPU Model: ${os.cpus()[0]["model"]}` + '\n' + 
-        `Network Interfaces: ${JSON.stringify(os.networkInterfaces())}` + '\n' + 
-        `System Memory: ${Math.round(os.totalmem()/1073741824 * 100) / 100} GB` + '\n' + 
-        `System Platform: ${os.platform()}` + '\n' + 
-        `System Release: ${os.release()}` + '\n' + 
-        `unrestrict.me Version: ${app.getVersion()}`  + '\n' + 
-        `Arguments: ${process.argv}`)
-    }, 1000)
 }
 
 
@@ -586,6 +573,19 @@ function createLoadingWindow() {
         loadingWindow.webContents.openDevTools({mode: "undocked"})
     }
     loadingWindow.setAlwaysOnTop(true)
+
+    //Log environment details
+    setTimeout(() => {
+        log.info(`ENVIRONMENT DETAILS` + '\n' + 
+        `CPU Architecture: ${os.arch()}` + '\n' + 
+        `CPU Model: ${os.cpus()[0]["model"]}` + '\n' + 
+        `Network Interfaces: ${JSON.stringify(os.networkInterfaces())}` + '\n' + 
+        `System Memory: ${Math.round(os.totalmem()/1073741824 * 100) / 100} GB` + '\n' + 
+        `System Platform: ${os.platform()}` + '\n' + 
+        `System Release: ${os.release()}` + '\n' + 
+        `unrestrict.me Version: ${app.getVersion()}`  + '\n' + 
+        `Arguments: ${process.argv}`)
+    }, 1000)
 }
 
 function createErrorWindow(error, sendError) {

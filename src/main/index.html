@@ -270,8 +270,13 @@
                 <div class="modal-header">
                     <h5 class="modal-title">News</h5>
                     <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
+                        <span aria-hidden="true">&times;</span>
                     </button>
+                </div>
+                <div class="alert alert-dismissible alert-warning" id="updateAvailableAlert" style="display:none">
+                    <button type="button" class="close" data-dismiss="alert">&times;</button>
+                    <strong>Update Available!</strong> We recommend updating to ensure you receive security fixes and other vital updates.</a><br>
+                    <button id="beginUpdate" type="button" class="btn btn-success my-1">Update</button>
                 </div>
                 <div class="modal-body" id="newsModalBody" style="overflow-y:auto;max-height:12em;">
                     <div class="text-center">
