@@ -1132,7 +1132,7 @@ exports.stealthConnect = (decryptedResponse) => {
                         },
                         "configPath": path.join(app.getPath('userData'), "current.ovpn"),
                         "ovpnPath": `${app.getPath("home")}/unrestrictme/sbin/openvpn`,
-                        "scriptPath": `${app.getPath("home")}/unrestrictme/sbin/update-resolv-conf`
+                        "scriptPath": `${app.getPath("home")}/unrestrictme/update-resolv-conf`
                     }
                     if (clientObj && clientObj != "killed") {
                         clientObj.write(JSON.stringify(writeData))
@@ -1171,7 +1171,7 @@ exports.stealthConnect = (decryptedResponse) => {
 
 function copyDnsHelper() {
     if (os.platform() === "darwin") {
-        fs.copyFile(path.join(__dirname, "assets", "openvpn", "update-resolv-conf"), path.join(app.getPath("home"), `.unrestrictme/sbin/update-resolv-conf`), (error) => {
+        fs.copyFile(path.join(__dirname, "assets", "openvpn", "update-resolv-conf"), path.join(app.getPath("home"), `.unrestrictme/update-resolv-conf`), (error) => {
             if (error) {
                 let status = {
                     "writeError": true
