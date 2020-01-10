@@ -485,7 +485,7 @@ function startBackgroundService() {
         let options = {
             name: "unrestrictme"
         }
-        sudo.exec(`sh -c "'${path.join(__dirname)}/assets/node/nodeMac' '${app.getPath("userData")}/service.js'"`, options, (error, stdout, stderr) => {
+        sudo.exec(`sh -c "'${app.getPath("userData")}/.unrestrictme/node' '${app.getPath("userData")}/service.js'"`, options, (error, stdout, stderr) => {
             log.info(`Error: ${error}, Stdout: ${stdout}, Stderr: ${stderr}`)
             if (error) {
                 if (String(error).includes(`User did not grant permission`)) {
@@ -1616,7 +1616,7 @@ function installDependenciesLinux(checkError) {
 }
 
 function createScriptFolderMac() {
-    exec(`mkdir "${app.getPath("home")}/.unrestrictme/"`, (error, stdout, stderr) => {
+    exec(`mkdir "${app.getPath("home")}/.unrestrictme/" && cp "${path.join(__dirname, "assets", "node")}/nodeMac" "${app.getPath("home")}/.unrestrictme/" && chmod +x "${app.getPath("home")}/.unrestrictme/nodeMac"`, (error, stdout, stderr) => {
         if (error) {
             log.error(`Main: Error creating unrestrictme folder. Error: ${error}`)
             let ipcUpdate = {
