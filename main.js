@@ -1066,7 +1066,7 @@ function connect(config) {
                 "command": "connectToOpenVPN",
                 "configPath": `${path.join(app.getPath("userData"), 'current.ovpn')}`,
                 "ovpnPath": `${path.join(__dirname, "assets", "openvpn", "darwin", "openvpn")}`,
-                "scriptPath": `${app.getPath("home")}/unrestrictme/sbin/update-resolv-conf`
+                "scriptPath": `${app.getPath("home")}/.unrestrictme/update-resolv-conf`
             }
             if (clientObj && clientObj != "killed") {
                 clientObj.write(JSON.stringify(writeData))  
@@ -1132,7 +1132,7 @@ exports.stealthConnect = (decryptedResponse) => {
                         },
                         "configPath": path.join(app.getPath('userData'), "current.ovpn"),
                         "ovpnPath": `${app.getPath("home")}/unrestrictme/sbin/openvpn`,
-                        "scriptPath": `${app.getPath("home")}/unrestrictme/update-resolv-conf`
+                        "scriptPath": `${app.getPath("home")}/.unrestrictme/update-resolv-conf`
                     }
                     if (clientObj && clientObj != "killed") {
                         clientObj.write(JSON.stringify(writeData))
