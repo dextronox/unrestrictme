@@ -956,33 +956,7 @@ exports.dependenciesCheck = () => {
             }
         })
     } else if (os.platform() === "darwin") {
-        exec(`openvpn && stunnel`, (error, stdout, stderr) => {
-            if (error) {
-                log.error(`Main: Error checking whether OpenVPN and stunnel are installed. This probably means they aren't. Error: ${error}`)
-                installDependenciesMac(error)
-            } else if (String(stdout).includes(`built on`)) {
-                let settings = {}
-                fs.writeFile(path.join(app.getPath('userData'), 'settings.conf'), JSON.stringify(settings), (error) => {
-                    if (error) {
-                        log.error(`Main: Error occurred writing settings file. Permissions error perhaps? Error: ${error}`)
-                        let ipcUpdate = {
-                            "error":"writingSettingsFile",
-                            "errorText": error
-                        }
-                        welcomeWindow.webContents.send(`statusUpdate`, ipcUpdate)
-                    } else {
-                        log.info(`Main: Settings file created!`)
-                        //Show alert to user and have them run quit()
-                        let ipcUpdate = {
-                            "update": "InstallComplete"
-                        }
-                        welcomeWindow.webContents.send(`statusUpdate`, ipcUpdate)
-                    }
-                })
-            } else {
-                installDependenciesMac(stdout)
-            }
-        })
+        createScriptFolderMac()
     } else {
         log.error(`Main: This is not a supported system. Time to exit.`)
         app.quit()
@@ -1091,7 +1065,7 @@ function connect(config) {
             let writeData = {
                 "command": "connectToOpenVPN",
                 "configPath": `${path.join(app.getPath("userData"), 'current.ovpn')}`,
-                "ovpnPath": `${app.getPath("home")}/unrestrictme/sbin/openvpn`,
+                "ovpnPath": `${path.join(__dirname, "assets", "openvpn", "darwin", "openvpn")}`,
                 "scriptPath": `${app.getPath("home")}/unrestrictme/sbin/update-resolv-conf`
             }
             if (clientObj && clientObj != "killed") {
@@ -1197,7 +1171,7 @@ exports.stealthConnect = (decryptedResponse) => {
 
 function copyDnsHelper() {
     if (os.platform() === "darwin") {
-        fs.copyFile(path.join(__dirname, "assets", "openvpn", "update-resolv-conf"), path.join(app.getPath("home"), `unrestrictme/sbin/update-resolv-conf`), (error) => {
+        fs.copyFile(path.join(__dirname, "assets", "openvpn", "update-resolv-conf"), path.join(app.getPath("home"), `.unrestrictme/sbin/update-resolv-conf`), (error) => {
             if (error) {
                 let status = {
                     "writeError": true
@@ -1641,73 +1615,34 @@ function installDependenciesLinux(checkError) {
     }
 }
 
-function installDependenciesMac(checkError) {
-    if (String(checkError).includes(`command not found`)) {
-        let ipcUpdate = {
-            "update": "installingOpenVPN"
-        }
-        welcomeWindow.webContents.send(`statusUpdate`, ipcUpdate)
-        fs.exists(`${app.getPath("home")}/unrestrictme/bin/brew`, (exists) => {
-            if (exists) {
-                log.info(`Main: Brew is already installed.`)
-                brewInstallDependencies()
-            } else {
-                exec(`mkdir "${app.getPath("home")}/unrestrictme/" && curl -L https://github.com/Homebrew/brew/tarball/master | tar xz --strip 1 -C "${app.getPath("home")}/unrestrictme/"`, (error, stdout, stderr) => {
-                    if (error) {
-                        log.error(`Main: Error downloading brew. Error: ${error}`)
-                        let ipcUpdate = {
-                            "error": "downloadingBrew",
-                            "errorText": JSON.stringify(error)
-                        }
-                        welcomeWindow.webContents.send(`statusUpdate`, ipcUpdate)
-                    } else {
-                        //Install dependencies
-                        brewInstallDependencies()
-                    }
-                })
-            }
-        })
-
-    }
-}
-
-function brewInstallDependencies() {
-    let brewInstallSpawn = spawn(`${app.getPath("home")}/unrestrictme/bin/brew`, ['install', 'openvpn', 'stunnel', 'node'])
-    let dataLog = ""
-    brewInstallSpawn.stdout.on('data', (data) => {
-        log.info(`Main: ${data.toString()}`)
-        dataLog = dataLog + data.toString() + '\n'
-        let ipcUpdate = {
-            "installLog": dataLog
-        }
-        if (data) {
-            welcomeWindow.webContents.send(`statusUpdate`, ipcUpdate)
-        }
-    })
-    brewInstallSpawn.stderr.on('data', (data) => {
-        log.error(`Main: ${data.toString()}`)
-        dataLog = dataLog + data.toString() + '\n'
-        let ipcUpdate = {
-            "installLog": dataLog
-        }
-        if (data) {
-            welcomeWindow.webContents.send(`statusUpdate`, ipcUpdate)
-        }
-    })
-    brewInstallSpawn.on('close', (code) => {
-        if (code === 0 || dataLog.includes("is already installed and up-to-date")) {
+function createScriptFolderMac() {
+    exec(`mkdir "${app.getPath("home")}/.unrestrictme/"`, (error, stdout, stderr) => {
+        if (error) {
+            log.error(`Main: Error creating unrestrictme folder. Error: ${error}`)
             let ipcUpdate = {
-                "update": "InstallComplete"
+                "error": "downloadingBrew",
+                "errorText": JSON.stringify(error)
             }
             welcomeWindow.webContents.send(`statusUpdate`, ipcUpdate)
-            writeBlankSettingsFile()
         } else {
-            log.info(`Main: Error installing dependencies from brew. Code: ${code}`)
-            let ipcUpdate = {
-                "error": "OpenVPNInstallFail",
-                "errorText": JSON.stringify(dataLog)
-            }
-            welcomeWindow.webContents.send(`statusUpdate`, ipcUpdate)
+            let settings = {}
+            fs.writeFile(path.join(app.getPath('userData'), 'settings.conf'), JSON.stringify(settings), (error) => {
+                if (error) {
+                    log.error(`Main: Error occurred writing settings file. Permissions error perhaps? Error: ${error}`)
+                    let ipcUpdate = {
+                        "error":"writingSettingsFile",
+                        "errorText": error
+                    }
+                    welcomeWindow.webContents.send(`statusUpdate`, ipcUpdate)
+                } else {
+                    log.info(`Main: Settings file created!`)
+                    //Show alert to user and have them run quit()
+                    let ipcUpdate = {
+                        "update": "InstallComplete"
+                    }
+                    welcomeWindow.webContents.send(`statusUpdate`, ipcUpdate)
+                }
+            })
         }
     })
 }
