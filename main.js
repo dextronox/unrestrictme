@@ -485,7 +485,7 @@ function startBackgroundService() {
         let options = {
             name: "unrestrictme"
         }
-        sudo.exec(`sh -c "'${path.join(__dirname)}/assets/node/node' '${app.getPath("userData")}/service.js'"`, options, (error, stdout, stderr) => {
+        sudo.exec(`sh -c "'${path.join(__dirname)}/assets/node/nodeMac' '${app.getPath("userData")}/service.js'"`, options, (error, stdout, stderr) => {
             log.info(`Error: ${error}, Stdout: ${stdout}, Stderr: ${stderr}`)
             if (error) {
                 if (String(error).includes(`User did not grant permission`)) {
