@@ -1340,7 +1340,12 @@ function killSwitch(enable) {
                 return;
             }
             let settings = JSON.parse(data)
-            killSwitchDisable(settings["selectedNic"])
+            if (settings["selectedNic"]) {
+                killSwitchDisable(settings["selectedNic"])
+            } else {
+                killSwitchDisable(settings["nic"])
+            }
+
         })
     }
 }
