@@ -59,7 +59,8 @@
       "category": "public.app-category.utilities",
       "target": "default",
       "icon": "icon.icns",
-      "type": "development"
+      "type": "development",
+      "asar":false
     },
     "dmg": {
       "icon": "build/icon.icns"
