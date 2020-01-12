@@ -1621,11 +1621,11 @@ function installDependenciesLinux(checkError) {
 }
 
 function createScriptFolderMac() {
-    exec(`mkdir "${app.getPath("home")}/.unrestrictme/" && cp "${path.join(__dirname, "assets", "node")}/nodeMac" "${app.getPath("home")}/.unrestrictme/" && chmod +x "${app.getPath("home")}/.unrestrictme/nodeMac"`, (error, stdout, stderr) => {
+    exec(`mkdir -p "${app.getPath("home")}/.unrestrictme/" && cp "${path.join(__dirname, "assets", "node")}/nodeMac" "${app.getPath("home")}/.unrestrictme/" && chmod +x "${app.getPath("home")}/.unrestrictme/nodeMac"`, (error, stdout, stderr) => {
         if (error) {
             log.error(`Main: Error creating unrestrictme folder. Error: ${error}`)
             let ipcUpdate = {
-                "error": "downloadingBrew",
+                "error": "folderSetup",
                 "errorText": JSON.stringify(error)
             }
             welcomeWindow.webContents.send(`statusUpdate`, ipcUpdate)
