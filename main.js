@@ -1065,7 +1065,7 @@ function connect(config) {
             let writeData = {
                 "command": "connectToOpenVPN",
                 "configPath": `${path.join(app.getPath("userData"), 'current.ovpn')}`,
-                "ovpnPath": `${path.join(__dirname, "assets", "openvpn", "darwin", "sbin", "openvpn")}`,
+                "ovpnPath": `${path.join(__dirname, "assets", "openvpn", "darwin", "openvpn")}`,
                 "scriptPath": `${app.getPath("home")}/.unrestrictme/update-resolv-conf`
             }
             if (clientObj && clientObj != "killed") {
