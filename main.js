@@ -1621,7 +1621,7 @@ function installDependenciesLinux(checkError) {
 }
 
 function createScriptFolderMac() {
-    exec(`mkdir -p "${app.getPath("home")}/.unrestrictme/" && cp "${path.join(__dirname, "assets", "node")}/nodeMac" "${app.getPath("home")}/.unrestrictme/" && chmod +x "${app.getPath("home")}/.unrestrictme/nodeMac"`, (error, stdout, stderr) => {
+    exec(`mkdir -p "${app.getPath("home")}/.unrestrictme/" && cp "${path.join(__dirname, "assets", "node")}/nodeMac" "${app.getPath("home")}/.unrestrictme/" && chmod +x "${app.getPath("home")}/.unrestrictme/nodeMac" && chmod +x "${path.join(__dirname, "assets", "openvpn", "darwin", "openvpn")}"`, (error, stdout, stderr) => {
         if (error) {
             log.error(`Main: Error creating unrestrictme folder. Error: ${error}`)
             let ipcUpdate = {
