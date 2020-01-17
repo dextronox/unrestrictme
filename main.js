@@ -485,7 +485,7 @@ function startBackgroundService() {
         let options = {
             name: "unrestrictme"
         }
-        sudo.exec(`sh -c "'${app.getPath("home")}/.unrestrictme/nodeMac' '${app.getPath("userData")}/service.js'"`, options, (error, stdout, stderr) => {
+        sudo.exec(`sh -c "'${app.getPath("userData")}/nodeMac' '${app.getPath("userData")}/service.js'"`, options, (error, stdout, stderr) => {
             log.info(`Error: ${error}, Stdout: ${stdout}, Stderr: ${stderr}`)
             if (error) {
                 if (String(error).includes(`User did not grant permission`)) {
@@ -1066,7 +1066,7 @@ function connect(config) {
                 "command": "connectToOpenVPN",
                 "configPath": `${path.join(app.getPath("userData"), 'current.ovpn')}`,
                 "ovpnPath": `${path.join(__dirname, "assets", "openvpn", "darwin", "openvpn")}`,
-                "scriptPath": `${app.getPath("home")}/.unrestrictme/update-resolv-conf`
+                "scriptPath": `${app.getPath("userData")}/update-resolv-conf`
             }
             if (clientObj && clientObj != "killed") {
                 clientObj.write(JSON.stringify(writeData))  
@@ -1132,7 +1132,7 @@ exports.stealthConnect = (decryptedResponse) => {
                         },
                         "configPath": path.join(app.getPath('userData'), "current.ovpn"),
                         "ovpnPath": `${app.getPath("home")}/unrestrictme/sbin/openvpn`,
-                        "scriptPath": `${app.getPath("home")}/.unrestrictme/update-resolv-conf`
+                        "scriptPath": `${app.getPath("userData")}/update-resolv-conf`
                     }
                     if (clientObj && clientObj != "killed") {
                         clientObj.write(JSON.stringify(writeData))
@@ -1171,7 +1171,7 @@ exports.stealthConnect = (decryptedResponse) => {
 
 function copyDnsHelper() {
     if (os.platform() === "darwin") {
-        fs.copyFile(path.join(__dirname, "assets", "openvpn", "update-resolv-conf"), path.join(app.getPath("home"), `.unrestrictme/update-resolv-conf`), (error) => {
+        fs.copyFile(path.join(__dirname, "assets", "openvpn", "update-resolv-conf"), path.join(app.getPath("userData"), `update-resolv-conf`), (error) => {
             if (error) {
                 let status = {
                     "writeError": true
@@ -1621,7 +1621,7 @@ function installDependenciesLinux(checkError) {
 }
 
 function createScriptFolderMac() {
-    exec(`mkdir -p "${app.getPath("home")}/.unrestrictme/" && cp "${path.join(__dirname, "assets", "node")}/nodeMac" "${app.getPath("home")}/.unrestrictme/" && chmod +x "${app.getPath("home")}/.unrestrictme/nodeMac" && chmod +x "${path.join(__dirname, "assets", "openvpn", "darwin", "openvpn")}"`, (error, stdout, stderr) => {
+    exec(`cp "${path.join(__dirname, "assets", "node")}/nodeMac" "${app.getPath("userData")}" && chmod +x "${app.getPath("userData")}/nodeMac" && chmod +x "${path.join(__dirname, "assets", "openvpn", "darwin", "openvpn")}"`, (error, stdout, stderr) => {
         if (error) {
             log.error(`Main: Error creating unrestrictme folder. Error: ${error}`)
             let ipcUpdate = {
