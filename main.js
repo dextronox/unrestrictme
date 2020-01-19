@@ -1098,7 +1098,7 @@ exports.stealthConnect = (decryptedResponse) => {
     })
     //Fire up stunnel and send off the config
     if (os.platform() === "win32" && os.arch() === "x64") {
-        log.info(`"${path.join(__dirname, "assets", "stunnel", "bin", "tstunnel.exe")}" "${path.join(app.getPath("userData"), 'stunnel.conf')}" -p "${path.join(app.getPath("userData"), 'stunnel.pem')}"`)
+        log.info(`"${path.join(__dirname, "assets", "stunnel", "win32", "tstunnel.exe")}" "${path.join(app.getPath("userData"), 'stunnel.conf')}" -p "${path.join(app.getPath("userData"), 'stunnel.pem')}"`)
         let stunnelProc = exec(`"${path.join(__dirname, "assets", "stunnel", "bin", "tstunnel.exe")}" "${path.join(app.getPath("userData"), 'stunnel.conf')}" -p "${path.join(app.getPath("userData"), 'stunnel.pem')}"`)
         let dataLog
         stunnelProc.stderr.on('data', (data) => {
@@ -1125,7 +1125,7 @@ exports.stealthConnect = (decryptedResponse) => {
                 if (os.platform() === "darwin") {
                     let writeData = {
                         "command": "connectToStealth",
-                        "stunnelPath": `${app.getPath("home")}/unrestrictme/bin/stunnel`,
+                        "stunnelPath": `${path.join(__dirname)}/assets/stunnel/darwin/stunnel`,
                         "resourcePath": {
                             "config": path.join(app.getPath("userData"), 'stunnel.conf'),
                             "pem": path.join(app.getPath("userData"), 'stunnel.pem')
