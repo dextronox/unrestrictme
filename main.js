@@ -1131,7 +1131,7 @@ exports.stealthConnect = (decryptedResponse) => {
                             "pem": path.join(app.getPath("userData"), 'stunnel.pem')
                         },
                         "configPath": path.join(app.getPath('userData'), "current.ovpn"),
-                        "ovpnPath": `${app.getPath("home")}/unrestrictme/sbin/openvpn`,
+                        "ovpnPath": `${path.join(__dirname, "assets", "openvpn", "darwin", "openvpn")}`,
                         "scriptPath": `${app.getPath("userData")}/update-resolv-conf`
                     }
                     if (clientObj && clientObj != "killed") {
