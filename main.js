@@ -248,6 +248,18 @@ function checkForUpdates(install) {
         log.info(`Main: The client will now attempt to download the update.`)
         autoUpdater.downloadUpdate()
         autoUpdater.on("update-downloaded", (info) => {
+            // HACK(mc, 2019-09-10): work around https://github.com/electron-userland/electron-builder/issues/4046
+            if (process.env.DESKTOPINTEGRATION === 'AppImageLauncher') {
+                // remap temporary running AppImage to actual source
+                // THIS IS PROBABLY SUPER BRITTLE AND MAKES ME WANT TO STOP USING APPIMAGE
+                log.info('Main: rewriting $APPIMAGE', {
+                    oldValue: process.env.APPIMAGE,
+                    newValue: process.env.ARGV0,
+                })
+                process.env.APPIMAGE = process.env.ARGV0
+            } else {
+                log.info('Main: Not running in AppImageLauncher')
+            }
             autoUpdater.quitAndInstall()
             quit(true)
         })
