@@ -69,19 +69,6 @@ function setLogValues() {
         }
     });
     log.transports.file.streamConfig = { flags: 'w' };
-
-    //Log environment details
-    setTimeout(() => {
-        log.info(`ENVIRONMENT DETAILS` + '\n' + 
-        `CPU Architecture: ${os.arch()}` + '\n' + 
-        `CPU Model: ${os.cpus()[0]["model"]}` + '\n' + 
-        `Network Interfaces: ${JSON.stringify(os.networkInterfaces())}` + '\n' + 
-        `System Memory: ${Math.round(os.totalmem()/1073741824 * 100) / 100} GB` + '\n' + 
-        `System Platform: ${os.platform()}` + '\n' + 
-        `System Release: ${os.release()}` + '\n' + 
-        `unrestrict.me Version: ${app.getVersion()}`  + '\n' + 
-        `Arguments: ${process.argv}`)
-    }, 1000)
 }
 
 
@@ -498,7 +485,7 @@ function startBackgroundService() {
         let options = {
             name: "unrestrictme"
         }
-        sudo.exec(`sh -c "'${app.getPath("home")}/unrestrictme/bin/node' '${app.getPath("userData")}/service.js'"`, options, (error, stdout, stderr) => {
+        sudo.exec(`sh -c "'${app.getPath("userData")}/nodeMac' '${app.getPath("userData")}/service.js'"`, options, (error, stdout, stderr) => {
             log.info(`Error: ${error}, Stdout: ${stdout}, Stderr: ${stderr}`)
             if (error) {
                 if (String(error).includes(`User did not grant permission`)) {
@@ -586,6 +573,19 @@ function createLoadingWindow() {
         loadingWindow.webContents.openDevTools({mode: "undocked"})
     }
     loadingWindow.setAlwaysOnTop(true)
+
+    //Log environment details
+    setTimeout(() => {
+        log.info(`ENVIRONMENT DETAILS` + '\n' + 
+        `CPU Architecture: ${os.arch()}` + '\n' + 
+        `CPU Model: ${os.cpus()[0]["model"]}` + '\n' + 
+        `Network Interfaces: ${JSON.stringify(os.networkInterfaces())}` + '\n' + 
+        `System Memory: ${Math.round(os.totalmem()/1073741824 * 100) / 100} GB` + '\n' + 
+        `System Platform: ${os.platform()}` + '\n' + 
+        `System Release: ${os.release()}` + '\n' + 
+        `unrestrict.me Version: ${app.getVersion()}`  + '\n' + 
+        `Arguments: ${process.argv}`)
+    }, 1000)
 }
 
 function createErrorWindow(error, sendError) {
@@ -646,10 +646,10 @@ function createMainWindow() {
         show: false, 
         frame: true, 
         width: 600, 
-        height: 420, 
+        height: 440, 
         icon: path.resolve(__dirname, 'assets', 'icons', 'icon.png'), 
         'minWidth': 600, 
-        'minHeight': 420,
+        'minHeight': 440,
         transparent: false, 
         title: "unrestrict.me Client", 
         resizable: false,
@@ -956,33 +956,7 @@ exports.dependenciesCheck = () => {
             }
         })
     } else if (os.platform() === "darwin") {
-        exec(`openvpn && stunnel`, (error, stdout, stderr) => {
-            if (error) {
-                log.error(`Main: Error checking whether OpenVPN and stunnel are installed. This probably means they aren't. Error: ${error}`)
-                installDependenciesMac(error)
-            } else if (String(stdout).includes(`built on`)) {
-                let settings = {}
-                fs.writeFile(path.join(app.getPath('userData'), 'settings.conf'), JSON.stringify(settings), (error) => {
-                    if (error) {
-                        log.error(`Main: Error occurred writing settings file. Permissions error perhaps? Error: ${error}`)
-                        let ipcUpdate = {
-                            "error":"writingSettingsFile",
-                            "errorText": error
-                        }
-                        welcomeWindow.webContents.send(`statusUpdate`, ipcUpdate)
-                    } else {
-                        log.info(`Main: Settings file created!`)
-                        //Show alert to user and have them run quit()
-                        let ipcUpdate = {
-                            "update": "InstallComplete"
-                        }
-                        welcomeWindow.webContents.send(`statusUpdate`, ipcUpdate)
-                    }
-                })
-            } else {
-                installDependenciesMac(stdout)
-            }
-        })
+        createScriptFolderMac()
     } else {
         log.error(`Main: This is not a supported system. Time to exit.`)
         app.quit()
@@ -1091,8 +1065,8 @@ function connect(config) {
             let writeData = {
                 "command": "connectToOpenVPN",
                 "configPath": `${path.join(app.getPath("userData"), 'current.ovpn')}`,
-                "ovpnPath": `${app.getPath("home")}/unrestrictme/sbin/openvpn`,
-                "scriptPath": `${app.getPath("home")}/unrestrictme/sbin/update-resolv-conf`
+                "ovpnPath": `${path.join(__dirname, "assets", "openvpn", "darwin", "openvpn")}`,
+                "scriptPath": `${app.getPath("userData")}/update-resolv-conf`
             }
             if (clientObj && clientObj != "killed") {
                 clientObj.write(JSON.stringify(writeData))  
@@ -1123,8 +1097,8 @@ exports.stealthConnect = (decryptedResponse) => {
         }
     })
     //Fire up stunnel and send off the config
-    if (os.platform() === "win32" && os.arch() === "x64") {
-        log.info(`"${path.join(__dirname, "assets", "stunnel", "bin", "tstunnel.exe")}" "${path.join(app.getPath("userData"), 'stunnel.conf')}" -p "${path.join(app.getPath("userData"), 'stunnel.pem')}"`)
+    if (os.platform() === "win32") {
+        log.info(`"${path.join(__dirname, "assets", "stunnel", "win32", "tstunnel.exe")}" "${path.join(app.getPath("userData"), 'stunnel.conf')}" -p "${path.join(app.getPath("userData"), 'stunnel.pem')}"`)
         let stunnelProc = exec(`"${path.join(__dirname, "assets", "stunnel", "bin", "tstunnel.exe")}" "${path.join(app.getPath("userData"), 'stunnel.conf')}" -p "${path.join(app.getPath("userData"), 'stunnel.pem')}"`)
         let dataLog
         stunnelProc.stderr.on('data', (data) => {
@@ -1151,14 +1125,14 @@ exports.stealthConnect = (decryptedResponse) => {
                 if (os.platform() === "darwin") {
                     let writeData = {
                         "command": "connectToStealth",
-                        "stunnelPath": `${app.getPath("home")}/unrestrictme/bin/stunnel`,
+                        "stunnelPath": `${path.join(__dirname)}/assets/stunnel/darwin/stunnel`,
                         "resourcePath": {
                             "config": path.join(app.getPath("userData"), 'stunnel.conf'),
                             "pem": path.join(app.getPath("userData"), 'stunnel.pem')
                         },
                         "configPath": path.join(app.getPath('userData'), "current.ovpn"),
-                        "ovpnPath": `${app.getPath("home")}/unrestrictme/sbin/openvpn`,
-                        "scriptPath": `${app.getPath("home")}/unrestrictme/sbin/update-resolv-conf`
+                        "ovpnPath": `${path.join(__dirname, "assets", "openvpn", "darwin", "openvpn")}`,
+                        "scriptPath": `${app.getPath("userData")}/update-resolv-conf`
                     }
                     if (clientObj && clientObj != "killed") {
                         clientObj.write(JSON.stringify(writeData))
@@ -1197,7 +1171,7 @@ exports.stealthConnect = (decryptedResponse) => {
 
 function copyDnsHelper() {
     if (os.platform() === "darwin") {
-        fs.copyFile(path.join(__dirname, "assets", "openvpn", "update-resolv-conf"), path.join(app.getPath("home"), `unrestrictme/sbin/update-resolv-conf`), (error) => {
+        fs.copyFile(path.join(__dirname, "assets", "openvpn", "update-resolv-conf"), path.join(app.getPath("userData"), `update-resolv-conf`), (error) => {
             if (error) {
                 let status = {
                     "writeError": true
@@ -1366,7 +1340,12 @@ function killSwitch(enable) {
                 return;
             }
             let settings = JSON.parse(data)
-            killSwitchDisable(settings["selectedNic"])
+            if (settings["selectedNic"]) {
+                killSwitchDisable(settings["selectedNic"])
+            } else {
+                killSwitchDisable(settings["nic"])
+            }
+
         })
     }
 }
@@ -1641,73 +1620,34 @@ function installDependenciesLinux(checkError) {
     }
 }
 
-function installDependenciesMac(checkError) {
-    if (String(checkError).includes(`command not found`)) {
-        let ipcUpdate = {
-            "update": "installingOpenVPN"
-        }
-        welcomeWindow.webContents.send(`statusUpdate`, ipcUpdate)
-        fs.exists(`${app.getPath("home")}/unrestrictme/bin/brew`, (exists) => {
-            if (exists) {
-                log.info(`Main: Brew is already installed.`)
-                brewInstallDependencies()
-            } else {
-                exec(`mkdir "${app.getPath("home")}/unrestrictme/" && curl -L https://github.com/Homebrew/brew/tarball/master | tar xz --strip 1 -C "${app.getPath("home")}/unrestrictme/"`, (error, stdout, stderr) => {
-                    if (error) {
-                        log.error(`Main: Error downloading brew. Error: ${error}`)
-                        let ipcUpdate = {
-                            "error": "downloadingBrew",
-                            "errorText": JSON.stringify(error)
-                        }
-                        welcomeWindow.webContents.send(`statusUpdate`, ipcUpdate)
-                    } else {
-                        //Install dependencies
-                        brewInstallDependencies()
-                    }
-                })
-            }
-        })
-
-    }
-}
-
-function brewInstallDependencies() {
-    let brewInstallSpawn = spawn(`${app.getPath("home")}/unrestrictme/bin/brew`, ['install', 'openvpn', 'stunnel', 'node'])
-    let dataLog = ""
-    brewInstallSpawn.stdout.on('data', (data) => {
-        log.info(`Main: ${data.toString()}`)
-        dataLog = dataLog + data.toString() + '\n'
-        let ipcUpdate = {
-            "installLog": dataLog
-        }
-        if (data) {
-            welcomeWindow.webContents.send(`statusUpdate`, ipcUpdate)
-        }
-    })
-    brewInstallSpawn.stderr.on('data', (data) => {
-        log.error(`Main: ${data.toString()}`)
-        dataLog = dataLog + data.toString() + '\n'
-        let ipcUpdate = {
-            "installLog": dataLog
-        }
-        if (data) {
-            welcomeWindow.webContents.send(`statusUpdate`, ipcUpdate)
-        }
-    })
-    brewInstallSpawn.on('close', (code) => {
-        if (code === 0 || dataLog.includes("is already installed and up-to-date")) {
+function createScriptFolderMac() {
+    exec(`cp "${path.join(__dirname, "assets", "node")}/nodeMac" "${app.getPath("userData")}" && chmod +x "${app.getPath("userData")}/nodeMac" && chmod +x "${path.join(__dirname, "assets", "openvpn", "darwin", "openvpn")}"`, (error, stdout, stderr) => {
+        if (error) {
+            log.error(`Main: Error creating unrestrictme folder. Error: ${error}`)
             let ipcUpdate = {
-                "update": "InstallComplete"
+                "error": "folderSetup",
+                "errorText": JSON.stringify(error)
             }
             welcomeWindow.webContents.send(`statusUpdate`, ipcUpdate)
-            writeBlankSettingsFile()
         } else {
-            log.info(`Main: Error installing dependencies from brew. Code: ${code}`)
-            let ipcUpdate = {
-                "error": "OpenVPNInstallFail",
-                "errorText": JSON.stringify(dataLog)
-            }
-            welcomeWindow.webContents.send(`statusUpdate`, ipcUpdate)
+            let settings = {}
+            fs.writeFile(path.join(app.getPath('userData'), 'settings.conf'), JSON.stringify(settings), (error) => {
+                if (error) {
+                    log.error(`Main: Error occurred writing settings file. Permissions error perhaps? Error: ${error}`)
+                    let ipcUpdate = {
+                        "error":"writingSettingsFile",
+                        "errorText": error
+                    }
+                    welcomeWindow.webContents.send(`statusUpdate`, ipcUpdate)
+                } else {
+                    log.info(`Main: Settings file created!`)
+                    //Show alert to user and have them run quit()
+                    let ipcUpdate = {
+                        "update": "InstallComplete"
+                    }
+                    welcomeWindow.webContents.send(`statusUpdate`, ipcUpdate)
+                }
+            })
         }
     })
 }

@@ -197,6 +197,7 @@
                 </div>
                 <div class="modal-body">
                     <p>This tool is used to upload your log file to unrestrict.me to assist with an ongoing support request.</p> 
+                    <b>Note: </b><p>This will upload your log file in its entirety. Please review it to ensure there's no sensitive information.</p>
                     <div class="form-group">
                         <label for="requestId">Support Request ID</label>
                         <input class="form-control" id="requestId" placeholder="Support Request ID">
@@ -251,7 +252,7 @@
                     </button>
                 </div>
                 <div class="modal-body">
-                    <p>The background process is the heart of the unrestrict.me application on Linux.</p>
+                    <p>The background process is the heart of the unrestrict.me application on Unix and Unix-like systems.</p>
                     <p>A VPN by nature requires a high level of system control to modify routing information, add network adapters etc. On Windows we simply prompt a user for administrative privileges when they launch the application. On Linux, it isn't that simple.</p>
                     <p>Running a graphical program as root creates a whole heap of issues when the user themselves isn't actually the root user. Subsequently, all commands run by the client that require elevation are performed in a background process that is elevated.</p>
                     <p>Whilst it is possible for us to prompt you everytime we're about to run a command that requires sudo this is unrealistic with features like the kill switch, which need commands to be run as soon as possible.</p>
@@ -269,8 +270,13 @@
                 <div class="modal-header">
                     <h5 class="modal-title">News</h5>
                     <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
+                        <span aria-hidden="true">&times;</span>
                     </button>
+                </div>
+                <div class="alert alert-dismissible alert-warning" id="updateAvailableAlert" style="display:none">
+                    <button type="button" class="close" data-dismiss="alert">&times;</button>
+                    <strong>Update Available!</strong> We recommend updating to ensure you receive security fixes and other vital updates.</a><br>
+                    <button id="beginUpdate" type="button" class="btn btn-success my-1">Update</button>
                 </div>
                 <div class="modal-body" id="newsModalBody" style="overflow-y:auto;max-height:12em;">
                     <div class="text-center">

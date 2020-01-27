@@ -70,3 +70,5 @@ current.ovpn
 dist/*
 config/*
 dev-app-update.yml
+assets/openvpn/.DS_Store
+.DS_Store
