@@ -167,18 +167,9 @@ $(document).ready(() => {
         $("#checkForUpdates").html(`Check for Updates`)
         $("#checkForUpdates").attr("disabled", false)
         if (args["updateAvailable"] === true) {
-            swal({
-                title: "Update Available",
-                text: "An update is available. Whilst it's not mandatory to update, older versions of our client may develop issues communicating with our API and remain vulnerable to potential security flaws. You will be disconnected from unrestrict.me if connected.",
-                icon: "info",
-                buttons: ["Cancel", "Update"]
-            }).then((willUpdate) => {
-                if (willUpdate) {
-                    //Tell we wish to update. They will take care of disconnection.
-                    log.info(`Renderer: User has indicated they wish to update their client....`)
-                    installUpdates()
-                }
-            })
+            $("#updateAvailableAlert").css("display", "block")
+            $("#showNews").removeClass("btn-outline-secondary")
+            $("#showNews").addClass("btn-success")
         }
         if (args["installingUpdate"] === true) {
             $("#disconnected").css('display', 'none')
@@ -876,12 +867,14 @@ function checkLatestNews() {
             })
         } else {          
             getNewsFeed((mostRecent) => {
-                if (mostRecent[0]["id"] > JSON.parse(stored)["latestNews"]) {
+                if (mostRecent[0] && mostRecent[0]["id"] > JSON.parse(stored)["latestNews"]) {
                     $("#showNews").removeClass("btn-outline-secondary")
                     $("#showNews").addClass("btn-success")
                 } else {
-                    $("#showNews").removeClass("btn-success")
-                    $("#showNews").addClass("btn-outline-secondary")
+                    if (document.getElementById("updateAvailableAlert") === null || $("#updateAvailableAlert").css("display") === 'none') {
+                        $("#showNews").removeClass("btn-success")
+                        $("#showNews").addClass("btn-outline-secondary")
+                    }
                 }
             })
         }
@@ -912,6 +905,9 @@ function readSettingsFile(callback) {
     })
 }
 
+$('#newsModal').on('hidden.bs.modal', function () {
+    checkLatestNews()
+})
 $("#uploadLogOpenModal").on("click", () => {
     $("#requestId").val(null)
     $("#requestPassword").val(null)
@@ -923,20 +919,34 @@ $("#uploadLogOpenModal").on("click", () => {
     
 })
 $("#submitUploadLogFileForm").on("click", () => {
-    $("#submitUploadLogFileForm").html(`<div class="spinner-border" role="status">
-        <span class="sr-only">Loading...</span>
-    </div>`)
-  $("#submitUploadLogFileForm").attr("disabled", true)
-    fs.readFile($("#logFileLocation").val(), 'utf8', (error, data) => {
-        if (error) {
-            swal("Whoops!", "We couldn't read the log file.", "error")
-            $("#submitUploadLogFileForm").html(`Upload`)
-            $("#submitUploadLogFileForm").attr("disabled", false)
-        } else {
-            uploadLogFile(data)
-        }
-    })
+    submitUploadLogFileButton(false)
+    if ($("#logFileLocation").val()) {
+        fs.readFile($("#logFileLocation").val(), 'utf8', (error, data) => {
+            if (error) {
+                swal("Whoops!", "We couldn't read the log file.", "error")
+                submitUploadLogFileButton(true)
+            } else {
+                uploadLogFile(data)
+            }
+        })
+    } else {
+        swal("Whoops!", "Please ensure all sections of the form are entered.", "error")
+        submitUploadLogFileButton(true)
+    }
+
 })
+
+function submitUploadLogFileButton(display) {
+    if (display) {
+        $("#submitUploadLogFileForm").html(`Upload`)
+        $("#submitUploadLogFileForm").attr("disabled", false)
+    } else {
+        $("#submitUploadLogFileForm").html(`<div class="spinner-border" role="status">
+            <span class="sr-only">Loading...</span>
+        </div>`)
+        $("#submitUploadLogFileForm").attr("disabled", true)
+    }
+}
 
 $("#searchForLogFile").on("click", () => {
     main.selectLogFileDialog()
@@ -970,8 +980,7 @@ function uploadLogFile(data) {
             swal('Whoops!', "An unknown error occurred. Check the log file for more information.", "error")
             log.error(`Renderer: An unknown error occurred whilst attempting to upload the log file. Body: ${body}`)
         }
-        $("#submitUploadLogFileForm").html(`Upload`)
-        $("#submitUploadLogFileForm").attr("disabled", false)
+        submitUploadLogFileButton(true)
     })
 }
 
@@ -981,4 +990,24 @@ $("#shareTwitter").on("click", () => {
 
 $("#shareFacebook").on("click", () => {
     require('electron').shell.openExternal(`http://www.facebook.com/sharer/sharer.php?u=https://unrestrict.me`)
+})
+
+$("#beginUpdate").on("click", () => {
+    if ($("#connected").css("display") === "block") {
+        swal({
+            title: "Are you sure?",
+            text: "Updating will disconnect you from unrestrict.me. Only continue if you're sure nothing's running in the background.",
+            icon: "info",
+            buttons: ["Cancel", "Update"]
+        }).then((willUpdate) => {
+            if (willUpdate) {
+                //Tell we wish to update. They will take care of disconnection.
+                log.info(`Renderer: User has indicated they wish to update their client.`)
+                installUpdates()
+            }
+        })
+    } else {
+        installUpdates()
+        $("#newsModal").modal("hide")
+    }
 })
