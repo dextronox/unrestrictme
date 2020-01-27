@@ -1,6 +1,6 @@
 {
   "name": "unrestrictme",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Desktop application for connecting to the unrestrict.me VPN network.",
   "main": "./main.js",
   "scripts": {
@@ -17,7 +17,7 @@
     "proxy"
   ],
   "author": "unrestrict.me",
-  "license": "MIT",
+  "license": "UNLICENSED",
   "build": {
     "appId": "com.unrestrictme.client",
     "productName": "unrestrict.me",
