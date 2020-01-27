@@ -1,4 +1,4 @@
-![](https://unrestrict.me/img/logo_cover.png)
+![](https://unrestrict.me/img/logo.png)
 
 unrestrict.me Client Built on Electron
 
