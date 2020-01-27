@@ -33,7 +33,7 @@
       "asar": false,
       "requestedExecutionLevel": "requireAdministrator"
     },
-    "nsisWeb": {
+    "nsis": {
       "oneClick": false,
       "runAfterFinish": true,
       "createDesktopShortcut": true,
