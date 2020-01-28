@@ -31,8 +31,7 @@
       "icon": "build/icon.ico",
       "verifyUpdateCodeSignature": true,
       "asar": false,
-      "requestedExecutionLevel": "requireAdministrator",
-      "publisherName":"unrestrict.me"
+      "requestedExecutionLevel": "requireAdministrator"
     },
     "nsis": {
       "oneClick": false,
@@ -87,7 +86,7 @@
   },
   "devDependencies": {
     "electron": "^4.0.2",
-    "electron-builder": "^21.1.5",
+    "electron-builder": "^22.3.2",
     "yarn": "^1.17.3"
   },
   "dependencies": {
