@@ -26,7 +26,6 @@
       "output": "dist/",
       "app": "."
     },
-    "forceCodeSigning":true,
     "win": {
       "target": "nsis",
       "icon": "build/icon.ico",
