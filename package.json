@@ -60,7 +60,7 @@
       "target": "default",
       "icon": "icon.icns",
       "type": "development",
-      "asar":false
+      "asar": false
     },
     "dmg": {
       "icon": "build/icon.icns"
