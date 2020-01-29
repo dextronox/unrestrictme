@@ -1003,10 +1003,12 @@ $("#beginUpdate").on("click", () => {
             if (willUpdate) {
                 //Tell we wish to update. They will take care of disconnection.
                 log.info(`Renderer: User has indicated they wish to update their client.`)
+                $("#updateAvailableAlert").alert("close")
                 installUpdates()
             }
         })
     } else {
+        $("#updateAvailableAlert").alert("close")
         installUpdates()
         $("#newsModal").modal("hide")
     }
