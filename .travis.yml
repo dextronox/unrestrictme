@@ -22,7 +22,7 @@ cache:
 script:
   - |
     if [ "$TRAVIS_OS_NAME" == "linux" ]; then
-      docker run --rm -e GH_TOKEN=$GH_TOKEN \
+      docker run --rm -e GH_TOKEN=$GH_TOKEN -e CSC_LINK=$CSC_LINK -e CSC_KEY_PASSWORD=$CSC_KEY_PASSWORD \
         -v ${PWD}:/project \
         -v ~/.cache/electron:/root/.cache/electron \
         -v ~/.cache/electron-builder:/root/.cache/electron-builder \
