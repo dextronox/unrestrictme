@@ -1101,7 +1101,7 @@ exports.stealthConnect = (decryptedResponse) => {
     //Fire up stunnel and send off the config
     if (os.platform() === "win32") {
         log.info(`"${path.join(__dirname, "assets", "stunnel", "win32", "tstunnel.exe")}" "${path.join(app.getPath("userData"), 'stunnel.conf')}" -p "${path.join(app.getPath("userData"), 'stunnel.pem')}"`)
-        let stunnelProc = exec(`"${path.join(__dirname, "assets", "stunnel", "bin", "tstunnel.exe")}" "${path.join(app.getPath("userData"), 'stunnel.conf')}" -p "${path.join(app.getPath("userData"), 'stunnel.pem')}"`)
+        let stunnelProc = exec(`"${path.join(__dirname, "assets", "stunnel", "win32", "tstunnel.exe")}" "${path.join(app.getPath("userData"), 'stunnel.conf')}" -p "${path.join(app.getPath("userData"), 'stunnel.pem')}"`)
         let dataLog
         stunnelProc.stderr.on('data', (data) => {
             log.info(`Stunnel: ${data}`)
