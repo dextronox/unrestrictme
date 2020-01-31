@@ -48,7 +48,7 @@ function foregroundProcessDataHandler(data) {
         killSwitchDisable(dataInterpreted["nic"])
     }
     if (dataInterpreted["command"] === "connectToStealth") {
-        stealthFunction(dataInterpreted["stunnelPath"],  dataInterpreted["resourcePath"]["config"], dataInterpreted["resourcePath"]["pem"], dataInterpreted["configPath"], dataInterpreted["ovpnPath"], dataInterpreted["scriptPath"])
+        stealthFunction(dataInterpreted["stunnelPath"],  dataInterpreted["resourcePath"]["config"], dataInterpreted["configPath"], dataInterpreted["ovpnPath"], dataInterpreted["scriptPath"])
     }
 }
 
@@ -268,9 +268,9 @@ function killSwitchDisable(nic) {
     })
 }
 
-function stealthFunction(stunnelPath, stunnelConfig, stunnelPem, ovpnConfig, ovpnPath, scriptPath) {
+function stealthFunction(stunnelPath, stunnelConfig, ovpnConfig, ovpnPath, scriptPath) {
     if (os.platform() === "linux") {
-        exec(`stunnel4 "${stunnelConfig}" -p "${stunnelPem}"`, (error, stdout, stderr) => {
+        exec(`stunnel4 "${stunnelConfig}"`, (error, stdout, stderr) => {
             if (error) {
                 console.log(`Error!`)
                 console.log(error)
@@ -282,8 +282,8 @@ function stealthFunction(stunnelPath, stunnelConfig, stunnelPem, ovpnConfig, ovp
         })
         ovpnFunction(ovpnConfig, ovpnPath, scriptPath)
     } else if (os.platform() === "darwin") {
-        console.log(`Going to execute: ${`${stunnelPath} "${stunnelConfig}" -p "${stunnelPem}"`}`)
-        exec(`${stunnelPath} "${stunnelConfig}" -p "${stunnelPem}"`, (error, stdout, stderr) => {
+        console.log(`Going to execute: ${`${stunnelPath} "${stunnelConfig}"`}`)
+        exec(`${stunnelPath} "${stunnelConfig}"`, (error, stdout, stderr) => {
             if (error) {
                 console.log(`Error!`)
                 console.log(error)
