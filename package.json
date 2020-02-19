@@ -87,7 +87,7 @@
   "devDependencies": {
     "electron": "^4.0.2",
     "electron-builder": "^22.3.2",
-    "yarn": "^1.17.3"
+    "yarn": "^1.22.0"
   },
   "dependencies": {
     "child_process": "^1.0.2",
