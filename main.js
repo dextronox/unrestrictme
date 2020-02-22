@@ -781,8 +781,8 @@ function quit(hard) {
     killSwitch(false)
     intentionalDisconnect = true
     if (os.platform() === "win32" && !hard) {
-        exec(`taskkill /IM openvpn.exe /F & taskkill /IM tstunnel.exe /F`, (error, stdout, stderr) => {
-            if (error && !String(error).includes(`"tstunnel.exe" not found.`)) {
+        exec(`taskkill /IM openvpn.exe /F & taskkill /IM wstunnel.exe /F`, (error, stdout, stderr) => {
+            if (error && !String(error).includes(`"wstunnel.exe" not found.`)) {
                 log.error(`Main: An error occurred killing OpenVPN. Error: ${error}`)
                 mainWindow.show()
                 let status = {
@@ -929,11 +929,11 @@ exports.dependenciesCheck = () => {
             }
         })
     } else if (os.platform() === "linux") {
-        exec(`dpkg-query -W openvpn stunnel4 net-tools`, (error, stdout, stderr) => {
+        exec(`dpkg-query -W openvpn net-tools`, (error, stdout, stderr) => {
             if (error) {
-                log.error(`Main: Error checking whether OpenVPN, stunnel and ifconfig are installed. Error: ${error}`)
+                log.error(`Main: Error checking whether OpenVPN and ifconfig (net-tools) are installed. Error: ${error}`)
                 installDependenciesLinux(error)
-            } else if (!String(stdout).includes("no packages found matching stunnel4") && !String(stdout).includes("no packages found matching openvpn") && !String(stdout).includes("no packages found matching net-tools")) {
+            } else if (!String(stdout).includes("no packages found matching openvpn") && !String(stdout).includes("no packages found matching net-tools")) {
                 //Packages are installed
                 let settings = {}
                 fs.writeFile(path.join(app.getPath('userData'), 'settings.conf'), JSON.stringify(settings), (error) => {
@@ -1088,11 +1088,6 @@ function connect(config) {
 }
 
 exports.stealthConnect = (decryptedResponse) => {
-    fs.writeFile(path.join(app.getPath("userData"), 'stunnel.conf'), decryptedResponse["stunnel"], (error) => {
-        if (error) {
-            log.error(`Main: Couldn't write the stunnel configuartion to disk.`)
-        }
-    })
     //Fire up stunnel and send off the config
     if (os.platform() === "win32") {
         log.info(`"${path.join(__dirname, "assets", "stunnel", "win32", "tstunnel.exe")}" "${path.join(app.getPath("userData"), 'stunnel.conf')}"`)
@@ -1202,8 +1197,8 @@ function disconnect() {
     intentionalDisconnect = true
     log.info(`Main: We're about to kill OpenVPN. If OpenVPN is not running, you will see no confirmation it wasn't killed.`)
     if (os.platform() === "win32") {
-        exec(`taskkill /IM openvpn.exe /F & taskkill /IM tstunnel.exe /F`, (error, stdout, stderr) => {
-            if (error && !String(error).includes(`"tstunnel.exe" not found.`)) {
+        exec(`taskkill /IM openvpn.exe /F & taskkill /IM wstunnel.exe /F`, (error, stdout, stderr) => {
+            if (error && !String(error).includes(`"wstunnel.exe" not found.`)) {
                 log.error(`Main: An error occurred killing OpenVPN. Error: ${error}`)
                 mainWindow.show()
                 let status = {
@@ -1561,9 +1556,9 @@ function killSwitchDisable(nic) {
     }
 }
 function installDependenciesLinux(checkError) {
-    if (String(checkError).includes("no packages found matching stunnel4") || String(checkError).includes("no packages found matching openvpn") || String(checkError).includes("no packages found matching net-tools")) {
-        //OpenVPN, stunnel4 or net-tools not installed. Get from package repository.
-        log.info(`Main: Installing OpenVPN, stunnel4 and net-tools from package repository.`)
+    if (String(checkError).includes("no packages found matching openvpn") || String(checkError).includes("no packages found matching net-tools")) {
+        //OpenVPN or net-tools not installed. Get from package repository.
+        log.info(`Main: Installing OpenVPN and net-tools from package repository.`)
         getos((error, ops) => {
             if (error) {
                 log.error(`Main: Error checking operating system environment. Error: ${error}`)
@@ -1582,7 +1577,7 @@ function installDependenciesLinux(checkError) {
                 let options = {
                     name: "unrestrictme"
                 }
-                sudo.exec(`apt-get -y install openvpn stunnel4 net-tools`, options, (error, stdout, stderr) => {
+                sudo.exec(`apt-get -y install openvpn net-tools`, options, (error, stdout, stderr) => {
                     if (error) {
                         //Couldn't run the install command.
                         log.error(`Main: Failed to run command to install OpenVPN. Error: ${error}`)
