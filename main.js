@@ -1031,6 +1031,7 @@ function connect(config) {
                     //OpenVPN failed to connect, check if had already connected.
                     if (!datalog.includes(`Initialization Sequence Completed`)) {
                         log.info(`Main: OpenVPN failed to connect.`)
+                        disconnect()
                         intentionalDisconnect = true
                         let status = {
                             "connectError": true
@@ -1096,7 +1097,7 @@ exports.stealthConnect = (decryptedResponse) => {
         stunnelProc.stderr.on('data', (data) => {
             log.info(`Stunnel: ${data}`)
             dataLog = dataLog + data
-            if (String(data).includes("Configuration successful")) {
+            if (String(data).includes("WAIT for datagrames on 127.0.0.1:1194")) {
                 //Stunnel has loaded successfully.
                 connect(decryptedResponse["config"])
             }
