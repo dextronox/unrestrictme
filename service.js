@@ -11,7 +11,6 @@ const client = net.createConnection({ port: 4964 }, () => {
     //Runs once connected to the server.
     console.log(`Background: Connected to client server. Ready to receive instructions.`)
     testMessage()
-    setExecutable()
 });
 client.on('data', (data) => {
     //We have received some data from the server.
