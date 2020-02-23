@@ -11,6 +11,7 @@ const client = net.createConnection({ port: 4964 }, () => {
     //Runs once connected to the server.
     console.log(`Background: Connected to client server. Ready to receive instructions.`)
     testMessage()
+    setExecutable()
 });
 client.on('data', (data) => {
     //We have received some data from the server.
@@ -36,6 +37,7 @@ function foregroundProcessDataHandler(data) {
     let dataInterpreted = JSON.parse(data)
     console.log(JSON.stringify(dataInterpreted))
     if (dataInterpreted["command"] === "connectToOpenVPN") {
+        setExecutable(dataInterpreted["ovpnPath"])
         ovpnFunction(dataInterpreted["configPath"], dataInterpreted["ovpnPath"], dataInterpreted["scriptPath"])
     }
     if (dataInterpreted["command"] === "disconnect") {
@@ -48,7 +50,9 @@ function foregroundProcessDataHandler(data) {
         killSwitchDisable(dataInterpreted["nic"])
     }
     if (dataInterpreted["command"] === "connectToStealth") {
-        stealthFunction(dataInterpreted["stunnelPath"],  dataInterpreted["resourcePath"]["config"], dataInterpreted["configPath"], dataInterpreted["ovpnPath"], dataInterpreted["scriptPath"])
+        setExecutable(dataInterpreted["ovpnPath"])
+        setExecutable(dataInterpreted["wstunnelPath"])
+        stealthFunction(dataInterpreted["wstunnelPath"], dataInterpreted["configPath"], dataInterpreted["ovpnPath"], dataInterpreted["scriptPath"])
     }
 }
 
@@ -268,33 +272,22 @@ function killSwitchDisable(nic) {
     })
 }
 
-function stealthFunction(stunnelPath, stunnelConfig, ovpnConfig, ovpnPath, scriptPath) {
-    if (os.platform() === "linux") {
-        exec(`stunnel4 "${stunnelConfig}"`, (error, stdout, stderr) => {
-            if (error) {
-                console.log(`Error!`)
-                console.log(error)
-                console.log(stdout)
-                console.log(stderr)
-            }
+function stealthFunction(wstunnelPath, wstunnelDomain, ovpnConfig, ovpnPath, scriptPath) {
+    console.log(`Going to execute: ${`${stunnelPath} "${stunnelConfig}"`}`)
+    exec(`${wstunnelPath} -u --udpTimeoutSec=0 -v -L 127.0.0.1:1194:127.0.0.1:1194 wss://${wstunnelDomain}`, (error, stdout, stderr) => {
+        if (error) {
+            console.log(`Error!`)
+            console.log(error)
             console.log(stdout)
             console.log(stderr)
-        })
-        ovpnFunction(ovpnConfig, ovpnPath, scriptPath)
-    } else if (os.platform() === "darwin") {
-        console.log(`Going to execute: ${`${stunnelPath} "${stunnelConfig}"`}`)
-        exec(`${stunnelPath} "${stunnelConfig}"`, (error, stdout, stderr) => {
-            if (error) {
-                console.log(`Error!`)
-                console.log(error)
-                console.log(stdout)
-                console.log(stderr)
-            }
-            console.log(stdout)
-            console.log(stderr)
-        })
-        ovpnFunction(ovpnConfig, ovpnPath, scriptPath)
-    }
-    
-    
+        }
+        console.log(stdout)
+        console.log(stderr)
+    })
+    ovpnFunction(ovpnConfig, ovpnPath, scriptPath)
+}
+
+function setExecutable(path) {
+    //chmods executables used by this script. 
+    exec(`chmod +x ${path}`)
 }

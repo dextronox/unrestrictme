@@ -1,6 +1,6 @@
 {
   "name": "unrestrictme",
-  "version": "1.0.5",
+  "version": "1.0.4",
   "description": "Desktop application for connecting to the unrestrict.me VPN network.",
   "main": "./main.js",
   "scripts": {

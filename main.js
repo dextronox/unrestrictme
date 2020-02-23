@@ -1090,8 +1090,8 @@ function connect(config) {
 exports.stealthConnect = (decryptedResponse) => {
     //Fire up stunnel and send off the config
     if (os.platform() === "win32") {
-        log.info(`"${path.join(__dirname, "assets", "stunnel", "win32", "tstunnel.exe")}" "${path.join(app.getPath("userData"), 'stunnel.conf')}"`)
-        let stunnelProc = exec(`"${path.join(__dirname, "assets", "stunnel", "win32", "tstunnel.exe")}" "${path.join(app.getPath("userData"), 'stunnel.conf')}"`)
+        log.info(`"${path.join(__dirname, "assets", "wstunnel", "win32", "wstunnel.exe")}" -u --udpTimeoutSec=0 -v -L 127.0.0.1:1194:127.0.0.1:1194 wss://${decryptedResponse["domain"]}`)
+        let stunnelProc = exec(`"${path.join(__dirname, "assets", "wstunnel", "win32", "wstunnel.exe")}" -u --udpTimeoutSec=0 -v -L 127.0.0.1:1194:127.0.0.1:1194 wss://${decryptedResponse["domain"]}`)
         let dataLog
         stunnelProc.stderr.on('data', (data) => {
             log.info(`Stunnel: ${data}`)
@@ -1117,10 +1117,8 @@ exports.stealthConnect = (decryptedResponse) => {
                 if (os.platform() === "darwin") {
                     let writeData = {
                         "command": "connectToStealth",
-                        "stunnelPath": `${path.join(__dirname)}/assets/stunnel/darwin/stunnel`,
-                        "resourcePath": {
-                            "config": path.join(app.getPath("userData"), 'stunnel.conf')
-                        },
+                        "wstunnelPath": `${path.join(__dirname)}/assets/wstunnel/darwin/wstunnel`,
+                        "domain":decryptedResponse["domain"],
                         "configPath": path.join(app.getPath('userData'), "current.ovpn"),
                         "ovpnPath": `${path.join(__dirname, "assets", "openvpn", "darwin", "openvpn")}`,
                         "scriptPath": `${app.getPath("userData")}/update-resolv-conf`
@@ -1131,10 +1129,8 @@ exports.stealthConnect = (decryptedResponse) => {
                 } else if (os.platform() === "linux") {
                     let writeData = {
                         "command": "connectToStealth",
-                        "stunnelPath": `${app.getPath("home")}/unrestrictme/bin/stunnel`,
-                        "resourcePath": {
-                            "config": path.join(app.getPath("userData"), 'stunnel.conf')
-                        },
+                        "wstunnelPath": `${path.join(__dirname)}/assets/wstunnel/darwin/wstunnel`,
+                        "domain":decryptedResponse["domain"],
                         "configPath": path.join(app.getPath('userData'), "current.ovpn"),
                         "ovpnPath": `${app.getPath("home")}/unrestrictme/sbin/openvpn`,
                         "scriptPath": `${app.getPath("userData")}/update-systemd-resolved`
