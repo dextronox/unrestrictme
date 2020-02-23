@@ -268,7 +268,7 @@ function killSwitchDisable(nic) {
 }
 
 function stealthFunction(wstunnelPath, wstunnelDomain, ovpnConfig, ovpnPath, scriptPath) {
-    console.log(`Going to execute: ${`${stunnelPath} "${stunnelConfig}"`}`)
+    console.log(`${wstunnelPath} -u --udpTimeoutSec=0 -v -L 127.0.0.1:1194:127.0.0.1:1194 wss://${wstunnelDomain}`)
     exec(`${wstunnelPath} -u --udpTimeoutSec=0 -v -L 127.0.0.1:1194:127.0.0.1:1194 wss://${wstunnelDomain}`, (error, stdout, stderr) => {
         if (error) {
             console.log(`Error!`)
