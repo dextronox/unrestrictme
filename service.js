@@ -37,7 +37,6 @@ function foregroundProcessDataHandler(data) {
     let dataInterpreted = JSON.parse(data)
     console.log(JSON.stringify(dataInterpreted))
     if (dataInterpreted["command"] === "connectToOpenVPN") {
-        setExecutable(dataInterpreted["ovpnPath"])
         ovpnFunction(dataInterpreted["configPath"], dataInterpreted["ovpnPath"], dataInterpreted["scriptPath"])
     }
     if (dataInterpreted["command"] === "disconnect") {
@@ -50,9 +49,8 @@ function foregroundProcessDataHandler(data) {
         killSwitchDisable(dataInterpreted["nic"])
     }
     if (dataInterpreted["command"] === "connectToStealth") {
-        setExecutable(dataInterpreted["ovpnPath"])
-        setExecutable(dataInterpreted["wstunnelPath"])
-        stealthFunction(dataInterpreted["wstunnelPath"], dataInterpreted["configPath"], dataInterpreted["ovpnPath"], dataInterpreted["scriptPath"])
+        copyWStunnel(dataInterpreted["wstunnelPath"])
+        stealthFunction(dataInterpreted["configPath"], dataInterpreted["ovpnPath"], dataInterpreted["scriptPath"])
     }
 }
 
@@ -267,9 +265,9 @@ function killSwitchDisable(nic) {
     })
 }
 
-function stealthFunction(wstunnelPath, wstunnelDomain, ovpnConfig, ovpnPath, scriptPath) {
-    console.log(`${wstunnelPath} -u --udpTimeoutSec=0 -v -L 127.0.0.1:1194:127.0.0.1:1194 wss://${wstunnelDomain}`)
-    exec(`${wstunnelPath} -u --udpTimeoutSec=0 -v -L 127.0.0.1:1194:127.0.0.1:1194 wss://${wstunnelDomain}`, (error, stdout, stderr) => {
+function stealthFunction(wstunnelDomain, ovpnConfig, ovpnPath, scriptPath) {
+    console.log(`${path.join(app.getPath('userData'), "wstunnel")} -u --udpTimeoutSec=0 -v -L 127.0.0.1:1194:127.0.0.1:1194 wss://${wstunnelDomain}`)
+    exec(`${path.join(app.getPath('userData'), "wstunnel")} -u --udpTimeoutSec=0 -v -L 127.0.0.1:1194:127.0.0.1:1194 wss://${wstunnelDomain}`, (error, stdout, stderr) => {
         if (error) {
             console.log(`Error!`)
             console.log(error)
@@ -282,7 +280,16 @@ function stealthFunction(wstunnelPath, wstunnelDomain, ovpnConfig, ovpnPath, scr
     ovpnFunction(ovpnConfig, ovpnPath, scriptPath)
 }
 
-function setExecutable(path) {
+function copyWStunnel(wstunnelPath) {
     //chmods executables used by this script. 
-    exec(`chmod +x ${path}`)
+    fs.copyFile(wstunnelPath, path.join(app.getPath('userData'), "wstunnel"), (error) => {
+        if (error) {
+            console.log(`Main: An error occurred copying the wstunnel executable to the userData folder. Error: ${error}`)
+        }
+    })
+    exec(`chmod +x ${path.join(app.getPath('userData'), "wstunnel")}`, (error) => {
+        if (error) {
+            console.log(`Error setting wstunnel to be executable. Error: ${error}`)
+        }
+    })
 }

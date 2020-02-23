@@ -1133,7 +1133,7 @@ exports.stealthConnect = (decryptedResponse) => {
                         "wstunnelPath": `${path.join(__dirname)}/assets/wstunnel/darwin/wstunnel`,
                         "domain":decryptedResponse["domain"],
                         "configPath": path.join(app.getPath('userData'), "current.ovpn"),
-                        "ovpnPath": `${app.getPath("home")}/unrestrictme/sbin/openvpn`,
+                        "ovpnPath": `openvpn`,
                         "scriptPath": `${app.getPath("userData")}/update-systemd-resolved`
                     }
                     if (clientObj && clientObj != "killed") {
