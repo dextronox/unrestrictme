@@ -1167,7 +1167,6 @@ function copyWStunnelBinary() {
         if (error) {
             console.log(`Error setting wstunnel to be executable. Error: ${error}`)
         }
-        stealthFunction(wstunnelDomain, ovpnConfig, ovpnPath, scriptPath)
     })
 }
 
