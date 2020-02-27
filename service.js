@@ -48,8 +48,8 @@ function foregroundProcessDataHandler(data) {
         killSwitchDisable(dataInterpreted["nic"])
     }
     if (dataInterpreted["command"] === "connectToStealth") {
-        copyWStunnel(dataInterpreted["wstunnelPath"])
-        stealthFunction(dataInterpreted["configPath"], dataInterpreted["ovpnPath"], dataInterpreted["scriptPath"])
+        //Runs into stealthFunction
+        stealthFunction(dataInterpreted["wstunnelPath"], dataInterpreted["configPath"], dataInterpreted["ovpnPath"], dataInterpreted["scriptPath"])
     }
 }
 
@@ -264,9 +264,9 @@ function killSwitchDisable(nic) {
     })
 }
 
-function stealthFunction(wstunnelDomain, ovpnConfig, ovpnPath, scriptPath) {
-    console.log(`${path.join(app.getPath('userData'), "wstunnel")} -u --udpTimeoutSec=0 -v -L 127.0.0.1:1194:127.0.0.1:1194 wss://${wstunnelDomain}`)
-    exec(`${path.join(app.getPath('userData'), "wstunnel")} -u --udpTimeoutSec=0 -v -L 127.0.0.1:1194:127.0.0.1:1194 wss://${wstunnelDomain}`, (error, stdout, stderr) => {
+function stealthFunction(wstunnelPath, wstunnelDomain, ovpnConfig, ovpnPath, scriptPath) {
+    console.log(`${wstunnelPath} -u --udpTimeoutSec=0 -v -L 127.0.0.1:1194:127.0.0.1:1194 wss://${wstunnelDomain}`)
+    exec(`${wstunnelPath} -u --udpTimeoutSec=0 -v -L 127.0.0.1:1194:127.0.0.1:1194 wss://${wstunnelDomain}`, (error, stdout, stderr) => {
         if (error) {
             console.log(`Error!`)
             console.log(error)
@@ -277,18 +277,4 @@ function stealthFunction(wstunnelDomain, ovpnConfig, ovpnPath, scriptPath) {
         console.log(stderr)
     })
     ovpnFunction(ovpnConfig, ovpnPath, scriptPath)
-}
-
-function copyWStunnel(wstunnelPath) {
-    //chmods executables used by this script. 
-    fs.copyFile(wstunnelPath, path.join(app.getPath('userData'), "wstunnel"), (error) => {
-        if (error) {
-            console.log(`Main: An error occurred copying the wstunnel executable to the userData folder. Error: ${error}`)
-        }
-    })
-    exec(`chmod +x ${path.join(app.getPath('userData'), "wstunnel")}`, (error) => {
-        if (error) {
-            console.log(`Error setting wstunnel to be executable. Error: ${error}`)
-        }
-    })
 }

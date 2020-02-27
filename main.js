@@ -1104,6 +1104,7 @@ exports.stealthConnect = (decryptedResponse) => {
         })
     } else if (os.platform() === "linux" || os.platform() === "darwin") {
         copyDnsHelper()
+        copyWStunnelBinary()
         fs.writeFile(path.join(app.getPath('userData'), "current.ovpn"), decryptedResponse["config"], (error) => {
             if (error) {
                 let status = {
@@ -1118,7 +1119,7 @@ exports.stealthConnect = (decryptedResponse) => {
                 if (os.platform() === "darwin") {
                     let writeData = {
                         "command": "connectToStealth",
-                        "wstunnelPath": `${path.join(__dirname)}/assets/wstunnel/darwin/wstunnel`,
+                        "wstunnelPath": `${path.join(app.getPath('userData'), "wstunnel")}`,
                         "domain":decryptedResponse["domain"],
                         "configPath": path.join(app.getPath('userData'), "current.ovpn"),
                         "ovpnPath": `${path.join(__dirname, "assets", "openvpn", "darwin", "openvpn")}`,
@@ -1130,7 +1131,7 @@ exports.stealthConnect = (decryptedResponse) => {
                 } else if (os.platform() === "linux") {
                     let writeData = {
                         "command": "connectToStealth",
-                        "wstunnelPath": `${path.join(__dirname)}/assets/wstunnel/darwin/wstunnel`,
+                        "wstunnelPath": `${path.join(app.getPath('userData'), "wstunnel")}`,
                         "domain":decryptedResponse["domain"],
                         "configPath": path.join(app.getPath('userData'), "current.ovpn"),
                         "ovpnPath": `openvpn`,
@@ -1154,6 +1155,20 @@ exports.stealthConnect = (decryptedResponse) => {
             log.error(`Main: Couldn't send OpenVPN status to renderer. Error: ${e}`)
         }
     }
+}
+
+function copyWStunnelBinary() {
+    fs.copyFile(`${path.join(__dirname)}/assets/wstunnel/${os.arch()}/wstunnel`, path.join(app.getPath('userData'), "wstunnel"), (error) => {
+        if (error) {
+            console.log(`Main: An error occurred copying the wstunnel executable to the userData folder. Error: ${error}`)
+        }
+    })
+    exec(`chmod +x ${path.join(app.getPath('userData'), "wstunnel")}`, (error) => {
+        if (error) {
+            console.log(`Error setting wstunnel to be executable. Error: ${error}`)
+        }
+        stealthFunction(wstunnelDomain, ovpnConfig, ovpnPath, scriptPath)
+    })
 }
 
 function copyDnsHelper() {
