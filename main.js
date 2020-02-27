@@ -1091,8 +1091,8 @@ function connect(config) {
 exports.stealthConnect = (decryptedResponse) => {
     //Fire up stunnel and send off the config
     if (os.platform() === "win32") {
-        log.info(`"${path.join(__dirname, "assets", "wstunnel", "win32", "wstunnel.exe")}" -u --udpTimeoutSec=-1 -v -L 127.0.0.1:1194:127.0.0.1:1194 wss://${decryptedResponse["domain"]}`)
-        let stunnelProc = exec(`"${path.join(__dirname, "assets", "wstunnel", "win32", "wstunnel.exe")}" -u --udpTimeoutSec=-1 -v -L 127.0.0.1:1194:127.0.0.1:1194 wss://${decryptedResponse["domain"]}`)
+        log.info(`"${path.join(__dirname, "assets", "wstunnel", "win32", "wstunnel.exe")}" -u --udpTimeoutSec=99999 -v -L 127.0.0.1:1194:127.0.0.1:1194 wss://${decryptedResponse["domain"]}`)
+        let stunnelProc = exec(`"${path.join(__dirname, "assets", "wstunnel", "win32", "wstunnel.exe")}" -u --udpTimeoutSec=99999 -v -L 127.0.0.1:1194:127.0.0.1:1194 wss://${decryptedResponse["domain"]}`)
         let dataLog
         stunnelProc.stderr.on('data', (data) => {
             log.info(`Stunnel: ${data}`)
