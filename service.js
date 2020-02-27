@@ -275,8 +275,9 @@ function stealthFunction(wstunnelPath, wstunnelDomain, ovpnConfig, ovpnPath, scr
         }
         console.log(stdout)
         console.log(stderr)
+        if (stdout.includes(`WAIT for datagrames on 127.0.0.1:1194`)) {
+            ovpnFunction(ovpnConfig, ovpnPath, scriptPath)
+        }
     })
-    if (stdout.includes(`WAIT for datagrames on 127.0.0.1:1194`)) {
-        ovpnFunction(ovpnConfig, ovpnPath, scriptPath)
-    }
+
 }
