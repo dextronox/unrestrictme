@@ -49,7 +49,7 @@ function foregroundProcessDataHandler(data) {
     }
     if (dataInterpreted["command"] === "connectToStealth") {
         //Runs into stealthFunction
-        stealthFunction(dataInterpreted["wstunnelPath"], dataInterpreted["configPath"], dataInterpreted["ovpnPath"], dataInterpreted["scriptPath"])
+        stealthFunction(dataInterpreted["wstunnelPath"], dataInterpreted["domain"], dataInterpreted["configPath"], dataInterpreted["ovpnPath"], dataInterpreted["scriptPath"])
     }
 }
 
