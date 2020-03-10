@@ -1065,6 +1065,7 @@ function connect(config) {
             })
         } else if (os.platform() === "darwin") {
             copyDnsHelper()
+            fixBinaries()
             let writeData = {
                 "command": "connectToOpenVPN",
                 "configPath": `${path.join(app.getPath("userData"), 'current.ovpn')}`,
@@ -1076,6 +1077,7 @@ function connect(config) {
             }
         } else if (os.platform() === "linux") {
             copyDnsHelper()
+            fixBinaries()
             let writeData = {
                 "command": "connectToOpenVPN",
                 "configPath": `${path.join(app.getPath("userData"), 'current.ovpn')}`,
