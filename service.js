@@ -79,11 +79,12 @@ function ovpnFunction(configPath, ovpnPath, scriptPath) {
 function startOvpn(configPath, ovpnPath, scriptPath) {
     intentionalDisconnect = false
     killSwitchStatus = false
+    scriptPath = scriptPath.replace(/([ /])/g, '\\$1')
     let ovpnProc
     if (os.platform() === "linux") {
         ovpnProc = exec(`openvpn --config "${configPath}"  --connect-retry-max 1 --tls-exit --mute-replay-warnings --connect-timeout 15 --script-security 2 --up "${scriptPath}" --down "${scriptPath}"`)
     } else {
-        ovpnProc = exec(`${ovpnPath} --config "${configPath}"  --connect-retry-max 1 --tls-exit --mute-replay-warnings --connect-timeout 15 --script-security 2 --up \`${scriptPath}\` --down \`${scriptPath}\``)        
+        ovpnProc = exec(`${ovpnPath} --config "${configPath}"  --connect-retry-max 1 --tls-exit --mute-replay-warnings --connect-timeout 15 --script-security 2 --up "${scriptPath}" --down "${scriptPath}"`)        
     }
     var datalog
     ovpnProc.stdout.on('data', (data) => {
