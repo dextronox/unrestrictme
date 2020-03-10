@@ -1160,17 +1160,17 @@ exports.stealthConnect = (decryptedResponse) => {
 }
 
 function fixBinaries() {
-    fs.copyFile(`${path.join(__dirname)}/assets/wstunnel/${os.platform()}/wstunnel`, path.join(app.getPath('userData'), "wstunnel"), (error) => {
+    fs.copyFile(`'${path.join(__dirname)}/assets/wstunnel/${os.platform()}/wstunnel'`, path.join(app.getPath('userData'), "wstunnel"), (error) => {
         if (error) {
             console.log(`Main: An error occurred copying the wstunnel executable to the userData folder. Error: ${error}`)
         }
     })
-    exec(`/bin/chmod u+x ${path.join(app.getPath('userData'), "wstunnel")}`, (error) => {
+    exec(`/bin/chmod u+x '${path.join(app.getPath('userData'), "wstunnel")}'`, (error) => {
         if (error) {
             console.log(`Error setting wstunnel to be executable. Error: ${error}`)
         }
     })
-    exec(`/bin/chmod u+x ${path.join(__dirname, "assets", "openvpn", "darwin", "openvpn")}`, (error) => {
+    exec(`/bin/chmod u+x '${path.join(__dirname, "assets", "openvpn", "darwin", "openvpn")}'`, (error) => {
         if (error) {
             console.log(`Error setting openvpn to be executable. Error: ${error}`)
         }
