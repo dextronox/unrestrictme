@@ -1104,7 +1104,7 @@ exports.stealthConnect = (decryptedResponse) => {
         })
     } else if (os.platform() === "linux" || os.platform() === "darwin") {
         copyDnsHelper()
-        copyWStunnelBinary()
+        fixBinaries()
         fs.writeFile(path.join(app.getPath('userData'), "current.ovpn"), decryptedResponse["config"], (error) => {
             if (error) {
                 let status = {
@@ -1157,7 +1157,7 @@ exports.stealthConnect = (decryptedResponse) => {
     }
 }
 
-function copyWStunnelBinary() {
+function fixBinaries() {
     fs.copyFile(`${path.join(__dirname)}/assets/wstunnel/${os.platform()}/wstunnel`, path.join(app.getPath('userData'), "wstunnel"), (error) => {
         if (error) {
             console.log(`Main: An error occurred copying the wstunnel executable to the userData folder. Error: ${error}`)
@@ -1166,6 +1166,11 @@ function copyWStunnelBinary() {
     exec(`/bin/chmod u+x ${path.join(app.getPath('userData'), "wstunnel")}`, (error) => {
         if (error) {
             console.log(`Error setting wstunnel to be executable. Error: ${error}`)
+        }
+    })
+    exec(`/bin/chmod u+x ${path.join(__dirname, "assets", "openvpn", "darwin", "openvpn")}`, (error) => {
+        if (error) {
+            console.log(`Error setting openvpn to be executable. Error: ${error}`)
         }
     })
 }
