@@ -1133,7 +1133,8 @@ exports.stealthConnect = (decryptedResponse) => {
                 } else if (os.platform() === "linux") {
                     let writeData = {
                         "command": "connectToStealth",
-                        "wstunnelPath": `${path.join(app.getPath('userData'), "wstunnel")}`,
+                        //On linux, the wstunnel path should be the location of the binary in the appimage, to be copied to /bin
+                        "wstunnelPath": `${path.join(__dirname)}/assets/wstunnel/${os.platform()}/wstunnel`,
                         "domain":decryptedResponse["domain"],
                         "configPath": path.join(app.getPath('userData'), "current.ovpn"),
                         "ovpnPath": `openvpn`,
@@ -1160,11 +1161,6 @@ exports.stealthConnect = (decryptedResponse) => {
 }
 
 function fixBinaries() {
-    exec(`/bin/chmod u+x '${path.join(app.getPath('userData'), "wstunnel")}'`, (error) => {
-        if (error) {
-            console.log(`Error setting wstunnel to be executable. Error: ${error}`)
-        }
-    })
     exec(`/bin/chmod u+x '${path.join(__dirname, "assets", "openvpn", "darwin", "openvpn")}'`, (error) => {
         if (error) {
             console.log(`Error setting openvpn to be executable. Error: ${error}`)

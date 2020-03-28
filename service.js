@@ -266,7 +266,7 @@ function killSwitchDisable(nic) {
 }
 
 function stealthFunction(wstunnelPath, wstunnelDomain, ovpnConfig, ovpnPath, scriptPath) {
-    fs.copyFile(`${path.join(__dirname)}/assets/wstunnel/${os.platform()}/wstunnel`, path.join('/bin/', "wstunnel"), (error) => {
+    fs.copyFile(`${wstunnelPath}`, path.join('/bin/', "wstunnel"), (error) => {
         if (error) {
             console.log(`Main: An error occurred copying the wstunnel executable to the userData folder. Error: ${error}`)
         }
