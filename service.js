@@ -276,7 +276,7 @@ function stealthFunction(wstunnelPath, wstunnelDomain, ovpnConfig, ovpnPath, scr
             console.log(`Error setting wstunnel to be executable. Error: ${error}`)
         }
     })
-    exec(`wstunnel -u --udpTimeoutSec=-1 -v -L 127.0.0.1:1194:127.0.0.1:1194 wss://${wstunnelDomain}`, (error, stdout, stderr) => {
+    exec(`/bin/wstunnel -u --udpTimeoutSec=-1 -v -L 127.0.0.1:1194:127.0.0.1:1194 wss://${wstunnelDomain}`, (error, stdout, stderr) => {
         if (error) {
             console.log(`Error!`)
             console.log(error)
