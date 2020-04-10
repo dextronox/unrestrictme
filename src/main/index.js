@@ -71,7 +71,7 @@ $(document).ready(() => {
             $("#loading3").css("display", "none")
             $("#connectButtons").css("display", "block")
         } else if (!args["connected"]) {
-            if ($("#disconnected").css('display') === 'block' && $("#disconnected-normal").css('display') === 'none' &&  $("#disconnected-OpenVPNRunning").css("display") === "none") {
+            if ($("#disconnected").css('display') === 'block' && $("#connectButtons").css('display') === 'none' &&  $("#disconnected-OpenVPNRunning").css("display") === "none") {
                 //We have failed to connect to unrestrict.me
                 $("#loading3").css("display", "none")
                 $("#connectButtons").css("display", "block")
