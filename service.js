@@ -212,7 +212,7 @@ function disconnectFromVPN(quit) {
 }
 
 function killSwitchEnable(nic) {
-    exec(`ifconfig "${nic}" down`, (error, stderr, stdout) => {
+    exec(`ip link set "${nic}" down`, (error, stderr, stdout) => {
         if (error) {
             console.log(`Main: Couldn't disable network adapter. Error: ${error}`)
             let writeData = {
@@ -239,7 +239,7 @@ function killSwitchEnable(nic) {
 }
 
 function killSwitchDisable(nic) {
-    exec(`ifconfig "${nic}" up`, (error, stderr, stdout) => {
+    exec(`ip link set "${nic}" up`, (error, stderr, stdout) => {
         if (error) {
             console.log(`Main: Couldn't enable network adapter. Error: ${error}`)
             let writeData = {

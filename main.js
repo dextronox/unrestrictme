@@ -929,11 +929,11 @@ exports.dependenciesCheck = () => {
             }
         })
     } else if (os.platform() === "linux") {
-        exec(`dpkg-query -W openvpn net-tools`, (error, stdout, stderr) => {
+        exec(`dpkg-query -W openvpn`, (error, stdout, stderr) => {
             if (error) {
-                log.error(`Main: Error checking whether OpenVPN and ifconfig (net-tools) are installed. Error: ${error}`)
+                log.error(`Main: Error checking whether OpenVPN is installed. Error: ${error}`)
                 installDependenciesLinux(error)
-            } else if (!String(stdout).includes("no packages found matching openvpn") && !String(stdout).includes("no packages found matching net-tools")) {
+            } else if (!String(stdout).includes("no packages found matching openvpn")) {
                 //Packages are installed
                 let settings = {}
                 fs.writeFile(path.join(app.getPath('userData'), 'settings.conf'), JSON.stringify(settings), (error) => {
@@ -1555,19 +1555,38 @@ function killSwitchDisable(nic) {
             log.info(`Main: Kill switch disabled.`)
         })
     } else if (os.platform() === "linux" || os.platform() === "darwin") {
-        if (clientObj && clientObj != "killed") {
-            let writeData = {
-                "command": "killSwitchDisable",
-                "nic": nic
+        log.info(`Main: We are going to read the NIC from the settings file. This should be valid regardless of whether the NIC was automatically determined or manually set.`)
+        fs.readFile(path.join(app.getPath('userData'), 'settings.conf'), 'utf8', (error, data) => {
+            if (error) {
+                if (error) {
+                    log.error(`Main: Couldn't read settings file to retrieve the kill switch NIC. Error: ${error}`)
+                    let status = {
+                        "error": "disable"
+                    }
+                    try {
+                        mainWindow.webContents.send('killSwitch', status)
+                    } catch(e) {
+                        log.error(`Main: Couldn't send kill switch status to renderer. Error: ${e}`)
+                    }
+                    return;
+                }
             }
-            clientObj.write(JSON.stringify(writeData))
-        }
+            let settings = JSON.parse(data)
+            if (clientObj && clientObj != "killed") {
+                let writeData = {
+                    "command": "killSwitchDisable",
+                    "nic": settings['nic']
+                }
+                clientObj.write(JSON.stringify(writeData))
+            }
+        })
+
     }
 }
 function installDependenciesLinux(checkError) {
-    if (String(checkError).includes("no packages found matching openvpn") || String(checkError).includes("no packages found matching net-tools")) {
-        //OpenVPN or net-tools not installed. Get from package repository.
-        log.info(`Main: Installing OpenVPN and net-tools from package repository.`)
+    if (String(checkError).includes("no packages found matching openvpn")) {
+        //OpenVPN not installed. Get from package repository.
+        log.info(`Main: Installing OpenVPN from package repository.`)
         getos((error, ops) => {
             if (error) {
                 log.error(`Main: Error checking operating system environment. Error: ${error}`)
@@ -1586,7 +1605,7 @@ function installDependenciesLinux(checkError) {
                 let options = {
                     name: "unrestrictme"
                 }
-                sudo.exec(`apt-get -y install openvpn net-tools`, options, (error, stdout, stderr) => {
+                sudo.exec(`apt-get -y install openvpn`, options, (error, stdout, stderr) => {
                     if (error) {
                         //Couldn't run the install command.
                         log.error(`Main: Failed to run command to install OpenVPN. Error: ${error}`)
