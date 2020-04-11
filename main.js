@@ -1099,7 +1099,8 @@ exports.stealthConnect = (decryptedResponse) => {
         stunnelProc.stderr.on('data', (data) => {
             log.info(`Stunnel: ${data}`)
             dataLog = dataLog + data
-            if (String(dataLog).includes("WAIT for datagrames on 127.0.0.1:1194")) {
+            //CANNOT BE DATALOG, OR ELSE IT WILL SPAWN INFINITE OPENVPN INSTANCES.
+            if (String(data).includes("WAIT for datagrames on 127.0.0.1:1194")) {
                 //Stunnel has loaded successfully.
                 connect(decryptedResponse["config"])
             }
