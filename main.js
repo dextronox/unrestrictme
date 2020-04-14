@@ -253,6 +253,7 @@ function checkForUpdates(install) {
     } else {
         autoUpdater.logger = require("electron-log")
         autoUpdater.logger.transports.file.level = "info"
+        autoUpdater.checkForUpdates()
         autoUpdater.autoDownload = false
         autoUpdater.autoInstallOnAppQuit = false
         autoUpdater.on("error", (error) => {
