@@ -697,6 +697,7 @@ function createMainWindow() {
     } else {
         tray = new Tray(path.join(__dirname, "assets", "icons", "icon.png"))
     }
+    tray.setIgnoreDoubleClickEvents(true)
     let contextMenu = Menu.buildFromTemplate([
         {
             label: "Show unrestrict.me", click: () => {
