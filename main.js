@@ -1123,7 +1123,7 @@ exports.stealthConnect = (decryptedResponse) => {
                 if (os.platform() === "darwin") {
                     let writeData = {
                         "command": "connectToStealth",
-                        "wstunnelPath": `${path.join(app.getPath('userData'), "wstunnel")}`,
+                        "wstunnelPath": `${path.join(__dirname, "assets", "wstunnel", "darwin", "wstunnel")}`,
                         "domain":decryptedResponse["domain"],
                         "configPath": path.join(app.getPath('userData'), "current.ovpn"),
                         "ovpnPath": `${path.join(__dirname, "assets", "openvpn", "darwin", "openvpn")}`,
