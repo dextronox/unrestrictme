@@ -1583,7 +1583,7 @@ function killSwitchDisable(nic) {
                 }
             }
             let settings = JSON.parse(data)
-            if (clientObj && clientObj != "killed") {
+            if (clientObj && clientObj != "killed" && settings['nic']) {
                 let writeData = {
                     "command": "killSwitchDisable",
                     "nic": settings['nic']
