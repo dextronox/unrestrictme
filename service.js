@@ -48,7 +48,8 @@ function foregroundProcessDataHandler(data) {
         killSwitchDisable(dataInterpreted["nic"])
     }
     if (dataInterpreted["command"] === "connectToStealth") {
-        stealthFunction(dataInterpreted["stunnelPath"],  dataInterpreted["resourcePath"]["config"], dataInterpreted["resourcePath"]["pem"], dataInterpreted["configPath"], dataInterpreted["ovpnPath"], dataInterpreted["scriptPath"])
+        //Runs into stealthFunction
+        stealthFunction(dataInterpreted["wstunnelPath"], dataInterpreted["domain"], dataInterpreted["configPath"], dataInterpreted["ovpnPath"], dataInterpreted["scriptPath"])
     }
 }
 
@@ -82,7 +83,8 @@ function startOvpn(configPath, ovpnPath, scriptPath) {
     if (os.platform() === "linux") {
         ovpnProc = exec(`openvpn --config "${configPath}"  --connect-retry-max 1 --tls-exit --mute-replay-warnings --connect-timeout 15 --script-security 2 --up "${scriptPath}" --down "${scriptPath}"`)
     } else {
-        ovpnProc = exec(`${ovpnPath} --config "${configPath}"  --connect-retry-max 1 --tls-exit --mute-replay-warnings --connect-timeout 15 --script-security 2 --up \`${scriptPath}\` --down \`${scriptPath}\``)        
+        scriptPath = scriptPath.replace(/([ ])/g, '\\$1')
+        ovpnProc = exec(`${ovpnPath} --config "${configPath}"  --connect-retry-max 1 --tls-exit --mute-replay-warnings --connect-timeout 15 --script-security 2 --up "${scriptPath}" --down "${scriptPath}"`)        
     }
     var datalog
     ovpnProc.stdout.on('data', (data) => {
@@ -164,12 +166,7 @@ function startOvpn(configPath, ovpnPath, scriptPath) {
 }
 function disconnectFromVPN(quit) {
     intentionalDisconnect = true
-    let execCmd = ""
-    if (os.platform() === "linux") {
-        execCmd = "pkill openvpn && pkill stunnel4"
-    } else if (os.platform() === "darwin") {
-        execCmd = "pkill openvpn && pkill stunnel"
-    }
+    let execCmd = "pkill openvpn && pkill wstunnel"
     exec(execCmd, (error, stdout, stderr) => {
         //https://www.freebsd.org/cgi/man.cgi?query=pkill&sektion=1
         if (error && error.code != 1) {
@@ -215,7 +212,13 @@ function disconnectFromVPN(quit) {
 }
 
 function killSwitchEnable(nic) {
-    exec(`ifconfig "${nic}" down`, (error, stderr, stdout) => {
+    let command
+    if (os.platform() === "linux") {
+        command = `ip link set "${nic}" down`
+    } else {
+        command = `ifconfig ${nic} down`
+    }
+    exec(`${command}`, (error, stderr, stdout) => {
         if (error) {
             console.log(`Main: Couldn't disable network adapter. Error: ${error}`)
             let writeData = {
@@ -242,7 +245,13 @@ function killSwitchEnable(nic) {
 }
 
 function killSwitchDisable(nic) {
-    exec(`ifconfig "${nic}" up`, (error, stderr, stdout) => {
+    var command
+    if (os.platform() === "linux") {
+        command = `ip link set "${nic}" up`
+    } else {
+        command = `ifconfig ${nic} up`
+    }
+    exec(`${command}`, (error, stderr, stdout) => {
         if (error) {
             console.log(`Main: Couldn't enable network adapter. Error: ${error}`)
             let writeData = {
@@ -268,33 +277,38 @@ function killSwitchDisable(nic) {
     })
 }
 
-function stealthFunction(stunnelPath, stunnelConfig, stunnelPem, ovpnConfig, ovpnPath, scriptPath) {
+function stealthFunction(wstunnelPath, wstunnelDomain, ovpnConfig, ovpnPath, scriptPath) {
+    let wstunnelExe
     if (os.platform() === "linux") {
-        exec(`stunnel4 "${stunnelConfig}" -p "${stunnelPem}"`, (error, stdout, stderr) => {
+        fs.copyFile(`${wstunnelPath}`, path.join('/bin/', "wstunnel"), (error) => {
             if (error) {
-                console.log(`Error!`)
-                console.log(error)
-                console.log(stdout)
-                console.log(stderr)
+                console.log(`Main: An error occurred copying the wstunnel executable to the userData folder. Error: ${error}`)
             }
-            console.log(stdout)
-            console.log(stderr)
         })
-        ovpnFunction(ovpnConfig, ovpnPath, scriptPath)
-    } else if (os.platform() === "darwin") {
-        console.log(`Going to execute: ${`${stunnelPath} "${stunnelConfig}" -p "${stunnelPem}"`}`)
-        exec(`${stunnelPath} "${stunnelConfig}" -p "${stunnelPem}"`, (error, stdout, stderr) => {
+        exec(`/bin/chmod u+x '${path.join('/bin/', "wstunnel")}' && /bin/chmod 755 ${path.join('/bin/', "wstunnel")}`, (error) => {
             if (error) {
-                console.log(`Error!`)
-                console.log(error)
-                console.log(stdout)
-                console.log(stderr)
+                console.log(`Error setting wstunnel to be executable. Error: ${error}`)
             }
-            console.log(stdout)
-            console.log(stderr)
         })
-        ovpnFunction(ovpnConfig, ovpnPath, scriptPath)
+        wstunnelExe = "/bin/wstunnel"
+    } else {
+        exec(`/bin/chmod u+x '${wstunnelPath}' && /bin/chmod 755 '${wstunnelPath}'`, (error) => {
+            if (error) {
+                console.log(`Error setting wstunnel to be executable. Error: ${error}`)
+            }
+        })
+        wstunnelExe = wstunnelPath
     }
-    
-    
+
+    exec(`'${wstunnelExe}' -u --udpTimeoutSec=-1 -v -L 127.0.0.1:1194:127.0.0.1:1194 wss://${wstunnelDomain}`, (error, stdout, stderr) => {
+        if (error) {
+            console.log(`Error!`)
+            console.log(error)
+            console.log(stdout)
+            console.log(stderr)
+        }
+        console.log(stdout)
+        console.log(stderr)
+    })
+    ovpnFunction(ovpnConfig, ovpnPath, scriptPath)
 }

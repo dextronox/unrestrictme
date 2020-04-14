@@ -71,7 +71,7 @@ $(document).ready(() => {
             $("#loading3").css("display", "none")
             $("#connectButtons").css("display", "block")
         } else if (!args["connected"]) {
-            if ($("#disconnected").css('display') === 'block' && $("#disconnected-OpenVPNRunning").css("display") === "none") {
+            if ($("#disconnected").css('display') === 'block' && $("#connectButtons").css('display') === 'none' &&  $("#disconnected-OpenVPNRunning").css("display") === "none") {
                 //We have failed to connect to unrestrict.me
                 $("#loading3").css("display", "none")
                 $("#connectButtons").css("display", "block")
@@ -1003,10 +1003,12 @@ $("#beginUpdate").on("click", () => {
             if (willUpdate) {
                 //Tell we wish to update. They will take care of disconnection.
                 log.info(`Renderer: User has indicated they wish to update their client.`)
+                $("#updateAvailableAlert").alert("close")
                 installUpdates()
             }
         })
     } else {
+        $("#updateAvailableAlert").alert("close")
         installUpdates()
         $("#newsModal").modal("hide")
     }

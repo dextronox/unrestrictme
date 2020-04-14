@@ -253,17 +253,7 @@ function checkForUpdates(install) {
     } else {
         autoUpdater.logger = require("electron-log")
         autoUpdater.logger.transports.file.level = "info"
-        autoUpdater.checkForUpdates().then((promise) => {
-            if (promise["versionInfo"]["version"] < promise["updateInfo"]["version"]) {
-                log.info(`Main: There is an update available.`)
-            } else {
-                log.info(`Main: There is no update available.`)
-                let updater = {
-                    "updateAvailable": false
-                }
-                mainWindow.webContents.send('updater', updater)
-            }
-        })
+        autoUpdater.checkForUpdates()
         autoUpdater.autoDownload = false
         autoUpdater.autoInstallOnAppQuit = false
         autoUpdater.on("error", (error) => {
@@ -275,8 +265,17 @@ function checkForUpdates(install) {
             mainWindow.webContents.send('updaterError', updater)
         })
         autoUpdater.on("update-available", (info) => {
+            log.info(`Main: There is an update available.`)
             let updater = {
                 "updateAvailable": true,
+                "info": info
+            }
+            mainWindow.webContents.send('updater', updater)
+        })
+        autoUpdater.on("update-not-available", (info) => {
+            log.info(`Main: There is no update available.`)
+            let updater = {
+                "updateAvailable": false,
                 "info": info
             }
             mainWindow.webContents.send('updater', updater)
@@ -707,6 +706,7 @@ function createMainWindow() {
     } else {
         tray = new Tray(path.join(__dirname, "assets", "icons", "icon.png"))
     }
+    tray.setIgnoreDoubleClickEvents(true)
     let contextMenu = Menu.buildFromTemplate([
         {
             label: "Show unrestrict.me", click: () => {
@@ -791,8 +791,8 @@ function quit(hard) {
     killSwitch(false)
     intentionalDisconnect = true
     if (os.platform() === "win32" && !hard) {
-        exec(`taskkill /IM openvpn.exe /F & taskkill /IM tstunnel.exe /F`, (error, stdout, stderr) => {
-            if (error && !String(error).includes(`"tstunnel.exe" not found.`)) {
+        exec(`taskkill /IM openvpn.exe /F & taskkill /IM wstunnel.exe /F`, (error, stdout, stderr) => {
+            if (error && !String(error).includes(`"wstunnel.exe" not found.`)) {
                 log.error(`Main: An error occurred killing OpenVPN. Error: ${error}`)
                 mainWindow.show()
                 let status = {
@@ -939,11 +939,11 @@ exports.dependenciesCheck = () => {
             }
         })
     } else if (os.platform() === "linux") {
-        exec(`dpkg-query -W openvpn stunnel4 net-tools`, (error, stdout, stderr) => {
+        exec(`dpkg-query -W openvpn`, (error, stdout, stderr) => {
             if (error) {
-                log.error(`Main: Error checking whether OpenVPN, stunnel and ifconfig are installed. Error: ${error}`)
+                log.error(`Main: Error checking whether OpenVPN is installed. Error: ${error}`)
                 installDependenciesLinux(error)
-            } else if (!String(stdout).includes("no packages found matching stunnel4") && !String(stdout).includes("no packages found matching openvpn") && !String(stdout).includes("no packages found matching net-tools")) {
+            } else if (!String(stdout).includes("no packages found matching openvpn")) {
                 //Packages are installed
                 let settings = {}
                 fs.writeFile(path.join(app.getPath('userData'), 'settings.conf'), JSON.stringify(settings), (error) => {
@@ -1041,6 +1041,7 @@ function connect(config) {
                     //OpenVPN failed to connect, check if had already connected.
                     if (!datalog.includes(`Initialization Sequence Completed`)) {
                         log.info(`Main: OpenVPN failed to connect.`)
+                        disconnect()
                         intentionalDisconnect = true
                         let status = {
                             "connectError": true
@@ -1074,6 +1075,7 @@ function connect(config) {
             })
         } else if (os.platform() === "darwin") {
             copyDnsHelper()
+            fixBinaries()
             let writeData = {
                 "command": "connectToOpenVPN",
                 "configPath": `${path.join(app.getPath("userData"), 'current.ovpn')}`,
@@ -1085,6 +1087,7 @@ function connect(config) {
             }
         } else if (os.platform() === "linux") {
             copyDnsHelper()
+            fixBinaries()
             let writeData = {
                 "command": "connectToOpenVPN",
                 "configPath": `${path.join(app.getPath("userData"), 'current.ovpn')}`,
@@ -1098,31 +1101,23 @@ function connect(config) {
 }
 
 exports.stealthConnect = (decryptedResponse) => {
-    fs.writeFile(path.join(app.getPath("userData"), 'stunnel.conf'), decryptedResponse["stunnel"], (error) => {
-        if (error) {
-            log.error(`Main: Couldn't write the stunnel configuartion to disk.`)
-        }
-    })
-    fs.writeFile(path.join(app.getPath("userData"), 'stunnel.pem'), decryptedResponse["cert"], (error) => {
-        if (error) {
-            log.error(`Main: Couldn't write the stunnel configuartion to disk.`)
-        }
-    })
     //Fire up stunnel and send off the config
     if (os.platform() === "win32") {
-        log.info(`"${path.join(__dirname, "assets", "stunnel", "win32", "tstunnel.exe")}" "${path.join(app.getPath("userData"), 'stunnel.conf')}" -p "${path.join(app.getPath("userData"), 'stunnel.pem')}"`)
-        let stunnelProc = exec(`"${path.join(__dirname, "assets", "stunnel", "bin", "tstunnel.exe")}" "${path.join(app.getPath("userData"), 'stunnel.conf')}" -p "${path.join(app.getPath("userData"), 'stunnel.pem')}"`)
+        log.info(`"${path.join(__dirname, "assets", "wstunnel", "win32", "wstunnel.exe")}" -u --udpTimeoutSec=99999 -v -L 127.0.0.1:1194:127.0.0.1:1194 wss://${decryptedResponse["domain"]}`)
+        let stunnelProc = exec(`"${path.join(__dirname, "assets", "wstunnel", "win32", "wstunnel.exe")}" -u --udpTimeoutSec=99999 -v -L 127.0.0.1:1194:127.0.0.1:1194 wss://${decryptedResponse["domain"]}`)
         let dataLog
         stunnelProc.stderr.on('data', (data) => {
             log.info(`Stunnel: ${data}`)
             dataLog = dataLog + data
-            if (String(data).includes("Configuration successful")) {
+            //CANNOT BE DATALOG, OR ELSE IT WILL SPAWN INFINITE OPENVPN INSTANCES.
+            if (String(data).includes("WAIT for datagrames on 127.0.0.1:1194")) {
                 //Stunnel has loaded successfully.
                 connect(decryptedResponse["config"])
             }
         })
     } else if (os.platform() === "linux" || os.platform() === "darwin") {
         copyDnsHelper()
+        fixBinaries()
         fs.writeFile(path.join(app.getPath('userData'), "current.ovpn"), decryptedResponse["config"], (error) => {
             if (error) {
                 let status = {
@@ -1137,11 +1132,8 @@ exports.stealthConnect = (decryptedResponse) => {
                 if (os.platform() === "darwin") {
                     let writeData = {
                         "command": "connectToStealth",
-                        "stunnelPath": `${path.join(__dirname)}/assets/stunnel/darwin/stunnel`,
-                        "resourcePath": {
-                            "config": path.join(app.getPath("userData"), 'stunnel.conf'),
-                            "pem": path.join(app.getPath("userData"), 'stunnel.pem')
-                        },
+                        "wstunnelPath": `${path.join(__dirname, "assets", "wstunnel", "darwin", "wstunnel")}`,
+                        "domain":decryptedResponse["domain"],
                         "configPath": path.join(app.getPath('userData'), "current.ovpn"),
                         "ovpnPath": `${path.join(__dirname, "assets", "openvpn", "darwin", "openvpn")}`,
                         "scriptPath": `${app.getPath("userData")}/update-resolv-conf`
@@ -1152,13 +1144,11 @@ exports.stealthConnect = (decryptedResponse) => {
                 } else if (os.platform() === "linux") {
                     let writeData = {
                         "command": "connectToStealth",
-                        "stunnelPath": `${app.getPath("home")}/unrestrictme/bin/stunnel`,
-                        "resourcePath": {
-                            "config": path.join(app.getPath("userData"), 'stunnel.conf'),
-                            "pem": path.join(app.getPath("userData"), 'stunnel.pem')
-                        },
+                        //On linux, the wstunnel path should be the location of the binary in the appimage, to be copied to /bin
+                        "wstunnelPath": `${path.join(__dirname)}/assets/wstunnel/${os.platform()}/wstunnel`,
+                        "domain":decryptedResponse["domain"],
                         "configPath": path.join(app.getPath('userData'), "current.ovpn"),
-                        "ovpnPath": `${app.getPath("home")}/unrestrictme/sbin/openvpn`,
+                        "ovpnPath": `openvpn`,
                         "scriptPath": `${app.getPath("userData")}/update-systemd-resolved`
                     }
                     if (clientObj && clientObj != "killed") {
@@ -1179,6 +1169,14 @@ exports.stealthConnect = (decryptedResponse) => {
             log.error(`Main: Couldn't send OpenVPN status to renderer. Error: ${e}`)
         }
     }
+}
+
+function fixBinaries() {
+    exec(`/bin/chmod u+x '${path.join(__dirname, "assets", "openvpn", "darwin", "openvpn")}'`, (error) => {
+        if (error) {
+            console.log(`Error setting openvpn to be executable. Error: ${error}`)
+        }
+    })
 }
 
 function copyDnsHelper() {
@@ -1219,8 +1217,8 @@ function disconnect() {
     intentionalDisconnect = true
     log.info(`Main: We're about to kill OpenVPN. If OpenVPN is not running, you will see no confirmation it wasn't killed.`)
     if (os.platform() === "win32") {
-        exec(`taskkill /IM openvpn.exe /F & taskkill /IM tstunnel.exe /F`, (error, stdout, stderr) => {
-            if (error && !String(error).includes(`"tstunnel.exe" not found.`)) {
+        exec(`taskkill /IM openvpn.exe /F & taskkill /IM wstunnel.exe /F`, (error, stdout, stderr) => {
+            if (error && !String(error).includes(`"wstunnel.exe" not found.`)) {
                 log.error(`Main: An error occurred killing OpenVPN. Error: ${error}`)
                 mainWindow.show()
                 let status = {
@@ -1568,19 +1566,38 @@ function killSwitchDisable(nic) {
             log.info(`Main: Kill switch disabled.`)
         })
     } else if (os.platform() === "linux" || os.platform() === "darwin") {
-        if (clientObj && clientObj != "killed") {
-            let writeData = {
-                "command": "killSwitchDisable",
-                "nic": nic
+        log.info(`Main: We are going to read the NIC from the settings file. This should be valid regardless of whether the NIC was automatically determined or manually set.`)
+        fs.readFile(path.join(app.getPath('userData'), 'settings.conf'), 'utf8', (error, data) => {
+            if (error) {
+                if (error) {
+                    log.error(`Main: Couldn't read settings file to retrieve the kill switch NIC. Error: ${error}`)
+                    let status = {
+                        "error": "disable"
+                    }
+                    try {
+                        mainWindow.webContents.send('killSwitch', status)
+                    } catch(e) {
+                        log.error(`Main: Couldn't send kill switch status to renderer. Error: ${e}`)
+                    }
+                    return;
+                }
             }
-            clientObj.write(JSON.stringify(writeData))
-        }
+            let settings = JSON.parse(data)
+            if (clientObj && clientObj != "killed" && settings['nic']) {
+                let writeData = {
+                    "command": "killSwitchDisable",
+                    "nic": settings['nic']
+                }
+                clientObj.write(JSON.stringify(writeData))
+            }
+        })
+
     }
 }
 function installDependenciesLinux(checkError) {
-    if (String(checkError).includes("no packages found matching stunnel4") || String(checkError).includes("no packages found matching openvpn") || String(checkError).includes("no packages found matching net-tools")) {
-        //OpenVPN, stunnel4 or net-tools not installed. Get from package repository.
-        log.info(`Main: Installing OpenVPN, stunnel4 and net-tools from package repository.`)
+    if (String(checkError).includes("no packages found matching openvpn")) {
+        //OpenVPN not installed. Get from package repository.
+        log.info(`Main: Installing OpenVPN from package repository.`)
         getos((error, ops) => {
             if (error) {
                 log.error(`Main: Error checking operating system environment. Error: ${error}`)
@@ -1599,7 +1616,7 @@ function installDependenciesLinux(checkError) {
                 let options = {
                     name: "unrestrictme"
                 }
-                sudo.exec(`apt-get -y install openvpn stunnel4 net-tools`, options, (error, stdout, stderr) => {
+                sudo.exec(`apt-get -y install openvpn`, options, (error, stdout, stderr) => {
                     if (error) {
                         //Couldn't run the install command.
                         log.error(`Main: Failed to run command to install OpenVPN. Error: ${error}`)
