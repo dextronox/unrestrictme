@@ -272,6 +272,14 @@ function checkForUpdates(install) {
             }
             mainWindow.webContents.send('updater', updater)
         })
+        autoUpdater.on("update-not-available", (info) => {
+            log.info(`Main: There is no update available.`)
+            let updater = {
+                "updateAvailable": false,
+                "info": info
+            }
+            mainWindow.webContents.send('updater', updater)
+        })
         autoUpdater.on("download-progress", (progress, bytesPerSecond, percent, total, transferred) => {
             let updateProgress = {
                 "progress": progress,
