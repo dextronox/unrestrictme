@@ -266,17 +266,29 @@ function killSwitchDisable(nic) {
 }
 
 function stealthFunction(wstunnelPath, wstunnelDomain, ovpnConfig, ovpnPath, scriptPath) {
-    fs.copyFile(`${wstunnelPath}`, path.join('/bin/', "wstunnel"), (error) => {
-        if (error) {
-            console.log(`Main: An error occurred copying the wstunnel executable to the userData folder. Error: ${error}`)
-        }
-    })
-    exec(`/bin/chmod u+x '${path.join('/bin/', "wstunnel")}' && /bin/chmod 755 ${path.join('/bin/', "wstunnel")}`, (error) => {
-        if (error) {
-            console.log(`Error setting wstunnel to be executable. Error: ${error}`)
-        }
-    })
-    exec(`/bin/wstunnel -u --udpTimeoutSec=-1 -v -L 127.0.0.1:1194:127.0.0.1:1194 wss://${wstunnelDomain}`, (error, stdout, stderr) => {
+    let wstunnelExe
+    if (os.platform() === "linux") {
+        fs.copyFile(`${wstunnelPath}`, path.join('/bin/', "wstunnel"), (error) => {
+            if (error) {
+                console.log(`Main: An error occurred copying the wstunnel executable to the userData folder. Error: ${error}`)
+            }
+        })
+        exec(`/bin/chmod u+x '${path.join('/bin/', "wstunnel")}' && /bin/chmod 755 ${path.join('/bin/', "wstunnel")}`, (error) => {
+            if (error) {
+                console.log(`Error setting wstunnel to be executable. Error: ${error}`)
+            }
+        })
+        wstunnelExe = "/bin/wstunnel"
+    } else {
+        exec(`/bin/chmod u+x '${wstunnelPath}' && /bin/chmod 755 ${wstunnelPath}`, (error) => {
+            if (error) {
+                console.log(`Error setting wstunnel to be executable. Error: ${error}`)
+            }
+        })
+        wstunnelExe = wstunnelPath
+    }
+
+    exec(`${wstunnelExe} -u --udpTimeoutSec=-1 -v -L 127.0.0.1:1194:127.0.0.1:1194 wss://${wstunnelDomain}`, (error, stdout, stderr) => {
         if (error) {
             console.log(`Error!`)
             console.log(error)
