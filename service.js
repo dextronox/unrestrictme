@@ -280,7 +280,7 @@ function stealthFunction(wstunnelPath, wstunnelDomain, ovpnConfig, ovpnPath, scr
         })
         wstunnelExe = "/bin/wstunnel"
     } else {
-        exec(`/bin/chmod u+x '${wstunnelPath}' && /bin/chmod 755 ${wstunnelPath}`, (error) => {
+        exec(`/bin/chmod u+x '${wstunnelPath}' && /bin/chmod 755 '${wstunnelPath}'`, (error) => {
             if (error) {
                 console.log(`Error setting wstunnel to be executable. Error: ${error}`)
             }
@@ -288,7 +288,7 @@ function stealthFunction(wstunnelPath, wstunnelDomain, ovpnConfig, ovpnPath, scr
         wstunnelExe = wstunnelPath
     }
 
-    exec(`${wstunnelExe} -u --udpTimeoutSec=-1 -v -L 127.0.0.1:1194:127.0.0.1:1194 wss://${wstunnelDomain}`, (error, stdout, stderr) => {
+    exec(`'${wstunnelExe}' -u --udpTimeoutSec=-1 -v -L 127.0.0.1:1194:127.0.0.1:1194 wss://${wstunnelDomain}`, (error, stdout, stderr) => {
         if (error) {
             console.log(`Error!`)
             console.log(error)
