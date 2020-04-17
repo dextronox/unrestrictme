@@ -1108,15 +1108,17 @@ function connect(config) {
 }
 
 function IPv6Management(disable) {
-    let adapter
+    let adapter, ipv6Ps
     readSettingsFile((error, data) => {
         if (error) {
             log.error(`Main: Couldn't read settings file to determine whether to disable IPv6.`)
         } else {
-            let ipv6Ps = new ps({
-                executionPolicy: 'Bypass',
-                noProfile: true
-            })
+            if (os.platform() === "win32") {
+                ipv6Ps = new ps({
+                    executionPolicy: 'Bypass',
+                    noProfile: true
+                })
+            }
             if (disable && data["disableIPv6"]) {
                 //Disable IPv6
                 if (os.platform() === "linux") {
