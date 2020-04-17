@@ -51,6 +51,12 @@ function foregroundProcessDataHandler(data) {
         //Runs into stealthFunction
         stealthFunction(dataInterpreted["wstunnelPath"], dataInterpreted["domain"], dataInterpreted["configPath"], dataInterpreted["ovpnPath"], dataInterpreted["scriptPath"])
     }
+    if (dataInterpreted["command"] === "disableIPv6") {
+        IPv6Management(true)
+    }
+    if (dataInterpreted["command"] === "enableIPv6") {
+        IPv6Management(false)
+    }
 }
 
 function ovpnFunction(configPath, ovpnPath, scriptPath) {
@@ -275,6 +281,18 @@ function killSwitchDisable(nic) {
         client.write(JSON.stringify(writeData))
         console.log(`Main: Kill switch disabled.`)
     })
+}
+
+function IPv6Management(disable) {
+    if (disable && os.platform() === "linux") {
+        exec(`sysctl -w net.ipv6.conf.all.disable_ipv6=1`, (error, stdout, stderr) => {
+            console.log(error, stdout, stderr)
+        })
+    } else if (!disable && os.platform() === "linux") {
+        exec(`sysctl -w net.ipv6.conf.all.disable_ipv6=0`, (error, stdout, stderr) => {
+            console.log(error, stdout, stderr)
+        })
+    }
 }
 
 function stealthFunction(wstunnelPath, wstunnelDomain, ovpnConfig, ovpnPath, scriptPath) {

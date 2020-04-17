@@ -227,37 +227,50 @@ $(document).ready(() => {
     ipcRenderer.on(`logFileUpload`, (event, args) => {
         $("#logFileLocation").val(args[0])
     })
-    $("#clientVersion").html(`You're currently running unrestrict.me v${app.getVersion()}`)
-    network.get_interfaces_list(function(error, obj) {
-        for (i = 0; Object.keys(obj).length >= i; i++) {
-            //This populates the settings list with current adapters.
-            $("#adapterSelect").append(new Option(`${obj[i]["name"]} (${obj[i]["model"]})`, i))
-            if (Object.keys(obj).length -1 === i) {
-                fs.readFile(path.join(app.getPath('userData'), 'settings.conf'), 'utf8', (error, data) => {
-                    if (error) {
-                        log.error(`Renderer: Error reading settings file. Error: ${error}`)
-                        swal("Whoops!", "We were unable to read your settings file. Please try rebooting the client.", "error")
-                        return;
-                    }
-                    settingsFile = JSON.parse(data)
-                    if (settingsFile["selectedNic"]) {
-                        //There is a custom adapter selected. In future, we should check it exists, then select it on the settings list.
-                        $("#adapterDiv").css("display", "block")
-                        $("#adapterWait").css("display", "none")
-                        $("#adapterSelect").val(settingsFile["selectedNic"])
-                        log.info(`Renderer: Custom adapter in settings. Reflected in settings.`)
-                    } else {
-                        //No custom adapter selected.
-                        $("#adapterDiv").css("display", "block")
-                        $("#adapterWait").css("display", "none")
-                        log.info(`Renderer: No custom adapter in settings file. Reflected in settings menu.`)
-                    }
-                })
-            }
+    ipcRenderer.on(`automaticNIC`, (event, args) => {
+        if (args["error"]) {
+            swal("Whoops!", "We couldn't determine automatically determine your primary network adapter. Please choose one in the settings menu.", "error")
+            populateAdapterSelect(false, null, args["adapterList"])
+        } else if (args["success"]) {
+            populateAdapterSelect(true, args["autoNIC"], args["adapterList"])
         }
     })
+    $("#clientVersion").html(`You're currently running unrestrict.me v${app.getVersion()}`)
     checkLatestNews()
 })
+
+function populateAdapterSelect(successfullyDeterminedAnAutomaticInterface, autoNic, adapterList) {
+    if (successfullyDeterminedAnAutomaticInterface) {
+        $("#adapterSelect").append(new Option(`Detect Automatically (${autoNic})`, "auto"))
+    }
+    for (i = 0; Object.keys(adapterList).length >= i; i++) {
+        //This populates the settings list with current adapters.
+        $("#adapterSelect").append(new Option(`${adapterList[i]["name"]} (${adapterList[i]["model"]})`, adapterList[i]["name"]))
+        if (Object.keys(adapterList).length -1 === i) {
+            //This is the last adapter
+            fs.readFile(path.join(app.getPath('userData'), 'settings.conf'), 'utf8', (error, data) => {
+                if (error) {
+                    log.error(`Renderer: Error reading settings file. Error: ${error}`)
+                    swal("Whoops!", "We were unable to read your settings file. Please try rebooting the client.", "error")
+                    return;
+                }
+                settingsFile = JSON.parse(data)
+                if (settingsFile["preferenceNIC"]) {
+                    //There is a preference selected.
+                    $("#adapterDiv").css("display", "block")
+                    $("#adapterWait").css("display", "none")
+                    $("#adapterSelect").val(settingsFile["preferenceNIC"])
+                    log.info(`Renderer: Custom adapter in settings. Reflected in settings.`)
+                } else {
+                    //No custom adapter selected.
+                    $("#adapterDiv").css("display", "block")
+                    $("#adapterWait").css("display", "none")
+                    log.info(`Renderer: No custom adapter in settings file. Reflected in settings menu.`)
+                }
+            })
+        }
+    }
+}
 
 $("#connect").on("click", () => {
     log.info(`Renderer: Creating connection request.`)
@@ -712,7 +725,7 @@ $("#adapterSelect").on('change', () => {
             return
         }
         let current = JSON.parse(data)
-        current["selectedNic"] = $("#adapterSelect").val()
+        current["preferenceNIC"] = $("#adapterSelect").val()
         log.debug(`Renderer: Selected NIC changing to ${$("#adapterSelect").val()}`)
         fs.writeFile(path.join(app.getPath('userData'), "settings.conf"), JSON.stringify(current), (error) => {
             if (error) {
@@ -853,7 +866,7 @@ function getNewsFeed(callback) {
 
 function checkLatestNews() {
     readSettingsFile((error, stored) => {
-        let storedParsed = JSON.parse(stored)
+        let storedParsed = stored
         if (error) {
             log.error("Renderer: Error reading settings file to get most recent news item.")
         } else if (storedParsed["latestNews"] == null) {
@@ -886,7 +899,7 @@ function setLatestNews(id) {
         if (error) {
             log.error("Renderer: Error reading settings file to set recent news item.")
         } else {
-            let storedParsed = JSON.parse(stored)
+            let storedParsed = stored
             storedParsed["latestNews"] = id
             fs.writeFile(path.join(app.getPath('userData'), 'settings.conf'), JSON.stringify(storedParsed), (error) => {
                 if (error) {
@@ -901,7 +914,16 @@ function setLatestNews(id) {
 
 function readSettingsFile(callback) {
     fs.readFile(path.join(app.getPath('userData'), 'settings.conf'), 'utf8', (error, data) => {
-        callback(error, data)
+        callback(error, JSON.parse(data))
+    })
+}
+
+function writeSettingsFile(data, callback) {
+    /**
+     * data should be in object form.
+     */
+    fs.writeFile(path.join(app.getPath('userData'), 'settings.conf'), JSON.stringify(data), (error) => {
+        callback(error)
     })
 }
 
@@ -1012,4 +1034,17 @@ $("#beginUpdate").on("click", () => {
         installUpdates()
         $("#newsModal").modal("hide")
     }
+})
+
+$("#disableIPv6Check").change(() => {
+    let x = $("#disableIPv6Check").is(":checked")
+    log.info(`Renderer: Disable IPv6?: ${x}`)
+    readSettingsFile((error, data) => {
+        if (error) {
+            log.error(`Renderer: Couldn't read settings file to update IPv6 disable preference.`)
+        } else {
+            data["disableIPv6"] = x
+            writeSettingsFile(data)
+        }
+    })
 })

@@ -20,9 +20,9 @@ const sudo = require('sudo-prompt');
 const appLock = app.requestSingleInstanceLock()
 const { autoUpdater } = require("electron-updater")
 const net = require("net")
-const spawn = require("child_process").spawn
 const isDev = require("electron-is-dev")
 const rimraf = require("rimraf");
+const ps = require('node-powershell')
 
 autoUpdater.logger = null
 
@@ -676,6 +676,7 @@ function createMainWindow() {
         mainWindow.show()
         checkForUpdates()
         checkIfConnected()
+        updateAutomaticNIC()
         if (os.platform() != "win32") {
             log.info(`Main: This is not a win32 installation. Starting background service/server.`)
             startBackgroundServer()
@@ -1006,6 +1007,8 @@ function connect(config) {
                 datalog = datalog + data 
                 if (data.includes(`Initialization Sequence Completed`)) {
                     killSwitchStatus = false
+                    //Disable IPv6 only once we know connection is successful. Then, enable IPv6 when process ends.
+                    IPv6Management(true)
                     let initializeCount = (datalog.match(/Initialization Sequence Completed/g) || []).length;
                     if (initializeCount <= 1) {
                         //Connected to unrestrictme
@@ -1063,6 +1066,8 @@ function connect(config) {
             })
             ovpnProc.on('close', (data) => {
                 //OpenVPN has closed!
+                //Reenable IPv6
+                IPv6Management(false)
                 if (killSwitchStatus === true || !intentionalDisconnect) {
                     log.info(`Main: Activating failsafe.`)
                     killSwitch(true)
@@ -1098,6 +1103,157 @@ function connect(config) {
             }
         }
     }) 
+}
+
+function IPv6Management(disable) {
+    let adapter
+    readSettingsFile((error, data) => {
+        if (error) {
+            log.error(`Main: Couldn't read settings file to determine whether to disable IPv6.`)
+        } else {
+            let ipv6Ps = new ps({
+                executionPolicy: 'Bypass',
+                noProfile: true
+            })
+            if (disable && data["disableIPv6"]) {
+                if (os.platform() === "linux" || os.platform() === "darwin") {
+                    let writeData = {
+                        "command": "disableIPv6"
+                    }
+                    if (clientObj && clientObj != "killed") {
+                        clientObj.write(JSON.stringify(writeData))
+                    }
+                }
+                if (data["preferenceNIC"] && data["preferenceNIC"] != "auto") {
+                    adapter = data["preferenceNIC"]
+                    if (os.platform() === "win32") {
+                        ipv6Ps.addCommand(`Disable-NetAdapterBinding -Name "${data["preferenceNIC"]}" -ComponentID ms_tcpip6`)
+                    }
+                } else if (data["autoNIC"]) {
+                    adapter = data["autoNIC"]
+                    if (os.platform() === "win32") {
+                        ipv6Ps.addCommand(`Disable-NetAdapterBinding -Name "${data["autoNIC"]}" -ComponentID ms_tcpip6`) 
+                    }
+                } else {
+                    adapter = null
+                    log.error(`Main: No adapter selected to disable IPv6 for!`)
+                }
+                //Make sure when we enable IPv6 we do it for the same adapter it was disabled on. (If a user changes settings mid connection.)
+                data["lastIPv6NIC"] = adapter
+                writeSettingsFile(data, (error) => {
+                    if (error) {
+                        log.error(`Main: Couldn't write lastIPv6NIC to settings.conf.`)
+                    }
+                })
+            } else if (data["disableIPv6"] && data["lastIPv6NIC"]) {
+                if (os.platform() === "linux" || os.platform() === "darwin") {
+                    let writeData = {
+                        "command": "enableIPv6"
+                    }
+                    if (clientObj && clientObj != "killed") {
+                        clientObj.write(JSON.stringify(writeData))
+                    }
+                }
+                ipv6Ps.addCommand(`Enable-NetAdapterBinding -Name "${data["lastIPv6NIC"]}" -ComponentID ms_tcpip6`)
+            }
+            if (os.platform() === "win32") {
+                ipv6Ps.invoke().then(output => {
+                    log.info(`Main: Powershell - ${output}`)
+                }).catch(error => {
+                    log.error(`Main: Powershell - ${error}`)
+                })
+            }
+
+        }
+    })
+
+}
+
+function determineAutomaticNIC(callback) {
+    network.get_interfaces_list(function(error, obj) {
+        if (error) {
+            callback(error)
+        } else {
+            let autoInterface = obj.find(function(element) {
+                if (element["gateway_ip"] != null) {
+                    return element
+                }
+            })
+            callback(null, autoInterface, obj)
+        }
+
+    })
+}
+
+function updateAutomaticNIC() {
+    determineAutomaticNIC((error, interface, allInterfaces) => {
+        if (error) {
+            log.error(`Main: Couldn't determine the automatic NIC interface. Error: ${error}`)
+            let status = {
+                "error": true
+            }
+            try {
+                mainWindow.webContents.send('automaticNIC', status)
+            } catch(e) {
+                log.error(`Main: Couldn't send OpenVPN status to renderer. Error: ${e}`)
+            }
+        } else {
+            readSettingsFile((error, data) => {
+                if (error) {
+                    log.error(`Main: Couldn't read settings file to set automatic NIC. Error: ${error}`)
+                    let status = {
+                        "error": true
+                    }
+                    try {
+                        mainWindow.webContents.send('automaticNIC', status)
+                    } catch(e) {
+                        log.error(`Main: Couldn't send OpenVPN status to renderer. Error: ${e}`)
+                    }
+                } else {
+                    data["autoNIC"] = interface["name"]
+                    writeSettingsFile(data, (error) => {
+                        if (error) {
+                            log.error(`Main: Couldn't write the automatic NIC interface to settings.conf. Error: ${error}`)
+                            let status = {
+                                "error": true
+                            }
+                            try {
+                                mainWindow.webContents.send('automaticNIC', status)
+                            } catch(e) {
+                                log.error(`Main: Couldn't send OpenVPN status to renderer. Error: ${e}`)
+                            }
+                        } else {
+                            let status = {
+                                "success": true,
+                                "autoNIC": interface["name"],
+                                "adapterList": allInterfaces
+                            }
+                            try {
+                                mainWindow.webContents.send('automaticNIC', status)
+                            } catch(e) {
+                                log.error(`Main: Couldn't send OpenVPN status to renderer. Error: ${e}`)
+                            }
+                        }
+                    })
+                }
+            })
+        }
+    })
+}
+
+function readSettingsFile(callback) {
+    fs.readFile(path.join(app.getPath('userData'), 'settings.conf'), 'utf8', (error, data) => {
+        callback(error, JSON.parse(data))
+    })
+}
+
+function writeSettingsFile(data, callback) {
+    /**
+     * data should be in object form.
+     */
+    fs.writeFile(path.join(app.getPath('userData'), 'settings.conf'), JSON.stringify(data), (error) => {
+        callback(error)
+    })
 }
 
 exports.stealthConnect = (decryptedResponse) => {

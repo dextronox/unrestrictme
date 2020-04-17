@@ -1,6 +1,6 @@
 {
   "name": "unrestrictme",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "Desktop application for connecting to the unrestrict.me VPN network.",
   "main": "./main.js",
   "scripts": {
@@ -98,6 +98,7 @@
     "is-elevated": "^2.0.1",
     "jquery": "^3.4.1",
     "network": "^0.4.1",
+    "node-powershell": "^4.0.0",
     "node-rsa": "^1.0.8",
     "node-time-ago": "^1.0.0",
     "os": "^0.1.1",
