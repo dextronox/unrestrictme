@@ -1556,8 +1556,10 @@ function killSwitch(enable) {
                 } catch(e) {
                     log.error(`Main: Couldn't send kill switch status to renderer. Error: ${e}`)
                 }
-            } else {
+            } else if (data["lastKillSwitchNIC"]) {
                 killSwitchDisable(data["lastKillSwitchNIC"])
+            } else {
+                //The killswitch has either never been enabled or the NIC wasn't saved.
             }
         })
     }
