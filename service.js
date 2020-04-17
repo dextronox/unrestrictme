@@ -163,7 +163,8 @@ function startOvpn(configPath, ovpnPath, scriptPath) {
             let writeData = {
                 "command":"execute",
                 "methods": [
-                    "killSwitch(true)"
+                    "killSwitch(true)",
+                    "IPv6Management(false)"
                 ]
             }
             client.write(JSON.stringify(writeData))

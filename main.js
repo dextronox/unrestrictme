@@ -1081,6 +1081,7 @@ function connect(config) {
         } else if (os.platform() === "darwin") {
             copyDnsHelper()
             fixBinaries()
+            IPv6Management(true)
             let writeData = {
                 "command": "connectToOpenVPN",
                 "configPath": `${path.join(app.getPath("userData"), 'current.ovpn')}`,
@@ -1093,6 +1094,7 @@ function connect(config) {
         } else if (os.platform() === "linux") {
             copyDnsHelper()
             fixBinaries()
+            IPv6Management(true)
             let writeData = {
                 "command": "connectToOpenVPN",
                 "configPath": `${path.join(app.getPath("userData"), 'current.ovpn')}`,
@@ -1554,8 +1556,10 @@ function killSwitch(enable) {
                 } catch(e) {
                     log.error(`Main: Couldn't send kill switch status to renderer. Error: ${e}`)
                 }
-            } else {
+            } else if (data["lastKillSwitchNIC"]) {
                 killSwitchDisable(data["lastKillSwitchNIC"])
+            } else {
+                //The killswitch has either never been enabled or the NIC wasn't saved.
             }
         })
     }
