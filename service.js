@@ -169,6 +169,13 @@ function startOvpn(configPath, ovpnPath, scriptPath) {
             }
             client.write(JSON.stringify(writeData))
         }
+        let writeData = {
+            "command":"execute",
+            "methods": [
+                "IPv6Management(false)"
+            ]
+        }
+        client.write(JSON.stringify(writeData))
     })
 }
 function disconnectFromVPN(quit) {
