@@ -33,7 +33,17 @@ function testMessage() {
     client.write(JSON.stringify(writeData))
 }
 function foregroundProcessDataHandler(data) {
-    let dataInterpreted = JSON.parse(data)
+    let dataInterpreted
+    try {
+        dataInterpreted = JSON.parse(data)
+    } catch (e) {
+        dataInterpreted = data.replace("}{", '}!{').split("!")
+        dataInterpreted.forEach((value) => {
+            foregroundProcessDataHandler(value)
+        })
+        return;
+    }
+
     console.log(JSON.stringify(dataInterpreted))
     if (dataInterpreted["command"] === "connectToOpenVPN") {
         ovpnFunction(dataInterpreted["configPath"], dataInterpreted["ovpnPath"], dataInterpreted["scriptPath"])
