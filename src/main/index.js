@@ -237,6 +237,7 @@ $(document).ready(() => {
     })
     $("#clientVersion").html(`You're currently running unrestrict.me v${app.getVersion()}`)
     checkLatestNews()
+    setIPv6Toggle()
 })
 
 function populateAdapterSelect(successfullyDeterminedAnAutomaticInterface, autoNic, adapterList) {
@@ -270,6 +271,16 @@ function populateAdapterSelect(successfullyDeterminedAnAutomaticInterface, autoN
             })
         }
     }
+}
+
+function setIPv6Toggle() {
+    readSettingsFile((error, data) => {
+        if (error) {
+            log.error(`Renderer: Couldn't read settings file to set IPv6 toggle.`)
+        } else if (data["disableIPv6"]) {
+            $("#disableIPv6Check").attr("checked", true)
+        }
+    })
 }
 
 $("#connect").on("click", () => {
