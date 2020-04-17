@@ -1116,9 +1116,11 @@ function IPv6Management(disable) {
                 noProfile: true
             })
             if (disable && data["disableIPv6"]) {
-                if (os.platform() === "linux" || os.platform() === "darwin") {
+                //Disable IPv6
+                if (os.platform() === "linux") {
                     let writeData = {
-                        "command": "disableIPv6"
+                        "command": "disableIPv6",
+                        "adapter":null
                     }
                     if (clientObj && clientObj != "killed") {
                         clientObj.write(JSON.stringify(writeData))
@@ -1128,11 +1130,27 @@ function IPv6Management(disable) {
                     adapter = data["preferenceNIC"]
                     if (os.platform() === "win32") {
                         ipv6Ps.addCommand(`Disable-NetAdapterBinding -Name "${data["preferenceNIC"]}" -ComponentID ms_tcpip6`)
+                    } else if (os.platform() === "darwin") {
+                        let writeData = {
+                            "command": "disableIPv6",
+                            "adapter": data["preferenceNIC"]
+                        }
+                        if (clientObj && clientObj != "killed") {
+                            clientObj.write(JSON.stringify(writeData))
+                        }
                     }
                 } else if (data["autoNIC"]) {
                     adapter = data["autoNIC"]
                     if (os.platform() === "win32") {
                         ipv6Ps.addCommand(`Disable-NetAdapterBinding -Name "${data["autoNIC"]}" -ComponentID ms_tcpip6`) 
+                    } else if (os.platform() === "darwin") {
+                        let writeData = {
+                            "command": "disableIPv6",
+                            "adapter": data["autoNIC"]
+                        }
+                        if (clientObj && clientObj != "killed") {
+                            clientObj.write(JSON.stringify(writeData))
+                        }
                     }
                 } else {
                     adapter = null
@@ -1146,15 +1164,27 @@ function IPv6Management(disable) {
                     }
                 })
             } else if (data["disableIPv6"] && data["lastIPv6NIC"]) {
-                if (os.platform() === "linux" || os.platform() === "darwin") {
+                //Reenable IPv6
+                if (os.platform() === "linux") {
                     let writeData = {
-                        "command": "enableIPv6"
+                        "command": "enableIPv6",
+                        "adapter":null
+                    }
+                    if (clientObj && clientObj != "killed") {
+                        clientObj.write(JSON.stringify(writeData))
+                    }
+                } else if (os.platform() === "darwin") {
+                    let writeData = {
+                        "command": "enableIPv6",
+                        "adapter": data["lastIPv6NIC"]
                     }
                     if (clientObj && clientObj != "killed") {
                         clientObj.write(JSON.stringify(writeData))
                     }
                 }
-                ipv6Ps.addCommand(`Enable-NetAdapterBinding -Name "${data["lastIPv6NIC"]}" -ComponentID ms_tcpip6`)
+                if (os.platform() === "win32") {
+                    ipv6Ps.addCommand(`Enable-NetAdapterBinding -Name "${data["lastIPv6NIC"]}" -ComponentID ms_tcpip6`)
+                }
             }
             if (os.platform() === "win32") {
                 ipv6Ps.invoke().then(output => {
@@ -1593,7 +1623,7 @@ function killSwitchDisable(nic) {
             log.info(`Main: Kill switch disabled.`)
         })
     } else if (os.platform() === "linux" || os.platform() === "darwin") {
-        if (clientObj && clientObj != "killed" && settings['nic']) {
+        if (clientObj && clientObj != "killed") {
             let writeData = {
                 "command": "killSwitchDisable",
                 "nic": nic

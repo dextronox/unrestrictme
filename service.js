@@ -52,10 +52,10 @@ function foregroundProcessDataHandler(data) {
         stealthFunction(dataInterpreted["wstunnelPath"], dataInterpreted["domain"], dataInterpreted["configPath"], dataInterpreted["ovpnPath"], dataInterpreted["scriptPath"])
     }
     if (dataInterpreted["command"] === "disableIPv6") {
-        IPv6Management(true)
+        IPv6Management(true, dataInterpreted["adapter"])
     }
     if (dataInterpreted["command"] === "enableIPv6") {
-        IPv6Management(false)
+        IPv6Management(false, dataInterpreted["adapter"])
     }
 }
 
@@ -283,13 +283,21 @@ function killSwitchDisable(nic) {
     })
 }
 
-function IPv6Management(disable) {
+function IPv6Management(disable, nic) {
     if (disable && os.platform() === "linux") {
         exec(`sysctl -w net.ipv6.conf.all.disable_ipv6=1`, (error, stdout, stderr) => {
             console.log(error, stdout, stderr)
         })
+    } else if (disable && os.platform() === "darwin"){
+        exec(`networksetup -setv6off ${nic}`, (error, stdout, stderr) => {
+            console.log(error, stdout, stderr)
+        })
     } else if (!disable && os.platform() === "linux") {
         exec(`sysctl -w net.ipv6.conf.all.disable_ipv6=0`, (error, stdout, stderr) => {
+            console.log(error, stdout, stderr)
+        })
+    } else if (!disable && os.platform() === "darwin") {
+        exec(`networksetup -setv6on ${nic}`, (error, stdout, stderr) => {
             console.log(error, stdout, stderr)
         })
     }
