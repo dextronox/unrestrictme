@@ -1474,9 +1474,10 @@ function killSwitch(enable) {
     //All platform specific options are to be handled in killSwitchEnable
     if (enable) {
         mainWindow.show()
-        fs.readFile(path.join(app.getPath('userData'), 'settings.conf'), 'utf8', (error, data) => {
+        let adapter
+        readSettingsFile((error, data) => {
             if (error) {
-                log.error(`Main: Couldn't read settings file to enter kill switch NIC. Will not proceed. Error: ${error}`)
+                log.error(`Main: Couldn't read settings file to get kill switch NIC. Will not proceed. Error: ${error}`)
                 let status = {
                     "error": "enable"
                 }
@@ -1485,214 +1486,84 @@ function killSwitch(enable) {
                 } catch(e) {
                     log.error(`Main: Couldn't send kill switch status to renderer. Error: ${e}`)
                 }
-                return;
-            }
-            let settings = JSON.parse(data)
-            if (!settings["selectedNic"] || settings["selectedNic"] == -1) {
-                //Automatically determine nic.
-                log.info(`Main: Will enable the kill switch with automatic configuration.`)
-                killSwitchEnable("auto")
+            } else if (data["preferenceNIC"] && data["preferenceNIC"] !== "auto") {
+                killSwitchEnable(data["preferenceNIC"])
+                adapter = data["preferenceNIC"]
+            } else if (data["autoNIC"]) {
+                killSwitchEnable(data["autoNIC"])
+                adapter = data["autoNIC"]
             } else {
-                //Use preset nic.
-                log.info(`Main: Will enable the kill switch with preset configuration.`)
-                killSwitchEnable(settings["selectedNic"])
+                log.error(`Main: There was no autoNIC set for the killswitch.`)
+                let status = {
+                    "error": "enable"
+                }
+                try {
+                    mainWindow.webContents.send('killSwitch', status)
+                } catch(e) {
+                    log.error(`Main: Couldn't send kill switch status to renderer. Error: ${e}`)
+                }
             }
-
+            if (adapter) {
+                data["lastKillSwitchNIC"] = adapter
+                writeSettingsFile(data, (error) => {
+                    if (error) {
+                        log.error(`Main: Couldn't write lastKillSwitchNIC to settings.conf.`)
+                    }
+                })
+            }
         })
     } else {
-        fs.readFile(path.join(app.getPath('userData'), 'settings.conf'), 'utf8', (error, data) => {
+        readSettingsFile((error, data) => {
             if (error) {
-                log.error(`Main: Couldn't read settings file to retrieve kill switch NIC. Will not proceed. Error: ${error}`)
-                return;
-            }
-            let settings = JSON.parse(data)
-            if (settings["selectedNic"]) {
-                killSwitchDisable(settings["selectedNic"])
+                log.error(`Main: We couldn't read the settings file to get lastKillSwitchNIC. Error: ${error}`)
+                let status = {
+                    "error": "disable"
+                }
+                try {
+                    mainWindow.webContents.send('killSwitch', status)
+                } catch(e) {
+                    log.error(`Main: Couldn't send kill switch status to renderer. Error: ${e}`)
+                }
             } else {
-                killSwitchDisable(settings["nic"])
+                killSwitchDisable(data["lastKillSwitchNIC"])
             }
-
         })
     }
 }
 
 function killSwitchEnable(nic) {
+    log.info(`Main: Enabling Kill Switch for ${os.platform()}.`)
     if (os.platform() === "win32") {
-        log.info(`Main: Enabling Kill Switch for ${os.platform()}.`)
         //This refers to the function nic, stupid.
-        if (nic === "auto") {
-            log.info(`Main: We will automatically determine the interface to disable.`)
-            network.get_interfaces_list(function(error, obj) {
-                let autoInterface = obj.find(function(element) {
-                    if (element["gateway_ip"] != null) {
-                        return element
-                    }
-                })
-                fs.readFile(path.join(app.getPath('userData'), 'settings.conf'), 'utf8', (error, data) => {
-                    if (error) {
-                        log.error(`Main: Couldn't read settings file to enter kill switch NIC. Will not proceed. Error: ${error}`)
-                        let status = {
-                            "error": "enable"
-                        }
-                        try {
-                            mainWindow.webContents.send('killSwitch', status)
-                        } catch(e) {
-                            log.error(`Main: Couldn't send kill switch status to renderer. Error: ${e}`)
-                        }
-                        return;
-                    }
-                    let settings = JSON.parse(data)
-                    settings["nic"] = autoInterface["name"]
-                    fs.writeFile(path.join(app.getPath('userData'), 'settings.conf'), JSON.stringify(settings), (error) => {
-                        if (error) {
-                            log.error(`Main: Couldn't write settings file to enter kill switch NIC. Will not proceed. Error: ${error}`)
-                            let status = {
-                                "error": "enable"
-                            }
-                            try {
-                                mainWindow.webContents.send('killSwitch', status)
-                            } catch(e) {
-                                log.error(`Main: Couldn't send kill switch status to renderer. Error: ${e}`)
-                            }
-                            return;
-                        }
-                        exec(`netsh interface set interface "${autoInterface["name"]}" admin=disable`, (error, stderr, stdout) => {
-                            if (error) {
-                                log.error(`Main: Couldn't disable network adapter. Error: ${error}`)
-                                let status = {
-                                    "error": "enable"
-                                }
-                                try {
-                                    mainWindow.webContents.send('killSwitch', status)
-                                } catch(e) {
-                                    log.error(`Main: Couldn't send kill switch status to renderer. Error: ${e}`)
-                                }
-                                return;
-                            }
-                            let status = {
-                                "enabled": true
-                            }
-                            try {
-                                mainWindow.webContents.send('killSwitch', status)
-                            } catch(e) {
-                                log.error(`Main: Couldn't send kill switch status to renderer. Error: ${e}`)
-                            }
-                            log.info(`Main: Kill switch enabled.`)
-                        })
-                    })
-                })
-            })
-        } else {
-            log.info(`Main: We will disable the user defined NIC.`)
-            network.get_interfaces_list(function(error, obj) {
-                if (error) {
-                    log.error(`Main: Couldn't get the list of network interfaces. Error: ${error}`)
-                    let status = {
-                        "error": "enable"
-                    }
-                    try {
-                        mainWindow.webContents.send('killSwitch', status)
-                    } catch(e) {
-                        log.error(`Main: Couldn't send kill switch status to renderer. Error: ${e}`)
-                    }
-                    return;
+        exec(`netsh interface set interface "${nic}" admin=disable`, (error, stdout, stderr) => {
+            if (error) {
+                log.error(`Main: Couldn't disable adapter for kill switch. Error: ${error}`)
+                let status = {
+                    "error": "enable"
                 }
-                let nicCmd = obj[parseInt(nic)]["name"]
-                exec(`netsh interface set interface "${nicCmd}" admin=disable`, (error, stderr, stdout) => {
-                    if (error) {
-                        log.error(`Main: Couldn't disable network adapter. Error: ${error}`)
-                        let status = {
-                            "error": "enable"
-                        }
-                        try {
-                            mainWindow.webContents.send('killSwitch', status)
-                        } catch(e) {
-                            log.error(`Main: Couldn't send kill switch status to renderer. Error: ${e}`)
-                        }
-                        return;
-                    }
-                    let status = {
-                        "enabled": true
-                    }
-                    try {
-                        mainWindow.webContents.send('killSwitch', status)
-                    } catch(e) {
-                        log.error(`Main: Couldn't send kill switch status to renderer. Error: ${e}`)
-                    }
-                    log.info(`Main: Kill switch enabled.`)
-                })
-            })
-        }
+                try {
+                    mainWindow.webContents.send('killSwitch', status)
+                } catch(e) {
+                    log.error(`Main: Couldn't send kill switch status to renderer. Error: ${e}`)
+                }
+            } else {
+                let status = {
+                    "enabled": true
+                }
+                try {
+                    mainWindow.webContents.send('killSwitch', status)
+                } catch(e) {
+                    log.error(`Main: Couldn't send kill switch status to renderer. Error: ${e}`)
+                }
+                log.info(`Main: Kill switch enabled.`)
+            }
+        })
     } else if (os.platform() === "linux" || os.platform() === "darwin") {
-        log.info(`Main: Enabling Kill Switch for ${os.platform()}.`)
-        //This refers to the function nic, stupid.
-        if (nic === "auto") {
-            log.info(`Main: We will automatically determine the interface to disable.`)
-            network.get_interfaces_list(function(error, obj) {
-                let autoInterface = obj.find(function(element) {
-                    if (element["gateway_ip"] != null) {
-                        return element
-                    }
-                })
-                fs.readFile(path.join(app.getPath('userData'), 'settings.conf'), 'utf8', (error, data) => {
-                    if (error) {
-                        log.error(`Main: Couldn't read settings file to enter kill switch NIC. Will not proceed. Error: ${error}`)
-                        let status = {
-                            "error": "enable"
-                        }
-                        try {
-                            mainWindow.webContents.send('killSwitch', status)
-                        } catch(e) {
-                            log.error(`Main: Couldn't send kill switch status to renderer. Error: ${e}`)
-                        }
-                        return;
-                    }
-                    let settings = JSON.parse(data)
-                    settings["nic"] = autoInterface["name"]
-                    fs.writeFile(path.join(app.getPath('userData'), 'settings.conf'), JSON.stringify(settings), (error) => {
-                        if (error) {
-                            log.error(`Main: Couldn't write settings file to enter kill switch NIC. Will not proceed. Error: ${error}`)
-                            let status = {
-                                "error": "enable"
-                            }
-                            try {
-                                mainWindow.webContents.send('killSwitch', status)
-                            } catch(e) {
-                                log.error(`Main: Couldn't send kill switch status to renderer. Error: ${e}`)
-                            }
-                            return;
-                        }
-                        let writeData = {
-                            "command": "killSwitchEnable",
-                            "nic": autoInterface["name"]
-                        }
-                        clientObj.write(JSON.stringify(writeData))
-                    })
-                })
-            })
-        } else {
-            log.info(`Main: We will disable the user defined NIC.`)
-            network.get_interfaces_list(function(error, obj) {
-                if (error) {
-                    log.error(`Main: Couldn't get the list of network interfaces. Error: ${error}`)
-                    let status = {
-                        "error": "enable"
-                    }
-                    try {
-                        mainWindow.webContents.send('killSwitch', status)
-                    } catch(e) {
-                        log.error(`Main: Couldn't send kill switch status to renderer. Error: ${e}`)
-                    }
-                    return;
-                }
-                let nicCmd = obj[parseInt(nic)]["name"]
-                let writeData = {
-                    "command": "killSwitchEnable",
-                    "nic": nicCmd
-                }
-                clientObj.write(JSON.stringify(writeData))
-            })
+        let writeData = {
+            "command": "killSwitchEnable",
+            "nic": nic
         }
+        clientObj.write(JSON.stringify(writeData))
     }
 }
 
@@ -1722,31 +1593,13 @@ function killSwitchDisable(nic) {
             log.info(`Main: Kill switch disabled.`)
         })
     } else if (os.platform() === "linux" || os.platform() === "darwin") {
-        log.info(`Main: We are going to read the NIC from the settings file. This should be valid regardless of whether the NIC was automatically determined or manually set.`)
-        fs.readFile(path.join(app.getPath('userData'), 'settings.conf'), 'utf8', (error, data) => {
-            if (error) {
-                if (error) {
-                    log.error(`Main: Couldn't read settings file to retrieve the kill switch NIC. Error: ${error}`)
-                    let status = {
-                        "error": "disable"
-                    }
-                    try {
-                        mainWindow.webContents.send('killSwitch', status)
-                    } catch(e) {
-                        log.error(`Main: Couldn't send kill switch status to renderer. Error: ${e}`)
-                    }
-                    return;
-                }
+        if (clientObj && clientObj != "killed" && settings['nic']) {
+            let writeData = {
+                "command": "killSwitchDisable",
+                "nic": nic
             }
-            let settings = JSON.parse(data)
-            if (clientObj && clientObj != "killed" && settings['nic']) {
-                let writeData = {
-                    "command": "killSwitchDisable",
-                    "nic": settings['nic']
-                }
-                clientObj.write(JSON.stringify(writeData))
-            }
-        })
+            clientObj.write(JSON.stringify(writeData))
+        }
 
     }
 }
