@@ -306,7 +306,8 @@ function IPv6Management(disable, nic) {
             console.log(error, stdout, stderr)
         })
     } else if (disable && os.platform() === "darwin"){
-        exec(`networksetup -setv6off ${nic}`, (error, stdout, stderr) => {
+        //Converts nic to 'network service'.
+        exec(`networksetup -setv6off $(networksetup -listallhardwareports | awk '/${nic}/{print previous_line}{previous_line=$0}' | sed 's/[^,:]*://g' | sed -e 's/^[[:space:]]*//')`, (error, stdout, stderr) => {
             console.log(error, stdout, stderr)
         })
     } else if (!disable && os.platform() === "linux") {
@@ -314,7 +315,7 @@ function IPv6Management(disable, nic) {
             console.log(error, stdout, stderr)
         })
     } else if (!disable && os.platform() === "darwin") {
-        exec(`networksetup -setv6automatic ${nic}`, (error, stdout, stderr) => {
+        exec(`networksetup -setv6automatic $(networksetup -listallhardwareports | awk '/${nic}/{print previous_line}{previous_line=$0}' | sed 's/[^,:]*://g' | sed -e 's/^[[:space:]]*//')`, (error, stdout, stderr) => {
             console.log(error, stdout, stderr)
         })
     }
