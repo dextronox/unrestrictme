@@ -541,8 +541,17 @@ function startBackgroundService() {
 }
 
 function backgroundProcessDataHandler(data) {
-    log.debug(data)
-    let dataInterpreted = JSON.parse(data)
+    let dataInterpreted
+    try {
+        dataInterpreted = JSON.parse(data)
+    } catch (e) {
+        dataInterpreted = data.replace("}{", '}!{').split("!")
+        dataInterpreted.forEach((value) => {
+            backgroundProcessDataHandler(value)
+        })
+        return;
+    }
+    log.debug(dataInterpreted)
     if (dataInterpreted["command"] === "sendToRenderer") {
         try {
             mainWindow.webContents.send(dataInterpreted["channel"], dataInterpreted["status"])
