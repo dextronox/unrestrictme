@@ -1214,6 +1214,7 @@ function IPv6Management(disable) {
 
 function determineAutomaticNIC(callback) {
     network.get_interfaces_list(function(error, obj) {
+        log.info(JSON.stringify(obj))
         if (error) {
             callback(error)
         } else {

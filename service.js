@@ -314,7 +314,7 @@ function IPv6Management(disable, nic) {
             console.log(error, stdout, stderr)
         })
     } else if (!disable && os.platform() === "darwin") {
-        exec(`networksetup -setv6on ${nic}`, (error, stdout, stderr) => {
+        exec(`networksetup -setv6automatic ${nic}`, (error, stdout, stderr) => {
             console.log(error, stdout, stderr)
         })
     }
