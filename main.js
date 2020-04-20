@@ -1130,6 +1130,15 @@ function IPv6Management(disable) {
             }
             if (disable && data["disableIPv6"]) {
                 //Disable IPv6
+                //Disable the toggle switch
+                let status = {
+                    "disableToggleSwitch": true
+                }
+                try {
+                    mainWindow.webContents.send('ipv6', status)
+                } catch(e) {
+                    log.error(`Main: Couldn't send OpenVPN status to renderer. Error: ${e}`)
+                }
                 if (os.platform() === "linux") {
                     let writeData = {
                         "command": "disableIPv6",
@@ -1178,6 +1187,15 @@ function IPv6Management(disable) {
                 })
             } else if (data["disableIPv6"] && data["lastIPv6NIC"]) {
                 //Reenable IPv6
+                //Disable the toggle switch
+                let status = {
+                    "disableToggleSwitch": false
+                }
+                try {
+                    mainWindow.webContents.send('ipv6', status)
+                } catch(e) {
+                    log.error(`Main: Couldn't send OpenVPN status to renderer. Error: ${e}`)
+                }
                 if (os.platform() === "linux") {
                     let writeData = {
                         "command": "enableIPv6",

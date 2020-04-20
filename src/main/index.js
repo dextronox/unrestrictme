@@ -235,6 +235,13 @@ $(document).ready(() => {
             populateAdapterSelect(true, args["autoNIC"], args["adapterList"])
         }
     })
+    ipcRenderer.on(`ipv6`, (event, args) => {
+        if (args["disableToggleSwitch"]) {
+            $("#disableIPv6Check").attr("disabled", true)
+        } else {
+            $("#disableIPv6Check").removeAttr("disabled")
+        }
+    })
     $("#clientVersion").html(`You're currently running unrestrict.me v${app.getVersion()}`)
     checkLatestNews()
     setIPv6Toggle()
