@@ -118,17 +118,24 @@
                     <h5>Client Version</h5>
                     <p id="clientVersion"></p>
                     <button id="checkForUpdates" class="btn btn-primary">Check for Updates</button>
-                    <h5>Kill Switch NIC</h5>
-                    <p>Select the adapter from the list below you wish to have disabled when connection is lost to unrestrict.me. By default we try to determine this automatically.</p>
+                    <h5>Network Adapter</h5>
+                    <p>This is the network adapter we'll disable if connection is lost to unrestrict.me and disable IPv6 for. By default we try to determine this automatically.</p>
                     <div id="adapterWait">
                         <p>Please wait. We're getting a list of available adapters.</p>
                     </div>
                     <div class="form-group" id="adapterDiv" style="display:none;">
                         <select class="form-control" id="adapterSelect">
-                            <option value="-1">Detect Automatically</option>
                         </select>
                     </div>
-                    <h5>Custom API Server</h5>
+                    <h5>Disable IPv6</h5>
+                    <p>To prevent data leaks you can temporarily disable IPv6 connectivity on the adapter above whilst connected to unrestrict.me.</p>
+                    <div class="form-group">
+                        <div class="custom-control custom-checkbox">
+                          <input type="checkbox" class="custom-control-input" id="disableIPv6Check">
+                          <label class="custom-control-label" for="disableIPv6Check">Disable IPv6?</label>
+                        </div>
+                    </div>
+                    <h5 style="display: inline">Custom API Server</h5><span class="badge badge-secondary" style="pointer-events: none; margin-left: 1em;">Developer Option</span>
                     <p>Input a custom API server for unrestrict.me to send requests.</p>
                     <div class="input-group mb-3">
                         <input id="customAPI" type="text" class="form-control" placeholder="https://..." required>
@@ -139,8 +146,8 @@
                             <button id="customAPIClear" class="btn btn-outline-danger" type="button">Clear</button>
                         </div>
                     </div>
-                    <h5>Custom Webpage</h5>
-                    <p>Input a custom webpage for unrestrict.me to navigate you to complete the connection.</p>
+                    <h5 style="display: inline">Custom API Webpage</h5><span class="badge badge-secondary" style="pointer-events: none; margin-left: 1em;">Developer Option</span>
+                    <p>Input a custom webpage for unrestrict.me to navigate you to choose your location.</p>
                     <div class="input-group mb-3">
                         <input id="customWebpage" type="text" class="form-control" placeholder="https://..." required>
                         <div class="input-group-append">

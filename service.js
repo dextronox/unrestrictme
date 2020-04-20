@@ -33,7 +33,17 @@ function testMessage() {
     client.write(JSON.stringify(writeData))
 }
 function foregroundProcessDataHandler(data) {
-    let dataInterpreted = JSON.parse(data)
+    let dataInterpreted
+    try {
+        dataInterpreted = JSON.parse(data)
+    } catch (e) {
+        dataInterpreted = data.replace("}{", '}!{').split("!")
+        dataInterpreted.forEach((value) => {
+            foregroundProcessDataHandler(value)
+        })
+        return;
+    }
+
     console.log(JSON.stringify(dataInterpreted))
     if (dataInterpreted["command"] === "connectToOpenVPN") {
         ovpnFunction(dataInterpreted["configPath"], dataInterpreted["ovpnPath"], dataInterpreted["scriptPath"])
@@ -50,6 +60,12 @@ function foregroundProcessDataHandler(data) {
     if (dataInterpreted["command"] === "connectToStealth") {
         //Runs into stealthFunction
         stealthFunction(dataInterpreted["wstunnelPath"], dataInterpreted["domain"], dataInterpreted["configPath"], dataInterpreted["ovpnPath"], dataInterpreted["scriptPath"])
+    }
+    if (dataInterpreted["command"] === "disableIPv6") {
+        IPv6Management(true, dataInterpreted["adapter"])
+    }
+    if (dataInterpreted["command"] === "enableIPv6") {
+        IPv6Management(false, dataInterpreted["adapter"])
     }
 }
 
@@ -162,6 +178,13 @@ function startOvpn(configPath, ovpnPath, scriptPath) {
             }
             client.write(JSON.stringify(writeData))
         }
+        let writeData = {
+            "command":"execute",
+            "methods": [
+                "IPv6Management(false)"
+            ]
+        }
+        client.write(JSON.stringify(writeData))
     })
 }
 function disconnectFromVPN(quit) {
@@ -275,6 +298,27 @@ function killSwitchDisable(nic) {
         client.write(JSON.stringify(writeData))
         console.log(`Main: Kill switch disabled.`)
     })
+}
+
+function IPv6Management(disable, nic) {
+    if (disable && os.platform() === "linux") {
+        exec(`sysctl -w net.ipv6.conf.all.disable_ipv6=1`, (error, stdout, stderr) => {
+            console.log(error, stdout, stderr)
+        })
+    } else if (disable && os.platform() === "darwin"){
+        //Converts nic to 'network service'.
+        exec(`networksetup -setv6off $(networksetup -listallhardwareports | awk '/${nic}/{print previous_line}{previous_line=$0}' | sed 's/[^,:]*://g' | sed -e 's/^[[:space:]]*//')`, (error, stdout, stderr) => {
+            console.log(error, stdout, stderr)
+        })
+    } else if (!disable && os.platform() === "linux") {
+        exec(`sysctl -w net.ipv6.conf.all.disable_ipv6=0`, (error, stdout, stderr) => {
+            console.log(error, stdout, stderr)
+        })
+    } else if (!disable && os.platform() === "darwin") {
+        exec(`networksetup -setv6automatic $(networksetup -listallhardwareports | awk '/${nic}/{print previous_line}{previous_line=$0}' | sed 's/[^,:]*://g' | sed -e 's/^[[:space:]]*//')`, (error, stdout, stderr) => {
+            console.log(error, stdout, stderr)
+        })
+    }
 }
 
 function stealthFunction(wstunnelPath, wstunnelDomain, ovpnConfig, ovpnPath, scriptPath) {
