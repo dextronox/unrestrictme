@@ -1247,6 +1247,10 @@ function determineAutomaticNIC(callback) {
     })
 }
 
+exports.updateAutomaticNIC = () => {
+    updateAutomaticNIC()
+}
+
 function updateAutomaticNIC() {
     determineAutomaticNIC((error, interface, allInterfaces) => {
         if (error) {
