@@ -286,6 +286,8 @@ function setIPv6Toggle() {
             log.error(`Renderer: Couldn't read settings file to set IPv6 toggle.`)
         } else if (data["disableIPv6"]) {
             $("#disableIPv6Check").attr("checked", true)
+        } else {
+            $("#disableIPv6Check").removeAttr("checked")
         }
     })
 }
@@ -700,6 +702,10 @@ $("#reset").on("click", () => {
         log.info(`Renderer: Config file reset!`)
         swal("Success!", "The config file has been reset. All settings are now at default.", "success")
         $("#settings").modal('toggle')
+        main.updateAutomaticNIC()
+        setIPv6Toggle()
+        $("#adapterWait").css("display", "block")
+        $("#adapterDiv").css("display", "none")
     })
 })
 
