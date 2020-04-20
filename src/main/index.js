@@ -904,7 +904,7 @@ function checkLatestNews() {
             })
         } else {          
             getNewsFeed((mostRecent) => {
-                if (mostRecent[0] && mostRecent[0]["id"] > JSON.parse(stored)["latestNews"]) {
+                if (mostRecent[0] && mostRecent[0]["id"] > stored["latestNews"]) {
                     $("#showNews").removeClass("btn-outline-secondary")
                     $("#showNews").addClass("btn-success")
                 } else {
