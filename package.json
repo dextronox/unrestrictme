@@ -17,7 +17,7 @@
     "proxy"
   ],
   "author": "unrestrict.me",
-  "license": "SEE LICENSE IN LICENSE",
+  "license": "CC BY-NC-ND 4.0",
   "build": {
     "appId": "com.unrestrictme.client",
     "productName": "unrestrict.me",
