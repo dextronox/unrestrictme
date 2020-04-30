@@ -96,7 +96,7 @@
     "electron-updater": "^4.2.5",
     "getos": "^3.1.5",
     "is-elevated": "^2.0.1",
-    "jquery": "^3.4.1",
+    "jquery": "^3.5.0",
     "network": "^0.4.1",
     "node-powershell": "^4.0.0",
     "node-rsa": "^1.0.8",
