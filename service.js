@@ -6,6 +6,8 @@ const path = require("path")
 const os = require("os")
 const {exec} = require('child_process')
 
+let ver = 1.0
+
 let killSwitchStatus, intentionalDisconnect
 const client = net.createConnection({ port: 4964 }, () => {
     //Runs once connected to the server.
@@ -28,7 +30,8 @@ client.on('error', (error) => {
 
 function testMessage() {
     let writeData = {
-        "command":"testMessage"
+        "command":"testMessage",
+        "ver": ver
     }
     client.write(JSON.stringify(writeData))
 }
@@ -86,6 +89,8 @@ function ovpnFunction(configPath, ovpnPath, scriptPath) {
                 startOvpn(configPath, ovpnPath, scriptPath)
             }
         })
+    } else if (ovpnPath) {
+        startOvpn(configPath, ovpnPath)
     } else {
         startOvpn(configPath)
     }
@@ -98,9 +103,12 @@ function startOvpn(configPath, ovpnPath, scriptPath) {
     let ovpnProc
     if (os.platform() === "linux") {
         ovpnProc = exec(`openvpn --config "${configPath}"  --connect-retry-max 1 --tls-exit --mute-replay-warnings --connect-timeout 15 --script-security 2 --up "${scriptPath}" --down "${scriptPath}"`)
-    } else {
+    } else if (os.platform() === "darwin") {
         scriptPath = scriptPath.replace(/([ ])/g, '\\$1')
-        ovpnProc = exec(`${ovpnPath} --config "${configPath}"  --connect-retry-max 1 --tls-exit --mute-replay-warnings --connect-timeout 15 --script-security 2 --up "${scriptPath}" --down "${scriptPath}"`)        
+        ovpnProc = exec(`${ovpnPath} --config "${configPath}"  --connect-retry-max 1 --tls-exit --mute-replay-warnings --connect-timeout 15 --script-security 2 --up "${scriptPath}" --down "${scriptPath}"`)
+    } else if (os.platform() === "win32") {
+        console.log(`"${ovpnPath}" --config "${configPath}"  --connect-retry-max 1 --tls-exit --mute-replay-warnings --connect-timeout 15`)
+        ovpnProc = exec(`"${ovpnPath}" --config "${configPath}"  --connect-retry-max 1 --tls-exit --mute-replay-warnings --connect-timeout 15`)
     }
     var datalog
     ovpnProc.stdout.on('data', (data) => {
@@ -189,49 +197,93 @@ function startOvpn(configPath, ovpnPath, scriptPath) {
 }
 function disconnectFromVPN(quit) {
     intentionalDisconnect = true
-    let execCmd = "pkill openvpn && pkill wstunnel"
-    exec(execCmd, (error, stdout, stderr) => {
-        //https://www.freebsd.org/cgi/man.cgi?query=pkill&sektion=1
-        if (error && error.code != 1) {
-            console.log(error, stdout, stderr)
+    if (os.platform() === "win32") {
+        exec(`taskkill /IM openvpn.exe /F & taskkill /IM wstunnel.exe /F`, (error, stdout, stderr) => {
+            if (error && !String(error).includes(`"wstunnel.exe" not found.`)) {
+                console.log(`An error occurred killing OpenVPN. Error: ${error}`)
+                let writeData = {
+                    "command":"sendToRenderer",
+                    "channel": "error",
+                    "status": {
+                        "disconnectError": true
+                    },
+                    "showWindow": true
+                }
+                client.write(JSON.stringify(writeData))
+                return;
+            }
+            console.log(`Background: taskkill has run successfully.`)
             let writeData = {
                 "command":"sendToRenderer",
-                "channel": "error",
+                "channel": "connection",
                 "status": {
-                    "disconnectError": true
-                },
-                "showWindow": true
-            }
-            client.write(JSON.stringify(writeData))
-            return;
-        }
-        console.log(`Background: pkill has run successfully.`)
-        let writeData = {
-            "command":"sendToRenderer",
-            "channel": "connection",
-            "status": {
-                "connected": false
-            }
-        }
-        client.write(JSON.stringify(writeData), () => {
-            if (quit) {
-                console.log(`Background: Sending command to quit unrestrict.me`)
-                let writeData = {
-                    "command":"execute",
-                    "methods": [
-                        "tray.destroy()",
-                        "app.quit()"
-                    ]
+                    "connected": false
                 }
-                setTimeout(() => {
-                    //Give main js time to deal with buffer
-                    client.write(JSON.stringify(writeData))
-                }, 200)
-                
             }
+            client.write(JSON.stringify(writeData), () => {
+                if (quit) {
+                    console.log(`Background: Sending command to quit unrestrict.me`)
+                    let writeData = {
+                        "command":"execute",
+                        "methods": [
+                            "tray.destroy()",
+                            "app.quit()"
+                        ]
+                    }
+                    setTimeout(() => {
+                        //Give main js time to deal with buffer
+                        client.write(JSON.stringify(writeData))
+                    }, 200)
+                    
+                }
+            })
         })
+    } else if (os.platform() === "linux" || os.platform() === "darwin") {
+        let execCmd = "pkill openvpn && pkill wstunnel"
+        exec(execCmd, (error, stdout, stderr) => {
+            //https://www.freebsd.org/cgi/man.cgi?query=pkill&sektion=1
+            if (error && error.code != 1) {
+                console.log(error, stdout, stderr)
+                let writeData = {
+                    "command":"sendToRenderer",
+                    "channel": "error",
+                    "status": {
+                        "disconnectError": true
+                    },
+                    "showWindow": true
+                }
+                client.write(JSON.stringify(writeData))
+                return;
+            }
+            console.log(`Background: pkill has run successfully.`)
+            let writeData = {
+                "command":"sendToRenderer",
+                "channel": "connection",
+                "status": {
+                    "connected": false
+                }
+            }
+            client.write(JSON.stringify(writeData), () => {
+                if (quit) {
+                    console.log(`Background: Sending command to quit unrestrict.me`)
+                    let writeData = {
+                        "command":"execute",
+                        "methods": [
+                            "tray.destroy()",
+                            "app.quit()"
+                        ]
+                    }
+                    setTimeout(() => {
+                        //Give main js time to deal with buffer
+                        client.write(JSON.stringify(writeData))
+                    }, 200)
+                    
+                }
+            })
+    
+        })
+    }
 
-    })
 }
 
 function killSwitchEnable(nic) {

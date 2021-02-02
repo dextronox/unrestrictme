@@ -23,7 +23,7 @@ const net = require("net")
 const isDev = require("electron-is-dev")
 const rimraf = require("rimraf");
 const ps = require('node-powershell')
-const Service = require('node-windows')
+const Service = require('node-windows').Service
 
 autoUpdater.logger = null
 
@@ -94,21 +94,7 @@ app.on('activate', function () {
 
 function appStart() {
     createLoadingWindow()
-    if (os.platform() === "win32") {
-        isElevated().then(elevated => {
-            if (!elevated) {
-                log.error("Main: Application run without elevated privileges. OpenVPN will not be able to change routing table.")
-                createErrorWindow(`elevation`)
-            } else {
-                log.info("Main: Application is elevated.")
-                checkSettings()
-            }
-        })
-    } else if (os.platform() === "linux") {
-        checkSettings()
-    } else if (os.platform() === "darwin") {
-        checkSettings()
-    }
+    checkSettings()
 
 }
 
@@ -440,6 +426,8 @@ function createBackgroundService() {
                 startBackgroundService()
             }
         })
+    } else if (os.platform() === "win32") {
+        startBackgroundService()
     }
 
 }
@@ -546,7 +534,13 @@ function startBackgroundService() {
         unrestrictmeSvc.on('install', () => {
             unrestrictmeSvc.start()
         })
+        unrestrictmeSvc.on('alreadyinstalled', () => {
+            unrestrictmeSvc.start()
+        })
         unrestrictmeSvc.install()
+        unrestrictmeSvc.on("error", () => {
+            log.error("Main: An error occurred installing the Windows service.")
+        })
     }
 
 }
@@ -699,11 +693,8 @@ function createMainWindow() {
         checkForUpdates()
         checkIfConnected()
         updateAutomaticNIC()
-        if (os.platform() != "win32") {
-            log.info(`Main: This is not a win32 installation. Starting background service/server.`)
-            startBackgroundServer()
-            createBackgroundService()
-        }
+        startBackgroundServer()
+        createBackgroundService()
     })
     if (process.argv.includes(`--devConsole`)) {
         mainWindow.webContents.openDevTools({mode: "undocked"})
@@ -1021,85 +1012,15 @@ function connect(config) {
             return
         }
         if (os.platform() === "win32") {
-            log.info(`Main: Going to run: "${path.join(__dirname, "assets", "openvpn", `${os.arch()}`)}\\openvpn.exe" --config "${path.join(app.getPath('userData'), "current.ovpn")}" --connect-retry-max 1 --tls-exit --mute-replay-warnings --connect-timeout 15`)
-            let ovpnProc = exec(`"${path.join(__dirname, "assets", "openvpn", `${os.arch()}`)}\\openvpn.exe" --config "${path.join(app.getPath('userData'), "current.ovpn")}"  --connect-retry-max 1 --tls-exit --mute-replay-warnings --connect-timeout 15`)
-            var datalog
-            ovpnProc.stdout.on('data', (data) => {
-                log.info(`OpenVPN: ${data}`)
-                datalog = datalog + data 
-                if (data.includes(`Initialization Sequence Completed`)) {
-                    killSwitchStatus = false
-                    //Disable IPv6 only once we know connection is successful. Then, enable IPv6 when process ends.
-                    IPv6Management(true)
-                    let initializeCount = (datalog.match(/Initialization Sequence Completed/g) || []).length;
-                    if (initializeCount <= 1) {
-                        //Connected to unrestrictme
-                        let status = {
-                            "connected": true
-                        }
-                        try {
-                            mainWindow.webContents.send('connection', status)
-                        } catch(e) {
-                            log.error(`Main: Couldn't send OpenVPN status to renderer. Error: ${e}`)
-                        }
-                    }
-                }
-                if (data.includes(`All TAP-Windows adapters on this system are currently in use.`)) {
-                    //Couldn't connect, some other VPN (maybe us) is already connected
-                    let status = {
-                        "tapError": true
-                    }
-                    try {
-                        mainWindow.webContents.send('error', status)
-                    } catch(e) {
-                        log.error(`Main: Couldn't send OpenVPN status to renderer. Error: ${e}`)
-                    }
-                }
-                if (data.includes('Closing TUN/TAP interface')) {
-                    if (datalog.includes(`Initialization Sequence Completed`) && !intentionalDisconnect) {
-                        //OpenVPN has disconnected on its own. Activate kill switch.
-                        log.info(`Main: OpenVPN has disconnected on its own. Enabling kill switch.`)
-                        killSwitchStatus = true
-                    }
-                }
-                if (data.includes('SIGTERM[soft,tls-error] received, process exiting') || data.includes('Exiting due to fatal error') || data.includes('Unrecognized option or missing or extra parameter(s) in ')) {
-                    //OpenVPN failed to connect, check if had already connected.
-                    if (!datalog.includes(`Initialization Sequence Completed`)) {
-                        log.info(`Main: OpenVPN failed to connect.`)
-                        disconnect()
-                        intentionalDisconnect = true
-                        let status = {
-                            "connectError": true
-                        }
-                        try {
-                            mainWindow.webContents.send('error', status)
-                        } catch(e) {
-                            log.error(`Main: Couldn't send OpenVPN status to renderer. Error: ${e}`)
-                        }
-                    }
-                }
-                if (data.includes(`Inactivity timeout (--ping-restart), restarting`)) {
-                    //Something has caused the VPN to restart. Alert the user that there are issues.
-                    let error = {
-                        "inactivityTimeout": true
-                    }
-                    mainWindow.webContents.send("error", error)
-                }
-            })
-            ovpnProc.on('close', (data) => {
-                //OpenVPN has closed!
-                //Reenable IPv6
-                IPv6Management(false)
-                if (killSwitchStatus === true || !intentionalDisconnect) {
-                    log.info(`Main: Activating failsafe.`)
-                    killSwitch(true)
-                }
-                fs.unlink(path.join(app.getPath('userData'), "current.ovpn"), (error) => {
-                    if (error) {
-                        log.error(`Main: Error deleting previous config file. This shouldn't matter as it will be overwritten.`)
-                    }
-                })
-            })
+            IPv6Management(true)
+            let writeData = {
+                "command": "connectToOpenVPN",
+                "configPath": `${path.join(app.getPath("userData"), 'current.ovpn')}`,
+                "ovpnPath": `${path.join(__dirname, "assets", "openvpn", `${os.arch()}`, "openvpn.exe")}`
+            }
+            if (clientObj && clientObj != "killed") {
+                clientObj.write(JSON.stringify(writeData))  
+            }
         } else if (os.platform() === "darwin") {
             copyDnsHelper()
             fixBinaries()
@@ -1200,7 +1121,7 @@ function IPv6Management(disable) {
                 })
             } else if (data["disableIPv6"] && data["lastIPv6NIC"]) {
                 //Reenable IPv6
-                //Disable the toggle switch
+                //Enable the toggle switch
                 let status = {
                     "disableToggleSwitch": false
                 }
@@ -1451,40 +1372,12 @@ function copyDnsHelper() {
 function disconnect() {
     intentionalDisconnect = true
     log.info(`Main: We're about to kill OpenVPN. If OpenVPN is not running, you will see no confirmation it wasn't killed.`)
-    if (os.platform() === "win32") {
-        exec(`taskkill /IM openvpn.exe /F & taskkill /IM wstunnel.exe /F`, (error, stdout, stderr) => {
-            if (error && !String(error).includes(`"wstunnel.exe" not found.`)) {
-                log.error(`Main: An error occurred killing OpenVPN. Error: ${error}`)
-                mainWindow.show()
-                let status = {
-                    "disconnectError": true
-                }
-                try {
-                    mainWindow.webContents.send('error', status)
-                } catch(e) {
-                    log.error(`Main: Couldn't send OpenVPN status to renderer. Error: ${e}`)
-                }
-                return false;
-            }
-            let status = {
-                "connected": false
-            }
-            try {
-                mainWindow.webContents.send('connection', status)
-            } catch(e) {
-                log.error(`Main: Couldn't send OpenVPN status to renderer. Error: ${e}`)
-            }
-            log.info(`Main: OpenVPN was killed`)
-            return true;
-        })
-    } else if (os.platform() === "linux" || os.platform() === "darwin") {
-        if (clientObj && clientObj != "killed") {
-            let writeData = {
-                "command": "disconnect",
-                "quitBoolean": false
-            }
-            clientObj.write(JSON.stringify(writeData))
+    if (clientObj && clientObj != "killed") {
+        let writeData = {
+            "command": "disconnect",
+            "quitBoolean": false
         }
+        clientObj.write(JSON.stringify(writeData))
     }
 }
 
