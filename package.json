@@ -86,7 +86,7 @@
   },
   "devDependencies": {
     "electron": "^11.2.1",
-    "electron-builder": "^22.3.5",
+    "electron-builder": "^22.9.1",
     "yarn": "^1.22.4"
   },
   "dependencies": {
@@ -101,6 +101,7 @@
     "node-powershell": "^4.0.0",
     "node-rsa": "^1.0.8",
     "node-time-ago": "^1.0.0",
+    "node-windows": "^1.0.0-beta.5",
     "os": "^0.1.1",
     "path": "^0.12.7",
     "request": "^2.88.2",

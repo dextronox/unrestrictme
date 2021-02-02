@@ -23,6 +23,7 @@ const net = require("net")
 const isDev = require("electron-is-dev")
 const rimraf = require("rimraf");
 const ps = require('node-powershell')
+const Service = require('node-windows')
 
 autoUpdater.logger = null
 
@@ -536,6 +537,16 @@ function startBackgroundService() {
                 }
             }
         })
+    } else if (os.platform() === "win32") {
+        var unrestrictmeSvc = new Service({
+            name:'unrestrict.me Service',
+            description:'Handles VPN tunnel and firewall changes for the unrestrict.me client.',
+            script:`${path.join(__dirname, 'service.js')}`
+        })
+        unrestrictmeSvc.on('install', () => {
+            unrestrictmeSvc.start()
+        })
+        unrestrictmeSvc.install()
     }
 
 }
