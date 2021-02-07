@@ -534,11 +534,9 @@ function startBackgroundService() {
             script:`${path.join(__dirname, 'service.js')}`
         })
         unrestrictmeSvc.on('install', () => {
-            log.info('456')
             unrestrictmeSvc.start()
         })
         unrestrictmeSvc.on('alreadyinstalled', () => {
-            log.info(`123`)
             unrestrictmeSvc.start()
         })
         unrestrictmeSvc.on("error", () => {
