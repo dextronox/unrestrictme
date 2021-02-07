@@ -30,8 +30,7 @@
       "target": "nsis",
       "icon": "build/icon.ico",
       "verifyUpdateCodeSignature": true,
-      "asar": false,
-      "requestedExecutionLevel": "requireAdministrator"
+      "asar": false
     },
     "nsis": {
       "oneClick": false,
