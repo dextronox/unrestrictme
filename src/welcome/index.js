@@ -110,8 +110,22 @@ $(document).ready(() => {
             $("#step3_repository_installing").css("display", "block")
         }
     })
+    ipcRenderer.on('service', (event, args) => {
+        if (args === "error") {
+            swal("Whoops!", "We couldn't install our service worker script. Did you grant permission?", "error")
+            $("#installButton").removeClass("running")
+            $("#installButton").attr("disabled", false)
+        } else if (args === "installed") {
+            main.dependenciesCheck2()
+        }
+    })
 })
 
+$("#installButton").on("click", () => {
+    $("#installButton").addClass("running")
+    $("#installButton").attr("disabled", true)
+    main.dependenciesCheck()
+})
 $("#step1_button").on("click", () => {
     $("#step1").css("display", "none")
     $("#step2").css("display", "block")

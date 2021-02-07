@@ -1,0 +1,50 @@
+@font-face {
+    font-family: Karla;
+    src: url("../../assets/fonts/Karla-VariableFont_wght.ttf")
+}
+body {
+    background: #24C6DC;  /* fallback for old browsers */
+    background: -webkit-linear-gradient(to right, #514A9D, #24C6DC);  /* Chrome 10-25, Safari 5.1-6 */
+    background: linear-gradient(to right, #514A9D, #24C6DC); /* W3C, IE 10+/ Edge, Firefox 16+, Chrome 26+, Opera 12+, Safari 7+ */
+    font-family: Karla;
+}
+
+.welcome-box {
+    margin: 20px;   
+    background-color: aliceblue;
+    min-height: 351px;
+}
+.welcome-box h1 {
+    color:dimgray;
+    text-align: center;
+    font-size: 300%;
+    margin: 10px;
+} 
+
+.welcome-box p {
+    color:dimgray;
+    text-align: center;
+    margin: 10px;
+}
+
+.welcome-box .conditionsBox {
+    width: 100%;
+    padding: 10px;
+}
+
+.welcome-box img {
+    max-width: 50%;
+    padding-top: 10px;
+    display: block;
+    margin: auto;
+} 
+
+.welcome-box button {
+    max-width: 50%;
+    display: block;
+    margin: auto;
+    margin-top: 27px;
+    font-size: 150%;
+}
+
+

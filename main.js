@@ -427,7 +427,9 @@ function createBackgroundService() {
             }
         })
     } else if (os.platform() === "win32") {
-        startBackgroundService()
+        
+        //Only triggered on first install from welcome page now.
+        //startBackgroundService()
     }
 
 }
@@ -532,15 +534,33 @@ function startBackgroundService() {
             script:`${path.join(__dirname, 'service.js')}`
         })
         unrestrictmeSvc.on('install', () => {
+            log.info('456')
             unrestrictmeSvc.start()
         })
         unrestrictmeSvc.on('alreadyinstalled', () => {
+            log.info(`123`)
             unrestrictmeSvc.start()
         })
-        unrestrictmeSvc.install()
         unrestrictmeSvc.on("error", () => {
             log.error("Main: An error occurred installing the Windows service.")
+            try {
+                welcomeWindow.webContents.send("service", "error")
+            } catch (e) {
+                log.error(`Main: Couldn't send service installation error to renderer.`)
+            }
         })
+        unrestrictmeSvc.on("start", () => {
+            log.info(`Main: Background service reportedly started.`)
+        })
+        unrestrictmeSvc.on("invalidinstallation ", () => {
+            log.info(789)
+            try {
+                welcomeWindow.webContents.send("service", "error")
+            } catch (e) {
+                log.error(`Main: Couldn't send service installation error to renderer.`)
+            }
+        })
+        unrestrictmeSvc.install()
     }
 
 }
@@ -559,7 +579,12 @@ function backgroundProcessDataHandler(data) {
     log.debug(dataInterpreted)
     if (dataInterpreted["command"] === "sendToRenderer") {
         try {
-            mainWindow.webContents.send(dataInterpreted["channel"], dataInterpreted["status"])
+            if (!dataInterpreted["window"]) {
+                mainWindow.webContents.send(dataInterpreted["channel"], dataInterpreted["status"])
+            } else {
+                dataInterpreted["window"].webContents.send(dataInterpreted["channel"], dataInterpreted["status"])
+            }
+            
         } catch(e) {
             log.error(`Main: Couldn't send data from service worker to renderer. Error: ${e}`)
         }
@@ -578,6 +603,11 @@ function backgroundProcessDataHandler(data) {
             mainWindow.webContents.send("authentication", "passed")
         } catch (e) {
             log.error(`Main: Couldn't send authentication waiting to renderer.`)
+        }
+        try {
+            welcomeWindow.webContents.send("service", "installed")
+        } catch (e) {
+            log.error(`Main: Couldn't send service install success to renderer.`)
         }
     }
 }
@@ -871,29 +901,6 @@ function quit(hard) {
 
 }
 
-function runTapInstaller () {
-    exec(`"${path.join(__dirname, `assets`, `openvpn`, `tap-${os.arch()}`, `tapinstall.exe`)}" install "${path.join(__dirname, `assets`, `openvpn`, `tap-${os.arch()}`, `OemVista.inf`)}" tap0901`, (error, stdout, stderr) => {
-        if (error) {
-            log.error(`Main: Could not install the TAP driver. Error: ${error}`)
-            //Alert renderer.
-            let ipcUpdate = {
-                "error":"TAPInstallationFailure",
-                "errorText":`Error: ${error}`
-            }
-            welcomeWindow.webContents.send(`statusUpdate`, ipcUpdate)
-        } else if (String(stdout).includes(`Drivers installed successfully.`)) {
-            //The driver been installed successfully.
-            createSettingsFile()
-        } else {
-            //Something went wrong with the installation.
-            let ipcUpdate = {
-                "error":"TAPInstallationFailure",
-                "errorText":`Stdout: ${stdout}, Stderr: ${stderr}`
-            }
-            welcomeWindow.webContents.send(`statusUpdate`, ipcUpdate)
-        }
-    })
-}
 function createSettingsFile() {
     let settings = {}
     fs.writeFile(path.join(app.getPath('userData'), 'settings.conf'), JSON.stringify(settings), (error) => {
@@ -933,25 +940,9 @@ function deleteUnrequiredFolders() {
 }
 exports.dependenciesCheck = () => {
     if (os.platform() === "win32") {
-        exec(`"${path.join(__dirname, 'assets', 'openvpn', `${os.arch()}`, 'openvpn.exe')}" --show-adapters`, (error, stdout, stderr) => {
-            if (error) {
-                log.error(`Main: Could not verify TAP installation. Error: ${error}`)
-                let ipcUpdate = {
-                    "error": "TAPVerifyInstall",
-                    "errorText": error
-                }
-                welcomeWindow.webContents.send(`statusUpdate`, ipcUpdate)
-            } else if ((stdout.replace('Available TAP-WIN32 adapters [name, GUID]:', '')).replace(/\s/g, '') === "") {
-                log.error(`Main: There is no TAP adapter on the system. Log: ${stdout}`)
-                runTapInstaller()
-/*                     let ipcUpdate = {
-                    "update":"installingTAPAdapter"
-                }
-                welcomeWindow.webContents.send(`statusUpdate`, ipcUpdate) */
-            } else {
-                createSettingsFile()
-            }
-        })
+        //Install service wrapper, tell it to install dependencies (requires elevation etc.)
+        startBackgroundServer()
+        startBackgroundService()
     } else if (os.platform() === "linux") {
         exec(`dpkg-query -W openvpn`, (error, stdout, stderr) => {
             if (error) {
@@ -988,6 +979,30 @@ exports.dependenciesCheck = () => {
         app.quit()
     }
 
+}
+
+//Function is split to make sure background service installs successfully before trying to send it data.
+exports.dependenciesCheck2 = () => {
+    exec(`"${path.join(__dirname, 'assets', 'openvpn', `${os.arch()}`, 'openvpn.exe')}" --show-adapters`, (error, stdout, stderr) => {
+        if (error) {
+            log.error(`Main: Could not verify TAP installation. Error: ${error}`)
+            let ipcUpdate = {
+                "error": "TAPVerifyInstall",
+                "errorText": error
+            }
+            welcomeWindow.webContents.send(`statusUpdate`, ipcUpdate)
+        } else if ((stdout.replace('Available TAP-WIN32 adapters [name, GUID]:', '')).replace(/\s/g, '') === "") {
+            log.error(`Main: There is no TAP adapter on the system. Log: ${stdout}`)
+            let writeData = {
+                "command": "runTapInstaller"
+            }
+            if (clientObj && clientObj != "killed") {
+                clientObj.write(JSON.stringify(writeData))
+            }
+        } else {
+            createSettingsFile()
+        }
+    })
 }
 
 exports.connect = (config) => {

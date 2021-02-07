@@ -5,28 +5,55 @@ const fs = require(`fs`)
 const path = require("path")
 const os = require("os")
 const {exec} = require('child_process')
+const { stdout } = require("process")
+let client
 
 let ver = 1.0
 
 let killSwitchStatus, intentionalDisconnect
-const client = net.createConnection({ port: 4964 }, () => {
-    //Runs once connected to the server.
-    console.log(`Background: Connected to client server. Ready to receive instructions.`)
-    testMessage()
-});
-client.on('data', (data) => {
-    //We have received some data from the server.
-    //data should always be JSON in buffer format
-    console.log(`Background: Data received.`)
-    foregroundProcessDataHandler(data.toString())
-});
-client.on('end', () => {
-    //Connection has been ended. Kill this process.
-    process.exit()
-});
-client.on('error', (error) => {
-    console.log(`Background: An error occurred. Error: ${error}`)
-})
+entryPoint()
+function entryPoint() {
+    //Behaviour explaination
+    //On Windows, don't kill the service, just keep retrying. Service worker continues in the background indefinitely, only restarted after application is closed.
+    if (os.platform() === "win32") {
+        exec("tasklist", (error, stdout, stderr) => {
+            console.log(String(stdout))
+            if (String(stdout).includes("unrestrict.me.exe") || String(stdout).includes("electron.exe")) {
+                console.log("unrestrict.me.exe found to be running. Starting service worker.")
+                tryConnect()
+            } else {
+                console.log("unrestrict.me.exe not running. Will retry in 1 second.")
+                setTimeout(() => {entryPoint()}, 1000)
+            }
+        })
+    } else {
+        tryConnect()
+    }
+}
+
+
+function tryConnect() {
+    client = net.createConnection({ port: 4964 }, () => {
+        //Runs once connected to the server.
+        console.log(`Background: Connected to client server. Ready to receive instructions.`)
+        testMessage()
+    });
+    client.on('data', (data) => {
+        //We have received some data from the server.
+        //data should always be JSON in buffer format
+        console.log(`Background: Data received.`)
+        foregroundProcessDataHandler(data.toString())
+    });
+    client.on('end', () => {
+        //Connection has been ended. Kill this process.
+        process.exit()
+    });
+    client.on('error', (error) => {
+        console.log(`Background: An error occurred. Error: ${error}`)
+    })
+}
+
+
 
 function testMessage() {
     let writeData = {
@@ -69,6 +96,9 @@ function foregroundProcessDataHandler(data) {
     }
     if (dataInterpreted["command"] === "enableIPv6") {
         IPv6Management(false, dataInterpreted["adapter"])
+    }
+    if (dataInterpreted["command"] === "runTapInstaller") {
+        runTapInstaller()
     }
 }
 
@@ -407,4 +437,45 @@ function stealthFunction(wstunnelPath, wstunnelDomain, ovpnConfig, ovpnPath, scr
         console.log(stderr)
     })
     ovpnFunction(ovpnConfig, ovpnPath, scriptPath)
+}
+
+function runTapInstaller () {
+    exec(`"${path.join(__dirname, `assets`, `openvpn`, `tap-${os.arch()}`, `tapinstall.exe`)}" install "${path.join(__dirname, `assets`, `openvpn`, `tap-${os.arch()}`, `OemVista.inf`)}" tap0901`, (error, stdout, stderr) => {
+        if (error) {
+            console.log(`Could not install the TAP driver. Error: ${error}`)
+            //Alert renderer.
+            let writeData = {
+                "command":"sendToRenderer",
+                "window":"welcomeWindow",
+                "channel": "killSwitch",
+                "status": {
+                    "error":"TAPInstallationFailure",
+                    "errorText":`Error: ${error}`
+                },
+            }
+            client.write(JSON.stringify(writeData))
+
+        } else if (String(stdout).includes(`Drivers installed successfully.`)) {
+            //The driver been installed successfully.
+            let writeData = {
+                "command":"execute",
+                "methods": [
+                    "createSettingsFile()"
+                ]
+            }
+            client.write(JSON.stringify(writeData))
+        } else {
+            //Something went wrong with the installation.
+            let writeData = {
+                "command":"sendToRenderer",
+                "window":"welcomeWindow",
+                "channel": "killSwitch",
+                "status": {
+                    "error":"TAPInstallationFailure",
+                    "errorText":`Stdout: ${stdout}, Stderr: ${stderr}`
+                },
+            }
+            client.write(JSON.stringify(writeData))
+        }
+    })
 }
