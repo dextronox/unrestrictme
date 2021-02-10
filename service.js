@@ -6,7 +6,20 @@ const path = require("path")
 const os = require("os")
 const {exec} = require('child_process')
 const { stdout } = require("process")
-let client
+let client, EventLogger, log
+
+if (os.platform() === "win32") {
+    EventLogger = require('node-windows').EventLogger
+    log = new EventLogger('unrestrict.me Service Log')
+} else {
+    log = {}
+    log.info = (arg) => {
+        console.log(arg)
+    }
+    log.error = () => {
+        console.log(arg)
+    }
+}
 
 let ver = 1.0
 
@@ -17,12 +30,11 @@ function entryPoint() {
     //On Windows, don't kill the service, just keep retrying. Service worker continues in the background indefinitely, only restarted after application is closed.
     if (os.platform() === "win32") {
         exec("tasklist", (error, stdout, stderr) => {
-            console.log(String(stdout))
             if (String(stdout).includes("unrestrict.me.exe") || String(stdout).includes("electron.exe")) {
-                console.log("unrestrict.me.exe found to be running. Starting service worker.")
+                log.info("unrestrict.me.exe found to be running. Starting service worker.")
                 tryConnect()
             } else {
-                console.log("unrestrict.me.exe not running. Will retry in 1 second.")
+                log.info("unrestrict.me.exe not running. Will retry in 1 second.")
                 setTimeout(() => {entryPoint()}, 1000)
             }
         })
@@ -35,13 +47,13 @@ function entryPoint() {
 function tryConnect() {
     client = net.createConnection({ port: 4964 }, () => {
         //Runs once connected to the server.
-        console.log(`Background: Connected to client server. Ready to receive instructions.`)
+        log.info(`Background: Connected to client server. Ready to receive instructions.`)
         testMessage()
     });
     client.on('data', (data) => {
         //We have received some data from the server.
         //data should always be JSON in buffer format
-        console.log(`Background: Data received.`)
+        log.info(`Background: Data received.`)
         foregroundProcessDataHandler(data.toString())
     });
     client.on('end', () => {
@@ -49,7 +61,7 @@ function tryConnect() {
         process.exit()
     });
     client.on('error', (error) => {
-        console.log(`Background: An error occurred. Error: ${error}`)
+        log.info(`Background: An error occurred. Error: ${error}`)
     })
 }
 
@@ -74,7 +86,7 @@ function foregroundProcessDataHandler(data) {
         return;
     }
 
-    console.log(JSON.stringify(dataInterpreted))
+    log.info(JSON.stringify(dataInterpreted))
     if (dataInterpreted["command"] === "connectToOpenVPN") {
         ovpnFunction(dataInterpreted["configPath"], dataInterpreted["ovpnPath"], dataInterpreted["scriptPath"])
     }
@@ -106,7 +118,7 @@ function ovpnFunction(configPath, ovpnPath, scriptPath) {
     if (scriptPath) {
         exec(`/bin/chmod +x "${scriptPath}"`, (error, stdout, stderr) => {
             if (error) {
-                console.log(`Couldn't set the permission of the DNS updater script. Error: ${error}`)
+                log.info(`Couldn't set the permission of the DNS updater script. Error: ${error}`)
                 let writeData = {
                     "command":"sendToRenderer",
                     "channel": "error",
@@ -137,12 +149,12 @@ function startOvpn(configPath, ovpnPath, scriptPath) {
         scriptPath = scriptPath.replace(/([ ])/g, '\\$1')
         ovpnProc = exec(`${ovpnPath} --config "${configPath}"  --connect-retry-max 1 --tls-exit --mute-replay-warnings --connect-timeout 15 --script-security 2 --up "${scriptPath}" --down "${scriptPath}"`)
     } else if (os.platform() === "win32") {
-        console.log(`"${ovpnPath}" --config "${configPath}"  --connect-retry-max 1 --tls-exit --mute-replay-warnings --connect-timeout 15`)
+        log.info(`"${ovpnPath}" --config "${configPath}"  --connect-retry-max 1 --tls-exit --mute-replay-warnings --connect-timeout 15`)
         ovpnProc = exec(`"${ovpnPath}" --config "${configPath}"  --connect-retry-max 1 --tls-exit --mute-replay-warnings --connect-timeout 15`)
     }
     var datalog
     ovpnProc.stdout.on('data', (data) => {
-        console.log(data)
+        log.info(data)
         datalog = datalog + data 
         if (data.includes(`Initialization Sequence Completed`)) {
             killSwitchStatus = false
@@ -173,14 +185,14 @@ function startOvpn(configPath, ovpnPath, scriptPath) {
         if (data.includes('Closing TUN/TAP interface')) {
             if (datalog.includes(`Initialization Sequence Completed`) && !intentionalDisconnect) {
                 //OpenVPN has disconnected on its own. Activate kill switch.
-                console.log(`Main: OpenVPN has disconnected on its own. Enabling kill switch.`)
+                log.info(`Main: OpenVPN has disconnected on its own. Enabling kill switch.`)
                 killSwitchStatus = true
             }
         }
         if (data.includes('SIGTERM[soft,tls-error] received, process exiting') || data.includes('Exiting due to fatal error')) {
             //OpenVPN failed to connect, check if had already connected.
             if (!datalog.includes(`Initialization Sequence Completed`)) {
-                console.log(`Main: OpenVPN failed to connect.`)
+                log.info(`Main: OpenVPN failed to connect.`)
                 intentionalDisconnect = true
                 let writeData = {
                     "command":"sendToRenderer",
@@ -207,7 +219,7 @@ function startOvpn(configPath, ovpnPath, scriptPath) {
     ovpnProc.on('close', (data) => {
         //OpenVPN has closed!
         if (killSwitchStatus === true || !intentionalDisconnect) {
-            console.log(`Main: Activating failsafe.`)
+            log.info(`Main: Activating failsafe.`)
             let writeData = {
                 "command":"execute",
                 "methods": [
@@ -230,7 +242,7 @@ function disconnectFromVPN(quit) {
     if (os.platform() === "win32") {
         exec(`taskkill /IM openvpn.exe /F & taskkill /IM wstunnel.exe /F`, (error, stdout, stderr) => {
             if (error && !String(error).includes(`"wstunnel.exe" not found.`)) {
-                console.log(`An error occurred killing OpenVPN. Error: ${error}`)
+                log.info(`An error occurred killing OpenVPN. Error: ${error}`)
                 let writeData = {
                     "command":"sendToRenderer",
                     "channel": "error",
@@ -242,7 +254,7 @@ function disconnectFromVPN(quit) {
                 client.write(JSON.stringify(writeData))
                 return;
             }
-            console.log(`Background: taskkill has run successfully.`)
+            log.info(`Background: taskkill has run successfully.`)
             let writeData = {
                 "command":"sendToRenderer",
                 "channel": "connection",
@@ -252,7 +264,7 @@ function disconnectFromVPN(quit) {
             }
             client.write(JSON.stringify(writeData), () => {
                 if (quit) {
-                    console.log(`Background: Sending command to quit unrestrict.me`)
+                    log.info(`Background: Sending command to quit unrestrict.me`)
                     let writeData = {
                         "command":"execute",
                         "methods": [
@@ -273,7 +285,7 @@ function disconnectFromVPN(quit) {
         exec(execCmd, (error, stdout, stderr) => {
             //https://www.freebsd.org/cgi/man.cgi?query=pkill&sektion=1
             if (error && error.code != 1) {
-                console.log(error, stdout, stderr)
+                log.info(error, stdout, stderr)
                 let writeData = {
                     "command":"sendToRenderer",
                     "channel": "error",
@@ -285,7 +297,7 @@ function disconnectFromVPN(quit) {
                 client.write(JSON.stringify(writeData))
                 return;
             }
-            console.log(`Background: pkill has run successfully.`)
+            log.info(`Background: pkill has run successfully.`)
             let writeData = {
                 "command":"sendToRenderer",
                 "channel": "connection",
@@ -295,7 +307,7 @@ function disconnectFromVPN(quit) {
             }
             client.write(JSON.stringify(writeData), () => {
                 if (quit) {
-                    console.log(`Background: Sending command to quit unrestrict.me`)
+                    log.info(`Background: Sending command to quit unrestrict.me`)
                     let writeData = {
                         "command":"execute",
                         "methods": [
@@ -325,7 +337,7 @@ function killSwitchEnable(nic) {
     }
     exec(`${command}`, (error, stderr, stdout) => {
         if (error) {
-            console.log(`Main: Couldn't disable network adapter. Error: ${error}`)
+            log.info(`Main: Couldn't disable network adapter. Error: ${error}`)
             let writeData = {
                 "command":"sendToRenderer",
                 "channel": "killSwitch",
@@ -345,7 +357,7 @@ function killSwitchEnable(nic) {
             }
         }
         client.write(JSON.stringify(writeData))
-        console.log(`Main: Kill switch enabled.`)
+        log.info(`Main: Kill switch enabled.`)
     })
 }
 
@@ -358,7 +370,7 @@ function killSwitchDisable(nic) {
     }
     exec(`${command}`, (error, stderr, stdout) => {
         if (error) {
-            console.log(`Main: Couldn't enable network adapter. Error: ${error}`)
+            log.info(`Main: Couldn't enable network adapter. Error: ${error}`)
             let writeData = {
                 "command":"sendToRenderer",
                 "channel": "killSwitch",
@@ -378,27 +390,27 @@ function killSwitchDisable(nic) {
             }
         }
         client.write(JSON.stringify(writeData))
-        console.log(`Main: Kill switch disabled.`)
+        log.info(`Main: Kill switch disabled.`)
     })
 }
 
 function IPv6Management(disable, nic) {
     if (disable && os.platform() === "linux") {
         exec(`sysctl -w net.ipv6.conf.all.disable_ipv6=1`, (error, stdout, stderr) => {
-            console.log(error, stdout, stderr)
+            log.info(error, stdout, stderr)
         })
     } else if (disable && os.platform() === "darwin"){
         //Converts nic to 'network service'.
         exec(`networksetup -setv6off $(networksetup -listallhardwareports | awk '/${nic}/{print previous_line}{previous_line=$0}' | sed 's/[^,:]*://g' | sed -e 's/^[[:space:]]*//')`, (error, stdout, stderr) => {
-            console.log(error, stdout, stderr)
+            log.info(error, stdout, stderr)
         })
     } else if (!disable && os.platform() === "linux") {
         exec(`sysctl -w net.ipv6.conf.all.disable_ipv6=0`, (error, stdout, stderr) => {
-            console.log(error, stdout, stderr)
+            log.info(error, stdout, stderr)
         })
     } else if (!disable && os.platform() === "darwin") {
         exec(`networksetup -setv6automatic $(networksetup -listallhardwareports | awk '/${nic}/{print previous_line}{previous_line=$0}' | sed 's/[^,:]*://g' | sed -e 's/^[[:space:]]*//')`, (error, stdout, stderr) => {
-            console.log(error, stdout, stderr)
+            log.info(error, stdout, stderr)
         })
     }
 }
@@ -408,19 +420,19 @@ function stealthFunction(wstunnelPath, wstunnelDomain, ovpnConfig, ovpnPath, scr
     if (os.platform() === "linux") {
         fs.copyFile(`${wstunnelPath}`, path.join('/bin/', "wstunnel"), (error) => {
             if (error) {
-                console.log(`Main: An error occurred copying the wstunnel executable to the userData folder. Error: ${error}`)
+                log.info(`Main: An error occurred copying the wstunnel executable to the userData folder. Error: ${error}`)
             }
         })
         exec(`/bin/chmod u+x '${path.join('/bin/', "wstunnel")}' && /bin/chmod 755 ${path.join('/bin/', "wstunnel")}`, (error) => {
             if (error) {
-                console.log(`Error setting wstunnel to be executable. Error: ${error}`)
+                log.info(`Error setting wstunnel to be executable. Error: ${error}`)
             }
         })
         wstunnelExe = "/bin/wstunnel"
     } else {
         exec(`/bin/chmod u+x '${wstunnelPath}' && /bin/chmod 755 '${wstunnelPath}'`, (error) => {
             if (error) {
-                console.log(`Error setting wstunnel to be executable. Error: ${error}`)
+                log.info(`Error setting wstunnel to be executable. Error: ${error}`)
             }
         })
         wstunnelExe = wstunnelPath
@@ -428,13 +440,13 @@ function stealthFunction(wstunnelPath, wstunnelDomain, ovpnConfig, ovpnPath, scr
 
     exec(`'${wstunnelExe}' -u --udpTimeoutSec=-1 -v -L 127.0.0.1:1194:127.0.0.1:1194 wss://${wstunnelDomain}`, (error, stdout, stderr) => {
         if (error) {
-            console.log(`Error!`)
-            console.log(error)
-            console.log(stdout)
-            console.log(stderr)
+            log.info(`Error!`)
+            log.info(error)
+            log.info(stdout)
+            log.info(stderr)
         }
-        console.log(stdout)
-        console.log(stderr)
+        log.info(stdout)
+        log.info(stderr)
     })
     ovpnFunction(ovpnConfig, ovpnPath, scriptPath)
 }
@@ -442,7 +454,7 @@ function stealthFunction(wstunnelPath, wstunnelDomain, ovpnConfig, ovpnPath, scr
 function runTapInstaller () {
     exec(`"${path.join(__dirname, `assets`, `openvpn`, `tap-${os.arch()}`, `tapinstall.exe`)}" install "${path.join(__dirname, `assets`, `openvpn`, `tap-${os.arch()}`, `OemVista.inf`)}" tap0901`, (error, stdout, stderr) => {
         if (error) {
-            console.log(`Could not install the TAP driver. Error: ${error}`)
+            log.info(`Could not install the TAP driver. Error: ${error}`)
             //Alert renderer.
             let writeData = {
                 "command":"sendToRenderer",
