@@ -34,7 +34,7 @@ function entryPoint() {
                 log.info("unrestrict.me.exe found to be running. Starting service worker.")
                 tryConnect()
             } else {
-                log.info("unrestrict.me.exe not running. Will retry in 1 second.")
+                //log.info("unrestrict.me.exe not running. Will retry in 1 second.")
                 setTimeout(() => {entryPoint()}, 1000)
             }
         })
