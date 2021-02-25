@@ -98,6 +98,16 @@ app.on('activate', function () {
 function appStart() {
         createLoadingWindow()
         checkSettings()
+        //Set update channel ASAP.
+        readSettingsFile((error, data) => {
+            if (!error) {
+                if (data["useBetaChannel"]) {
+                    autoUpdater.channel = "beta"
+                } else {
+                    autoUpdater.channel = "stable"
+                }
+            }
+        })
 }
 
 function checkSettings() {
@@ -280,7 +290,6 @@ function checkForUpdates(install) {
             mainWindow.webContents.send('updaterProgress', updateProgress)
         })
     }
-
 }
 
 exports.checkForUpdates = () => {

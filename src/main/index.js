@@ -248,6 +248,7 @@ $(document).ready(() => {
     $("#clientVersion").html(`You're currently running unrestrict.me v${app.getVersion()}`)
     checkLatestNews()
     setIPv6Toggle()
+    setBetaToggle()
 })
 
 function populateAdapterSelect(successfullyDeterminedAnAutomaticInterface, autoNic, adapterList) {
@@ -291,6 +292,18 @@ function setIPv6Toggle() {
             $("#disableIPv6Check").attr("checked", true)
         } else {
             $("#disableIPv6Check").removeAttr("checked")
+        }
+    })
+}
+
+function setBetaToggle() {
+    readSettingsFile((error, data) => {
+        if (error) {
+            log.error(`Renderer: Couldn't read settings file to set beta toggle.`)
+        } else if (data["useBetaChannel"]) {
+            $("#betaCheck").attr("checked", true)
+        } else {
+            $("#betaCheck").removeAttr("checked")
         }
     })
 }
@@ -707,6 +720,7 @@ $("#reset").on("click", () => {
         $("#settings").modal('toggle')
         main.updateAutomaticNIC()
         setIPv6Toggle()
+        setBetaToggle()
         $("#adapterWait").css("display", "block")
         $("#adapterDiv").css("display", "none")
     })
@@ -1063,7 +1077,7 @@ $("#beginUpdate").on("click", () => {
     }
 })
 
-$("#disableIPv6Check").change(() => {
+$("#disableIPv6Check").on("change", () => {
     let x = $("#disableIPv6Check").is(":checked")
     log.info(`Renderer: Disable IPv6?: ${x}`)
     readSettingsFile((error, data) => {
@@ -1071,6 +1085,19 @@ $("#disableIPv6Check").change(() => {
             log.error(`Renderer: Couldn't read settings file to update IPv6 disable preference.`)
         } else {
             data["disableIPv6"] = x
+            writeSettingsFile(data)
+        }
+    })
+})
+
+$("#betaCheck").on("change", () => {
+    let x = $("#betaCheck").is(":checked")
+    log.info(`Renderer: Subscribe to beta?: ${x}`)
+    readSettingsFile((error, data) => {
+        if (error) {
+            log.error(`Renderer: Couldn't read settings file to update beta preference.`)
+        } else {
+            data["useBetaChannel"] = x
             writeSettingsFile(data)
         }
     })
