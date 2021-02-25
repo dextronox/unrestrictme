@@ -22,8 +22,11 @@ const { autoUpdater } = require("electron-updater")
 const net = require("net")
 const isDev = require("electron-is-dev")
 const rimraf = require("rimraf");
+
 const ps = require('node-powershell')
-const Service = require('node-windows').Service
+if (os.platform === "win32") {
+    const Service = require('node-windows').Service
+}
 
 //Required service worker version. Decimal.
 const requiredService = 1.0
