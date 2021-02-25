@@ -297,9 +297,11 @@ exports.checkForUpdates = () => {
 }
 
 function startBackgroundServer() {
+    let connected
     backgroundServer = net.createServer((client) => {
         //This runs the time a client connects.
         log.info(`Main: Background process has started successfully.`)
+        connected = true
         //Tell the renderer
         try {
             mainWindow.webContents.send("backgroundService", "processStarted")
@@ -333,6 +335,16 @@ function startBackgroundServer() {
     })
     backgroundServer.listen(4964, () => {
         log.info(`Main: Background server has started successfully.`)
+        setTimeout(() => {
+            if (!connected) {
+                //After 5 seconds the background service has not connected. Uh oh.
+                try {
+                    mainWindow.webContents.send("backgroundService", "startingErrorWin")
+                } catch (e) {
+                    log.error(`Main: Couldn't send backgroundService startingError to renderer.`)
+                }
+            }
+        }, 5000)
     })
     backgroundServer.on("error", (error) => {
         log.error(`Main: An error has occurred with the background server. Error: ${error}`)
@@ -1435,6 +1447,10 @@ exports.disableKillSwitch = () => {
 
 exports.startBackgroundService = () => {
     createBackgroundService()
+}
+
+exports.startBackgroundServiceWin = () => {
+    startBackgroundService()
 }
 
 exports.clearSettings = () => {

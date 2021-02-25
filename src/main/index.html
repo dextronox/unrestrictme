@@ -104,6 +104,11 @@
         <p>We need your sudo password to start the background process (<a data-toggle="modal" href="#backgroundProcessExplanation">why?</a>).</p>
         <button type="button" class="btn btn-primary btn-lg" id="startBackgroundProcess">Start Background Process</button>
     </div>
+    <div id="startBackgroundProcessDivWin" class="container prompt" style="display: none">
+        <h1>Oops, something's wrong.</h1>
+        <p>We couldn't connect to our background service. Although it should automatically start, we can try manually starting it. If you're seeing this message repeatedly, try reinstalling.</p>
+        <button type="button" class="btn btn-primary btn-lg" id="manuallyStartBackgroundProcess">Manually Start Background Process</button>
+    </div>
     <div class="modal fade" id="settings" tabindex="-1" role="dialog" aria-labelledby="settings" aria-hidden="true">
         <div class="modal-dialog" role="document">
             <div class="modal-content">

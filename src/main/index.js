@@ -188,6 +188,12 @@ $(document).ready(() => {
             $("#startBackgroundProcessDiv").css("display", "block")
             swal("Whoops!", "An error occurred starting the background service.", "error")
         }
+        if (args === "startingErrorWin") {
+            //An error occurred starting the background process on Windows
+            $("#disconnected").css("display", "none")
+            $("#startBackgroundProcessDivWin").css("display", "block")
+            swal("Whoops!", "An error occurred starting the background service.", "error")
+        }
         if (args === "portInUse") {
             //An error occurred starting the background process
             $("#disconnected").css("display", "none")
@@ -197,6 +203,7 @@ $(document).ready(() => {
         if (args === "processStarted") {
             //The process has started successfully. This is the default state but needs to be here for cleanup
             $("#startBackgroundProcessDiv").css("display", "none")
+            $("#startBackgroundProcessDivWin").css("display", "none")
             $("#disconnected").css("display", "block")
         }
         if (args === "processClosed") {
@@ -573,6 +580,9 @@ $("#cancelConnection").on("click", () => {
 
 $("#startBackgroundProcess").on("click", () => {
     main.startBackgroundService()
+})
+$("#manuallyStartBackgroundProcess").on("click", () => {
+    main.startBackgroundServiceWin()
 })
 //Settings listeners
 $("#customAPISubmit").on("click", () => {
