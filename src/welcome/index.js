@@ -5,6 +5,7 @@ const path = require("path")
 const main = remote.require(path.resolve(__dirname, '../..', 'main.js'))
 const swal = require('sweetalert')
 const log = require("electron-log")
+const fs = require('fs')
 
 $(document).ready(() => {
     ipcRenderer.on(`statusUpdate`, (event, args) => {
@@ -119,7 +120,20 @@ $(document).ready(() => {
             main.dependenciesCheck2()
         }
     })
+    checkIfUpdate()
 })
+
+function checkIfUpdate() {
+    /**
+     * Return value can be true or false.
+     */
+    main.checkIfUpdate((returnValue) => {
+        if (returnValue) {
+            $("#main").css("display", "none")
+            $("#update").css("display", "block")
+        }
+    })
+}
 
 $("#installButton").on("click", () => {
     $("#installButton").addClass("running")

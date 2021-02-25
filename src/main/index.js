@@ -206,6 +206,9 @@ $(document).ready(() => {
             $("#killSwitch").css("display", "none")
             $("#backgroundProcessCrash").css("display", "block")
         }
+        if (args === "notInstalledCannotInstall") {
+            swal("Whoops!", "This error shouldn't be possible, but we can't remove the settings.conf file to trigger the service worker to update. Try manually deleting settings.conf and restarting the client. The client will not work unless this issue is solved.", "error")
+        }
     })
     ipcRenderer.on(`openvpnStatus`, (event, args) => {
         if (args === "processRunning") {

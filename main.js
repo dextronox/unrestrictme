@@ -11,7 +11,7 @@ const fs = require("fs")
 const log = require("electron-log")
 const os = require("os")
 const isElevated = require("is-elevated")
-const exec = require('child_process').exec
+const {exec, fork} = require('child_process')
 const request = require("request")
 const nodersa = require('node-rsa')
 const network = require("network")
@@ -24,6 +24,9 @@ const isDev = require("electron-is-dev")
 const rimraf = require("rimraf");
 const ps = require('node-powershell')
 const Service = require('node-windows').Service
+
+//Required service worker version. Decimal.
+const requiredService = 1.0
 
 autoUpdater.logger = null
 
@@ -63,7 +66,7 @@ function setLogValues() {
     log.transports.file.format = '{h}:{i}:{s}:{ms} {text}';
     log.transports.file.maxSize = 5 * 1024 * 1024;
     fs.mkdir(`${app.getPath('userData')}/logs/`, { recursive: true }, (error) => {
-        if (!String(error).includes("EEXIST:")) {
+        if (!String(error).includes("EEXIST:") && error) {
             log.error(`Main: Couldn't create log directory. Error: ${error}`)
         } else {
             log.transports.file.stream = fs.createWriteStream(path.join(app.getPath('userData'), `logs/log-${logDate}.txt`));
@@ -93,9 +96,8 @@ app.on('activate', function () {
 })
 
 function appStart() {
-    createLoadingWindow()
-    checkSettings()
-
+        createLoadingWindow()
+        checkSettings()
 }
 
 function checkSettings() {
@@ -528,39 +530,44 @@ function startBackgroundService() {
             }
         })
     } else if (os.platform() === "win32") {
-        var unrestrictmeSvc = new Service({
-            name:'unrestrict.me Service',
-            description:'Handles VPN tunnel and firewall changes for the unrestrict.me client.',
-            script:`${path.join(__dirname, 'service.js')}`
-        })
-        unrestrictmeSvc.on('install', () => {
-            unrestrictmeSvc.start()
-        })
-        unrestrictmeSvc.on('alreadyinstalled', () => {
-            unrestrictmeSvc.start()
-        })
-        unrestrictmeSvc.on("error", () => {
-            log.error("Main: An error occurred installing the Windows service.")
-            try {
-                welcomeWindow.webContents.send("service", "error")
-            } catch (e) {
-                log.error(`Main: Couldn't send service installation error to renderer.`)
+        fs.rmdir(path.join(__dirname, "daemon"), {recursive: true}, (error) => {
+            if (error) {
+                log.error(`Main: Error deleting 'daemon' folder. Error: ${error}`)
             }
+            var unrestrictmeSvc = new Service({
+                name:'unrestrict.me Service',
+                description:'Handles VPN tunnel and firewall changes for the unrestrict.me client.',
+                script:`${path.join(__dirname, 'service.js')}`,
+                execPath: `${path.join(__dirname, 'assets', 'node32', 'node.exe')}`
+            })
+            unrestrictmeSvc.on('install', () => {
+                unrestrictmeSvc.start()
+            })
+            unrestrictmeSvc.on('alreadyinstalled', () => {
+                unrestrictmeSvc.start()
+            })
+            unrestrictmeSvc.on("error", () => {
+                log.error("Main: An error occurred installing the Windows service.")
+                try {
+                    welcomeWindow.webContents.send("service", "error")
+                } catch (e) {
+                    log.error(`Main: Couldn't send service installation error to renderer.`)
+                }
+            })
+            unrestrictmeSvc.on("start", () => {
+                log.info(`Main: Background service reportedly started.`)
+            })
+            unrestrictmeSvc.on("invalidinstallation ", () => {
+                log.info(789)
+                try {
+                    welcomeWindow.webContents.send("service", "error")
+                } catch (e) {
+                    log.error(`Main: Couldn't send service installation error to renderer.`)
+                }
+            })
+            unrestrictmeSvc.install()
         })
-        unrestrictmeSvc.on("start", () => {
-            log.info(`Main: Background service reportedly started.`)
-        })
-        unrestrictmeSvc.on("invalidinstallation ", () => {
-            log.info(789)
-            try {
-                welcomeWindow.webContents.send("service", "error")
-            } catch (e) {
-                log.error(`Main: Couldn't send service installation error to renderer.`)
-            }
-        })
-        unrestrictmeSvc.install()
     }
-
 }
 
 function backgroundProcessDataHandler(data) {
@@ -606,6 +613,22 @@ function backgroundProcessDataHandler(data) {
             welcomeWindow.webContents.send("service", "installed")
         } catch (e) {
             log.error(`Main: Couldn't send service install success to renderer.`)
+        }
+        if (!dataInterpreted["ver"] || dataInterpreted["ver"] != requiredService) {
+            //Service is out of date, need to reinstall.
+            fs.unlink(path.join(app.getPath('userData'), 'settings.conf'), (error) => {
+                if (!error) {
+                    app.relaunch()
+                    app.exit()
+                } else {
+                    try {
+                        mainWindow.webContents.send("backgroundService", "notInstalledCannotInstall")
+                    } catch (e) {
+                        log.error(`Main: Couldn't send authentication waiting to renderer.`)
+                    }
+                }
+            })
+
         }
     }
 }
@@ -1454,6 +1477,19 @@ exports.selectLogFileDialog = () => {
         properties: ["openFile"]
     }
     mainWindow.webContents.send('logFileUpload', dialog.showOpenDialog(dialogOptions))
+}
+
+exports.checkIfUpdate = (callback) => {
+    fs.stat(path.join(app.getPath('userData'), "private"), (error, stats) => {
+        if (!error) {
+            callback(true)
+        } else if (error === "ENOENT") {
+            callback(false)
+        } else {
+            log.error(`Main: Error checking if the welcome window is open due to an update. Error: ${error}`)
+            callback(false)
+        }
+    })
 }
 function killSwitch(enable) {
     //All platform specific options are to be handled in killSwitchEnable
