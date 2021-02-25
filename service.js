@@ -332,6 +332,8 @@ function killSwitchEnable(nic) {
     let command
     if (os.platform() === "linux") {
         command = `ip link set "${nic}" down`
+    } if (os.platform() === "win32") {
+        command = `netsh interface set interface "${nic}" admin=disable`
     } else {
         command = `ifconfig ${nic} down`
     }
@@ -365,6 +367,8 @@ function killSwitchDisable(nic) {
     var command
     if (os.platform() === "linux") {
         command = `ip link set "${nic}" up`
+    } if (os.platform() === "win32") {
+        command = `netsh interface set interface "${nic}" admin=enable`
     } else {
         command = `ifconfig ${nic} up`
     }

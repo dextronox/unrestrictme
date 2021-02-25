@@ -98,16 +98,6 @@ app.on('activate', function () {
 function appStart() {
         createLoadingWindow()
         checkSettings()
-        //Set update channel ASAP.
-        readSettingsFile((error, data) => {
-            if (!error) {
-                if (data["useBetaChannel"]) {
-                    autoUpdater.channel = "beta"
-                } else {
-                    autoUpdater.channel = "stable"
-                }
-            }
-        })
 }
 
 function checkSettings() {
@@ -124,6 +114,16 @@ function checkSettings() {
                 JSON.parse(data)
                 log.info("Main: settings.conf found!")
                 checkForApi()
+                //Set update channel ASAP.
+                readSettingsFile((error, data) => {
+                    if (!error) {
+                        if (data["useBetaChannel"]) {
+                            autoUpdater.channel = "beta"
+                        } else {
+                            autoUpdater.channel = "stable"
+                        }
+                    }
+                })
             } catch (e) {
                 //We found a file but couldn't parse it.
                 createErrorWindow('parse')
@@ -876,46 +876,7 @@ function quit(hard) {
     log.info(`Main: We're about to kill OpenVPN. Hard kill?: ${hard}`)
     killSwitch(false)
     intentionalDisconnect = true
-    if (os.platform() === "win32" && !hard) {
-        exec(`taskkill /IM openvpn.exe /F & taskkill /IM wstunnel.exe /F`, (error, stdout, stderr) => {
-            if (error && !String(error).includes(`"wstunnel.exe" not found.`)) {
-                log.error(`Main: An error occurred killing OpenVPN. Error: ${error}`)
-                mainWindow.show()
-                let status = {
-                    "disconnectError": true
-                }
-                try {
-                    mainWindow.webContents.send('error', status)
-                } catch(e) {
-                    log.error(`Main: Couldn't send OpenVPN status to renderer. Error: ${e}`)
-                }
-                tray.destroy()
-                app.quit()
-                return;
-            }
-            let status = {
-                "connected": false
-            }
-            try {
-                mainWindow.webContents.send('connection', status)
-            } catch(e) {
-                log.error(`Main: Couldn't send OpenVPN status to renderer. Error: ${e}`)
-            }
-            log.info(`Main: OpenVPN was killed`)
-            tray.destroy()
-            app.quit()
-        })
-    } else if (os.platform() === "linux" && !hard) {
-        if (clientObj && clientObj != "killed") {
-            let writeData = {
-                "command": "disconnect",
-                "quitBoolean": true
-            }
-            clientObj.write(JSON.stringify(writeData))
-        } else {
-            quit(true)
-        }
-    } else if (os.platform() === "darwin" && !hard){
+    if (!hard){
         if (clientObj && clientObj != "killed") {
             let writeData = {
                 "command": "disconnect",
@@ -1581,74 +1542,20 @@ function killSwitch(enable) {
 
 function killSwitchEnable(nic) {
     log.info(`Main: Enabling Kill Switch for ${os.platform()}.`)
-    if (os.platform() === "win32") {
-        //This refers to the function nic, stupid.
-        exec(`netsh interface set interface "${nic}" admin=disable`, (error, stdout, stderr) => {
-            if (error) {
-                log.error(`Main: Couldn't disable adapter for kill switch. Error: ${error}`)
-                let status = {
-                    "error": "enable"
-                }
-                try {
-                    mainWindow.webContents.send('killSwitch', status)
-                } catch(e) {
-                    log.error(`Main: Couldn't send kill switch status to renderer. Error: ${e}`)
-                }
-            } else {
-                let status = {
-                    "enabled": true
-                }
-                try {
-                    mainWindow.webContents.send('killSwitch', status)
-                } catch(e) {
-                    log.error(`Main: Couldn't send kill switch status to renderer. Error: ${e}`)
-                }
-                log.info(`Main: Kill switch enabled.`)
-            }
-        })
-    } else if (os.platform() === "linux" || os.platform() === "darwin") {
-        let writeData = {
-            "command": "killSwitchEnable",
-            "nic": nic
-        }
-        clientObj.write(JSON.stringify(writeData))
+    let writeData = {
+        "command": "killSwitchEnable",
+        "nic": nic
     }
+    clientObj.write(JSON.stringify(writeData))
 }
 
 function killSwitchDisable(nic) {
-    if (os.platform() === "win32") {
-        exec(`netsh interface set interface "${nic}" admin=enable`, (error, stderr, stdout) => {
-            if (error) {
-                log.error(`Main: Couldn't enable network adapter. Error: ${error}`)
-                let status = {
-                    "error": "disable"
-                }
-                try {
-                    mainWindow.webContents.send('killSwitch', status)
-                } catch(e) {
-                    log.error(`Main: Couldn't send kill switch status to renderer. Error: ${e}`)
-                }
-                return;
-            }
-            let status = {
-                "enabled": false
-            }
-            try {
-                mainWindow.webContents.send('killSwitch', status)
-            } catch(e) {
-                log.error(`Main: Couldn't send kill switch status to renderer. Error: ${e}`)
-            }
-            log.info(`Main: Kill switch disabled.`)
-        })
-    } else if (os.platform() === "linux" || os.platform() === "darwin") {
-        if (clientObj && clientObj != "killed") {
-            let writeData = {
-                "command": "killSwitchDisable",
-                "nic": nic
-            }
-            clientObj.write(JSON.stringify(writeData))
+    if (clientObj && clientObj != "killed") {
+        let writeData = {
+            "command": "killSwitchDisable",
+            "nic": nic
         }
-
+        clientObj.write(JSON.stringify(writeData))
     }
 }
 function installDependenciesLinux(checkError) {
