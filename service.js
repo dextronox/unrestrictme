@@ -441,18 +441,20 @@ function stealthFunction(wstunnelPath, wstunnelDomain, ovpnConfig, ovpnPath, scr
         })
         wstunnelExe = wstunnelPath
     }
-
-    exec(`'${wstunnelExe}' -u --udpTimeoutSec=-1 -v -L 127.0.0.1:1194:127.0.0.1:1194 wss://${wstunnelDomain}`, (error, stdout, stderr) => {
-        if (error) {
-            log.info(`Error!`)
-            log.info(error)
+    setTimeout(() => {
+        exec(`'${wstunnelExe}' -u --udpTimeoutSec=-1 -v -L 127.0.0.1:1194:127.0.0.1:1194 wss://${wstunnelDomain}`, (error, stdout, stderr) => {
+            if (error) {
+                log.info(`Error!`)
+                log.info(error)
+                log.info(stdout)
+                log.info(stderr)
+            }
             log.info(stdout)
             log.info(stderr)
-        }
-        log.info(stdout)
-        log.info(stderr)
-    })
-    ovpnFunction(ovpnConfig, ovpnPath, scriptPath)
+        })
+        ovpnFunction(ovpnConfig, ovpnPath, scriptPath)
+    }, 1000)
+
 }
 
 function runTapInstaller () {
