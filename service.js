@@ -21,6 +21,8 @@ if (os.platform() === "win32") {
     }
 }
 
+
+//When changing this, IMMEDIATELY update the main.js file to match. Otherwise, the client will get caught in a boot loop.
 let ver = 1.0
 
 let killSwitchStatus, intentionalDisconnect
