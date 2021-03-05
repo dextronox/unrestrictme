@@ -441,6 +441,8 @@ function stealthFunction(wstunnelPath, wstunnelDomain, ovpnConfig, ovpnPath, scr
         })
         wstunnelExe = wstunnelPath
     }
+    //This is a lazy solution and needs to be improved in the future. Basically, we're trying to run the binary faster than we can set it to be executable, hence we get a 'permission denied' error. To fix this, we add a timeout.
+    //Should really be nestled in a callback, but whatever.
     setTimeout(() => {
         exec(`'${wstunnelExe}' -u --udpTimeoutSec=-1 -v -L 127.0.0.1:1194:127.0.0.1:1194 wss://${wstunnelDomain}`, (error, stdout, stderr) => {
             if (error) {
