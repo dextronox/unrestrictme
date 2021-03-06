@@ -23,7 +23,7 @@ if (os.platform() === "win32") {
 
 
 //When changing this, IMMEDIATELY update the main.js file to match. Otherwise, the client will get caught in a boot loop.
-let ver = 1.0
+let ver = 1.1
 
 let killSwitchStatus, intentionalDisconnect
 entryPoint()
@@ -435,28 +435,44 @@ function stealthFunction(wstunnelPath, wstunnelDomain, ovpnConfig, ovpnPath, scr
             }
         })
         wstunnelExe = "/bin/wstunnel"
-    } else {
+    } else if (os.platform() === "darwin") {
         exec(`/bin/chmod u+x '${wstunnelPath}' && /bin/chmod 755 '${wstunnelPath}'`, (error) => {
             if (error) {
                 log.info(`Error setting wstunnel to be executable. Error: ${error}`)
             }
         })
         wstunnelExe = wstunnelPath
+    } else {
+        wstunnelExe = wstunnelPath
     }
     //This is a lazy solution and needs to be improved in the future. Basically, we're trying to run the binary faster than we can set it to be executable, hence we get a 'permission denied' error. To fix this, we add a timeout.
     //Should really be nestled in a callback, but whatever.
     setTimeout(() => {
-        exec(`'${wstunnelExe}' -u --udpTimeoutSec=-1 -v -L 127.0.0.1:1194:127.0.0.1:1194 wss://${wstunnelDomain}`, (error, stdout, stderr) => {
-            if (error) {
-                log.info(`Error!`)
-                log.info(error)
+        if (os.platform() === "win32") {
+            //Different brackets...
+            exec(`"${wstunnelExe}" -u --udpTimeoutSec=-1 -v -L 127.0.0.1:1194:127.0.0.1:1194 wss://${wstunnelDomain}`, (error, stdout, stderr) => {
+                if (error) {
+                    log.info(`Stunnel Error! (possibly quitting)`)
+                }
+            })
+        } else {
+            exec(`'${wstunnelExe}' -u --udpTimeoutSec=-1 -v -L 127.0.0.1:1194:127.0.0.1:1194 wss://${wstunnelDomain}`, (error, stdout, stderr) => {
+                if (error) {
+                    log.info(`Error!`)
+                    log.info(error)
+                    log.info(stdout)
+                    log.info(stderr)
+                }
                 log.info(stdout)
                 log.info(stderr)
-            }
-            log.info(stdout)
-            log.info(stderr)
-        })
-        ovpnFunction(ovpnConfig, ovpnPath, scriptPath)
+            })
+        }
+        if (scriptPath) {
+            ovpnFunction(ovpnConfig, ovpnPath, scriptPath)
+        } else {
+            ovpnFunction(ovpnConfig, ovpnPath)
+        }
+
     }, 1000)
 
 }

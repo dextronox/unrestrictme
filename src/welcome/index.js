@@ -5,7 +5,6 @@ const path = require("path")
 const main = remote.require(path.resolve(__dirname, '../..', 'main.js'))
 const swal = require('sweetalert')
 const log = require("electron-log")
-const fs = require('fs')
 
 $(document).ready(() => {
     ipcRenderer.on(`statusUpdate`, (event, args) => {

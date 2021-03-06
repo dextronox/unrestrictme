@@ -10,7 +10,6 @@ const url = require("url")
 const fs = require("fs")
 const log = require("electron-log")
 const os = require("os")
-const isElevated = require("is-elevated")
 const {exec, fork} = require('child_process')
 const request = require("request")
 const nodersa = require('node-rsa')
@@ -22,14 +21,17 @@ const { autoUpdater } = require("electron-updater")
 const net = require("net")
 const isDev = require("electron-is-dev")
 const rimraf = require("rimraf");
-
 const ps = require('node-powershell')
-if (os.platform === "win32") {
-    const Service = require('node-windows').Service
+
+//Definition of global variables
+let loadingWindow, errorWindow, welcomeWindow, mainWindow, tray, backgroundServer, clientObj, Service
+
+if (os.platform() === "win32") {
+    Service = require('node-windows').Service
 }
 
 //Required service worker version. Decimal.
-const requiredService = 1.0
+const requiredService = 1.1
 
 autoUpdater.logger = null
 
@@ -47,9 +49,6 @@ if (!appLock) {
     })
 }
 
-//Definition of global variables
-let loadingWindow, errorWindow, welcomeWindow, mainWindow, tray, killSwitchStatus, intentionalDisconnect, backgroundServer, clientObj
-
 function setLogValues() {
     //Create log file with a date naming schema.
     var date = new Date();
@@ -65,6 +64,7 @@ function setLogValues() {
     var day  = date.getDate();
     day = (day < 10 ? "0" : "") + day;
     let logDate = year + "-" + month + "-" + day + "-" + hour + "-" + min + "-" + sec;
+    log.transports.console.format = '{h}:{i}:{s}:{ms} {text}'
     log.transports.file.level = 'info';
     log.transports.file.format = '{h}:{i}:{s}:{ms} {text}';
     log.transports.file.maxSize = 5 * 1024 * 1024;
@@ -99,8 +99,8 @@ app.on('activate', function () {
 })
 
 function appStart() {
-        createLoadingWindow()
-        checkSettings()
+    createLoadingWindow()
+    checkSettings()
 }
 
 function checkSettings() {
@@ -313,7 +313,8 @@ function startBackgroundServer() {
         }
         client.on("error", (error) => {
             if (error.errno === "ECONNRESET") {
-                log.info(`Main: Background process has disconnected.`)
+                log.info(`Main: Background process has disconnected (ECONNRESET).`)
+                backgroundHasDisconnected()
             } else {
                 log.error(`Main: An unknown error has occurred. Error: ${error}`)
             }
@@ -325,14 +326,7 @@ function startBackgroundServer() {
         client.on("end", () => {
             //Background process has disconnected.
             log.info(`Main: Background process has disconnected.`)
-            try {
-                mainWindow.webContents.send("backgroundService", "processClosed")
-                mainWindow.focus()
-                mainWindow.show()
-            } catch (e) {
-                log.error(`Main: Couldn't send backgroundService processClosed to renderer.`)
-            }
-            clientObj = "killed"
+            backgroundHasDisconnected()
         })
         clientObj = client
     })
@@ -360,6 +354,17 @@ function startBackgroundServer() {
             }
         }
     })
+}
+
+function backgroundHasDisconnected () {
+    try {
+        mainWindow.webContents.send("backgroundService", "processClosed")
+        mainWindow.focus()
+        mainWindow.show()
+    } catch (e) {
+        log.error(`Main: Couldn't send backgroundService processClosed to renderer.`)
+    }
+    clientObj = "killed"
 }
 
 function createBackgroundService() {
@@ -648,7 +653,7 @@ function backgroundProcessDataHandler(data) {
                     try {
                         mainWindow.webContents.send("backgroundService", "notInstalledCannotInstall")
                     } catch (e) {
-                        log.error(`Main: Couldn't send authentication waiting to renderer.`)
+                        log.error(`Main: Couldn't send notInstalledCannotInstall to renderer.`)
                     }
                 }
             })
@@ -671,6 +676,13 @@ function createLoadingWindow() {
     })
     if (process.argv.includes(`--devConsole`)) {
         loadingWindow.webContents.openDevTools({mode: "undocked"})
+    }
+    if (process.argv.includes(`--reinstallService`)) {
+        fs.unlink(path.join(app.getPath('userData'), 'settings.conf'), (error) => {
+            if (error) {
+                log.error(`Main: Can't delete settings file to trigger service reinstall.`)
+            }
+        })
     }
     loadingWindow.setAlwaysOnTop(true)
 
@@ -1279,73 +1291,63 @@ function writeSettingsFile(data, callback) {
 
 exports.stealthConnect = (decryptedResponse) => {
     //Fire up stunnel and send off the config
-    if (os.platform() === "win32") {
-        log.info(`"${path.join(__dirname, "assets", "wstunnel", "win32", "wstunnel.exe")}" -u --udpTimeoutSec=99999 -v -L 127.0.0.1:1194:127.0.0.1:1194 wss://${decryptedResponse["domain"]}`)
-        let stunnelProc = exec(`"${path.join(__dirname, "assets", "wstunnel", "win32", "wstunnel.exe")}" -u --udpTimeoutSec=99999 -v -L 127.0.0.1:1194:127.0.0.1:1194 wss://${decryptedResponse["domain"]}`)
-        let dataLog
-        stunnelProc.stderr.on('data', (data) => {
-            log.info(`Stunnel: ${data}`)
-            dataLog = dataLog + data
-            //CANNOT BE DATALOG, OR ELSE IT WILL SPAWN INFINITE OPENVPN INSTANCES.
-            if (String(data).includes("WAIT for datagrames on 127.0.0.1:1194")) {
-                //Stunnel has loaded successfully.
-                connect(decryptedResponse["config"])
-            }
-        })
-    } else if (os.platform() === "linux" || os.platform() === "darwin") {
-        copyDnsHelper()
-        fixBinaries()
-        fs.writeFile(path.join(app.getPath('userData'), "current.ovpn"), decryptedResponse["config"], (error) => {
-            if (error) {
-                let status = {
-                    "writeError": true
-                }
-                try {
-                    mainWindow.webContents.send('error', status)
-                } catch(e) {
-                    log.error(`Main: Couldn't send OpenVPN status to renderer. Error: ${e}`)
-                }
-            } else {
-                if (os.platform() === "darwin") {
-                    let writeData = {
-                        "command": "connectToStealth",
-                        "wstunnelPath": `${path.join(__dirname, "assets", "wstunnel", "darwin", "wstunnel")}`,
-                        "domain":decryptedResponse["domain"],
-                        "configPath": path.join(app.getPath('userData'), "current.ovpn"),
-                        "ovpnPath": `${path.join(__dirname, "assets", "openvpn", "darwin", "openvpn")}`,
-                        "scriptPath": `${app.getPath("userData")}/update-resolv-conf`
-                    }
-                    if (clientObj && clientObj != "killed") {
-                        clientObj.write(JSON.stringify(writeData))
-                    }
-                } else if (os.platform() === "linux") {
-                    let writeData = {
-                        "command": "connectToStealth",
-                        //On linux, the wstunnel path should be the location of the binary in the appimage, to be copied to /bin
-                        "wstunnelPath": `${path.join(__dirname)}/assets/wstunnel/${os.platform()}/wstunnel`,
-                        "domain":decryptedResponse["domain"],
-                        "configPath": path.join(app.getPath('userData'), "current.ovpn"),
-                        "ovpnPath": `openvpn`,
-                        "scriptPath": `${app.getPath("userData")}/update-systemd-resolved`
-                    }
-                    if (clientObj && clientObj != "killed") {
-                        clientObj.write(JSON.stringify(writeData))
-                    }   
-                }
-
-            }
-        })
-
-    } else {
-        let status = {
-            "platformSupport": true
-        }
-        try {
-            mainWindow.webContents.send('error', status)
-        } catch(e) {
-            log.error(`Main: Couldn't send OpenVPN status to renderer. Error: ${e}`)
-        }
+    if (os.platform() === "linux" || os.platform() === "darwin") {
+            copyDnsHelper()
+            fixBinaries()
     }
+    fs.writeFile(path.join(app.getPath('userData'), "current.ovpn"), decryptedResponse["config"], (error) => {
+        if (error) {
+            let status = {
+                "writeError": true
+            }
+            try {
+                mainWindow.webContents.send('error', status)
+            } catch(e) {
+                log.error(`Main: Couldn't send OpenVPN status to renderer. Error: ${e}`)
+            }
+        } else {
+            if (os.platform() === "darwin") {
+                let writeData = {
+                    "command": "connectToStealth",
+                    "wstunnelPath": `${path.join(__dirname, "assets", "wstunnel", "darwin", "wstunnel")}`,
+                    "domain":decryptedResponse["domain"],
+                    "configPath": path.join(app.getPath('userData'), "current.ovpn"),
+                    "ovpnPath": `${path.join(__dirname, "assets", "openvpn", "darwin", "openvpn")}`,
+                    "scriptPath": `${app.getPath("userData")}/update-resolv-conf`
+                }
+                if (clientObj && clientObj != "killed") {
+                    clientObj.write(JSON.stringify(writeData))
+                }
+            } else if (os.platform() === "linux") {
+                let writeData = {
+                    "command": "connectToStealth",
+                    //On linux, the wstunnel path should be the location of the binary in the appimage, to be copied to /bin
+                    "wstunnelPath": `${path.join(__dirname)}/assets/wstunnel/${os.platform()}/wstunnel`,
+                    "domain":decryptedResponse["domain"],
+                    "configPath": path.join(app.getPath('userData'), "current.ovpn"),
+                    "ovpnPath": `openvpn`,
+                    "scriptPath": `${app.getPath("userData")}/update-systemd-resolved`
+                }
+                if (clientObj && clientObj != "killed") {
+                    clientObj.write(JSON.stringify(writeData))
+                }   
+            } else if (os.platform() === "win32") {
+                let writeData = {
+                    "command": "connectToStealth",
+                    //On linux, the wstunnel path should be the location of the binary in the appimage, to be copied to /bin
+                    "wstunnelPath": `${path.join(__dirname)}/assets/wstunnel/${os.platform()}/wstunnel.exe`,
+                    "domain":decryptedResponse["domain"],
+                    "configPath": path.join(app.getPath('userData'), "current.ovpn"),
+                    "ovpnPath": `${path.join(__dirname)}/assets/openvpn/${os.arch()}/openvpn.exe`
+                }
+                if (clientObj && clientObj != "killed") {
+                    clientObj.write(JSON.stringify(writeData))
+                }   
+            }
+
+        }
+    })
+
 }
 
 function fixBinaries() {
